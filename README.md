@@ -56,3 +56,4 @@ This repo currently contains the initial implementation foundation:
 - first monthly report aggregation slice backed by `transactions`
 - first manual transaction entry flow feeding the monthly report
 - first normalized CSV transaction import flow
+- first Sinopac-specific transaction CSV mapping layer

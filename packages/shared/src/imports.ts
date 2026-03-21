@@ -1,5 +1,5 @@
 export type TransactionCsvImportResult = {
-  source: "transactions-csv";
+  source: "transactions-csv" | "sinopac-tw";
   imported: number;
   skipped: number;
   failed: number;

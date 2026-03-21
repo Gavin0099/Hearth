@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import type { AccountRecord } from "@hearth/shared";
 import { fetchAccounts } from "../lib/accounts";
-import { importTransactionsCsv } from "../lib/imports";
+import {
+  importSinopacTransactionsCsv,
+  importTransactionsCsv,
+} from "../lib/imports";
 
 type ImportPanelProps = {
   session: Session | null;
@@ -18,6 +21,7 @@ export function ImportPanel({ session, onImported }: ImportPanelProps) {
   const [state, setState] = useState<LoadState>({ status: "idle" });
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [importMode, setImportMode] = useState<"normalized" | "sinopac-tw">("normalized");
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -69,7 +73,10 @@ export function ImportPanel({ session, onImported }: ImportPanelProps) {
     }
 
     setIsSubmitting(true);
-    const result = await importTransactionsCsv(selectedAccountId, selectedFile);
+    const result =
+      importMode === "sinopac-tw"
+        ? await importSinopacTransactionsCsv(selectedAccountId, selectedFile)
+        : await importTransactionsCsv(selectedAccountId, selectedFile);
     setIsSubmitting(false);
 
     if (result.status === "error") {
@@ -91,8 +98,24 @@ export function ImportPanel({ session, onImported }: ImportPanelProps) {
       {state.status === "error" ? <p>匯入面板載入失敗: {state.message}</p> : null}
       {state.status === "success" ? (
         <>
-          <p>CSV 欄位格式：`date,amount,currency,category,description`</p>
+          <p>
+            {importMode === "normalized"
+              ? "CSV 欄位格式：`date,amount,currency,category,description`"
+              : "永豐最小欄位格式：`日期,金額,摘要`，可選 `幣別` 與 `收支別`。"}
+          </p>
           <form className="account-form" onSubmit={handleSubmit}>
+            <label>
+              匯入模式
+              <select
+                value={importMode}
+                onChange={(event) =>
+                  setImportMode(event.target.value as "normalized" | "sinopac-tw")
+                }
+              >
+                <option value="normalized">Normalized CSV</option>
+                <option value="sinopac-tw">Sinopac TW CSV</option>
+              </select>
+            </label>
             <label>
               匯入目標帳戶
               <select

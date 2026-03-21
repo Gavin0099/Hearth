@@ -66,13 +66,14 @@
 - [x] 建立月報 API / UI 的第一個 Phase C 切片
 - [x] 建立第一條手動 transaction 寫入路徑
 - [x] 建立第一條 normalized CSV transaction 匯入路徑
+- [x] 建立第一個 `sinopac-tw` 銀行專屬 mapping 切片
 - [ ] 建立 repo-specific engineering governance baseline
 
 ### 接下來
 
 1. 建立 repo-specific engineering governance baseline
 2. 擴大 `transactions` 路徑，加入更完整的歷史列表與驗證
-3. 把 normalized import 進一步特化為銀行/帳本 parser
+3. 把 `sinopac-tw` 從最小 mapping 擴大到更接近真實銀行格式
 4. 視需要補前端端到端驗證
 
 ---
@@ -109,7 +110,8 @@
 - [x] transactions domain types
 - [x] 手動 transaction 寫入入口
 - [x] normalized CSV 匯入入口
-- [ ] 銀行 / 信用卡匯入入口
+- [x] 第一個銀行專屬 mapping：`sinopac-tw`
+- [ ] 更完整的銀行 / 信用卡匯入入口
 - [ ] 月帳本 Excel parser
 - [x] 月度收支報表 API 與 dashboard 第一版骨架
 
@@ -163,3 +165,4 @@
 | 2026-03-21 | 建立月報第一個 Phase C 切片 | 讓 `transactions -> monthly report API -> dashboard panel` 開始成形 |
 | 2026-03-21 | 建立第一條手動 transaction 寫入路徑 | 讓 Phase C 不再只讀取交易，而有真正的資料輸入來源 |
 | 2026-03-21 | 建立第一條 normalized CSV transaction 匯入路徑 | 先把通用匯入管線打通，再往銀行/帳本專屬 parser 演進 |
+| 2026-03-21 | 建立第一個 `sinopac-tw` 銀行專屬 mapping 切片 | 驗證銀行專屬欄位映射可以建立在通用匯入管線之上 |

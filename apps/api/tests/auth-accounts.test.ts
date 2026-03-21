@@ -481,3 +481,93 @@ test("POST /api/import/transactions-csv imports normalized transaction csv rows"
     },
   ]);
 });
+
+test("POST /api/import/sinopac-tw maps minimal Sinopac csv rows into transactions", async () => {
+  let insertedRows: Array<Record<string, unknown>> = [];
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "transactions") {
+          return {
+            insert: async (values: Array<Record<string, unknown>>) => {
+              insertedRows = values;
+              return { error: null };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set(
+    "file",
+    new File(
+      [
+        "日期,金額,摘要,幣別,收支別\n2026/03/12,120,午餐,TWD,支出\n2026/03/13,1500,退款,TWD,收入\n",
+      ],
+      "sinopac.csv",
+      { type: "text/csv" },
+    ),
+  );
+
+  const response = await app.request(
+    "/api/import/sinopac-tw",
+    {
+      method: "POST",
+      body: formData,
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    source: "sinopac-tw",
+    imported: 2,
+    skipped: 0,
+    failed: 0,
+    runtime: "cloudflare-worker",
+    persistence: "supabase",
+    status: "ok",
+    errors: [],
+  });
+  assert.deepEqual(insertedRows, [
+    {
+      account_id: "account-1",
+      date: "2026-03-12",
+      amount: -120,
+      currency: "TWD",
+      category: "餐飲",
+      description: "午餐",
+      source: "sinopac_bank",
+    },
+    {
+      account_id: "account-1",
+      date: "2026-03-13",
+      amount: 1500,
+      currency: "TWD",
+      category: "其他",
+      description: "退款",
+      source: "sinopac_bank",
+    },
+  ]);
+});
