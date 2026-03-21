@@ -15,10 +15,7 @@ export type ApiEnv = {
     createSupabaseAdminClient: (
       env: WorkerBindings,
     ) => {
-      from: (table: string) => {
-        select: (columns: string) => unknown;
-        insert: (values: Record<string, unknown>) => unknown;
-      };
+      from: (table: string) => any;
     };
   };
 };

@@ -9,6 +9,10 @@ export async function importSinopacTransactionsCsv(accountId: string, file: File
   return importCsvToEndpoint("/api/import/sinopac-tw", accountId, file);
 }
 
+export async function importExcelMonthly(accountId: string, file: File) {
+  return importCsvToEndpoint("/api/import/excel-monthly", accountId, file);
+}
+
 async function importCsvToEndpoint(endpoint: string, accountId: string, file: File) {
   const formData = new FormData();
   formData.set("account_id", accountId);

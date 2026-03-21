@@ -1,5 +1,5 @@
 export type TransactionCsvImportResult = {
-  source: "transactions-csv" | "sinopac-tw";
+  source: "transactions-csv" | "sinopac-tw" | "excel-monthly";
   imported: number;
   skipped: number;
   failed: number;

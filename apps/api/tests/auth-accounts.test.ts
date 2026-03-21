@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import * as XLSX from "xlsx";
 import { createApp, type AuthenticatedUser, type SupabaseAdminClient } from "../src/app";
 import { buildTransactionSourceHash } from "../src/lib/transaction-hash";
 import type { WorkerBindings } from "../src/types";
@@ -10,6 +11,16 @@ const env: WorkerBindings = {
   SUPABASE_ANON_KEY: "anon",
   SUPABASE_SERVICE_ROLE_KEY: "service",
 };
+
+function createExcelMonthlyFile(rows: unknown[][]) {
+  const worksheet = XLSX.utils.aoa_to_sheet(rows);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "March");
+  const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+  return new File([buffer], "monthly.xlsx", {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+}
 
 function createTestApp(options?: {
   user?: AuthenticatedUser | null;
@@ -670,4 +681,121 @@ test("POST /api/import/transactions-csv skips duplicate rows by source hash", as
     errors: [],
   });
   assert.deepEqual(insertedRows, []);
+});
+
+test("POST /api/import/excel-monthly imports simplified calendar workbook rows", async () => {
+  let insertedRows: Array<Record<string, unknown>> = [];
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "transactions") {
+          return {
+            select: () => ({
+              in: async () => ({
+                data: [],
+                error: null,
+              }),
+            }),
+            insert: async (values: Array<Record<string, unknown>>) => {
+              insertedRows = values;
+              return { error: null };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set(
+    "file",
+    createExcelMonthlyFile([
+      ["分類", "項目", "2026/03/01", "2026/03/02"],
+      ["飲食費用", "早餐", 80, 120],
+      ["交通花費", "捷運", "", 50],
+      ["生活雜費", "日用品", 300, ""],
+    ]),
+  );
+
+  const response = await app.request(
+    "/api/import/excel-monthly",
+    {
+      method: "POST",
+      body: formData,
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    source: "excel-monthly",
+    imported: 4,
+    skipped: 0,
+    failed: 0,
+    runtime: "cloudflare-worker",
+    persistence: "supabase",
+    status: "ok",
+    errors: [],
+  });
+  assert.deepEqual(insertedRows, [
+    {
+      account_id: "account-1",
+      date: "2026-03-01",
+      amount: -80,
+      currency: "TWD",
+      category: "餐飲",
+      description: "早餐",
+      source: "excel_monthly",
+      source_hash: insertedRows[0]?.source_hash,
+    },
+    {
+      account_id: "account-1",
+      date: "2026-03-02",
+      amount: -120,
+      currency: "TWD",
+      category: "餐飲",
+      description: "早餐",
+      source: "excel_monthly",
+      source_hash: insertedRows[1]?.source_hash,
+    },
+    {
+      account_id: "account-1",
+      date: "2026-03-02",
+      amount: -50,
+      currency: "TWD",
+      category: "交通",
+      description: "捷運",
+      source: "excel_monthly",
+      source_hash: insertedRows[2]?.source_hash,
+    },
+    {
+      account_id: "account-1",
+      date: "2026-03-01",
+      amount: -300,
+      currency: "TWD",
+      category: "生活購物",
+      description: "日用品",
+      source: "excel_monthly",
+      source_hash: insertedRows[3]?.source_hash,
+    },
+  ]);
 });

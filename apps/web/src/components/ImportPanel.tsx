@@ -3,6 +3,7 @@ import type { Session } from "@supabase/supabase-js";
 import type { AccountRecord } from "@hearth/shared";
 import { fetchAccounts } from "../lib/accounts";
 import {
+  importExcelMonthly,
   importSinopacTransactionsCsv,
   importTransactionsCsv,
 } from "../lib/imports";
@@ -21,7 +22,7 @@ export function ImportPanel({ session, onImported }: ImportPanelProps) {
   const [state, setState] = useState<LoadState>({ status: "idle" });
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [importMode, setImportMode] = useState<"normalized" | "sinopac-tw">("normalized");
+  const [importMode, setImportMode] = useState<"normalized" | "sinopac-tw" | "excel-monthly">("normalized");
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -68,7 +69,7 @@ export function ImportPanel({ session, onImported }: ImportPanelProps) {
     }
 
     if (!selectedFile) {
-      setMessage("請先選擇 CSV 檔案。");
+      setMessage(importMode === "excel-monthly" ? "請先選擇 Excel 檔案。" : "請先選擇 CSV 檔案。");
       return;
     }
 
@@ -76,7 +77,9 @@ export function ImportPanel({ session, onImported }: ImportPanelProps) {
     const result =
       importMode === "sinopac-tw"
         ? await importSinopacTransactionsCsv(selectedAccountId, selectedFile)
-        : await importTransactionsCsv(selectedAccountId, selectedFile);
+        : importMode === "excel-monthly"
+          ? await importExcelMonthly(selectedAccountId, selectedFile)
+          : await importTransactionsCsv(selectedAccountId, selectedFile);
     setIsSubmitting(false);
 
     if (result.status === "error") {
@@ -85,7 +88,7 @@ export function ImportPanel({ session, onImported }: ImportPanelProps) {
     }
 
     setMessage(
-      `匯入完成：成功 ${result.imported} 筆，失敗 ${result.failed} 筆。`,
+      `匯入完成：成功 ${result.imported} 筆，跳過 ${result.skipped} 筆，失敗 ${result.failed} 筆。`,
     );
     onImported();
   }
@@ -101,7 +104,9 @@ export function ImportPanel({ session, onImported }: ImportPanelProps) {
           <p>
             {importMode === "normalized"
               ? "CSV 欄位格式：`date,amount,currency,category,description`"
-              : "永豐最小欄位格式：`日期,金額,摘要`，可選 `幣別` 與 `收支別`。"}
+              : importMode === "sinopac-tw"
+                ? "永豐最小欄位格式：`日期,金額,摘要`，可選 `幣別` 與 `收支別`。"
+                : "Excel 第一版格式：第一列放日期欄，左側欄位使用 `分類` / `項目`，每日金額填在日期欄下方。"}
           </p>
           <form className="account-form" onSubmit={handleSubmit}>
             <label>
@@ -109,11 +114,12 @@ export function ImportPanel({ session, onImported }: ImportPanelProps) {
               <select
                 value={importMode}
                 onChange={(event) =>
-                  setImportMode(event.target.value as "normalized" | "sinopac-tw")
+                  setImportMode(event.target.value as "normalized" | "sinopac-tw" | "excel-monthly")
                 }
               >
                 <option value="normalized">Normalized CSV</option>
                 <option value="sinopac-tw">Sinopac TW CSV</option>
+                <option value="excel-monthly">Excel Monthly</option>
               </select>
             </label>
             <label>
@@ -130,15 +136,19 @@ export function ImportPanel({ session, onImported }: ImportPanelProps) {
               </select>
             </label>
             <label>
-              CSV 檔案
+              {importMode === "excel-monthly" ? "Excel 檔案" : "CSV 檔案"}
               <input
-                accept=".csv,text/csv"
+                accept={
+                  importMode === "excel-monthly"
+                    ? ".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                    : ".csv,text/csv"
+                }
                 type="file"
                 onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
               />
             </label>
             <button className="action-button" disabled={isSubmitting} type="submit">
-              {isSubmitting ? "匯入中..." : "匯入 CSV"}
+              {isSubmitting ? "匯入中..." : importMode === "excel-monthly" ? "匯入 Excel" : "匯入 CSV"}
             </button>
           </form>
           {message ? <p>{message}</p> : null}
