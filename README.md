@@ -55,3 +55,4 @@ This repo currently contains the initial implementation foundation:
 - local executable verification for auth/accounts/report routes
 - first monthly report aggregation slice backed by `transactions`
 - first manual transaction entry flow feeding the monthly report
+- first normalized CSV transaction import flow

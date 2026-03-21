@@ -65,14 +65,15 @@
 - [x] `accounts + auth` 本地可執行驗證
 - [x] 建立月報 API / UI 的第一個 Phase C 切片
 - [x] 建立第一條手動 transaction 寫入路徑
+- [x] 建立第一條 normalized CSV transaction 匯入路徑
 - [ ] 建立 repo-specific engineering governance baseline
 
 ### 接下來
 
 1. 建立 repo-specific engineering governance baseline
 2. 擴大 `transactions` 路徑，加入更完整的歷史列表與驗證
-3. 視需要補前端端到端驗證
-4. 進一步進入匯入與月報切片
+3. 把 normalized import 進一步特化為銀行/帳本 parser
+4. 視需要補前端端到端驗證
 
 ---
 
@@ -107,6 +108,7 @@
 **任務清單**:
 - [x] transactions domain types
 - [x] 手動 transaction 寫入入口
+- [x] normalized CSV 匯入入口
 - [ ] 銀行 / 信用卡匯入入口
 - [ ] 月帳本 Excel parser
 - [x] 月度收支報表 API 與 dashboard 第一版骨架
@@ -160,3 +162,4 @@
 | 2026-03-21 | 完成 `accounts + auth` 本地可執行驗證 | 以可重複執行的 API tests 鎖住目前核心路徑，降低後續迭代回歸風險 |
 | 2026-03-21 | 建立月報第一個 Phase C 切片 | 讓 `transactions -> monthly report API -> dashboard panel` 開始成形 |
 | 2026-03-21 | 建立第一條手動 transaction 寫入路徑 | 讓 Phase C 不再只讀取交易，而有真正的資料輸入來源 |
+| 2026-03-21 | 建立第一條 normalized CSV transaction 匯入路徑 | 先把通用匯入管線打通，再往銀行/帳本專屬 parser 演進 |

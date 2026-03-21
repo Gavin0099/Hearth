@@ -4,6 +4,7 @@ import { transactionCategories } from "@hearth/shared";
 import { env } from "./env";
 import { AccountsPanel } from "./components/AccountsPanel";
 import { AuthPanel } from "./components/AuthPanel";
+import { ImportPanel } from "./components/ImportPanel";
 import { MonthlyReportPanel } from "./components/MonthlyReportPanel";
 import { TransactionsPanel } from "./components/TransactionsPanel";
 import { getCurrentSession, signInWithGoogle, signOut } from "./lib/auth";
@@ -96,6 +97,10 @@ export function App() {
     setReportRefreshKey((current) => current + 1);
   }
 
+  function handleImported() {
+    setReportRefreshKey((current) => current + 1);
+  }
+
   async function handleSignOut() {
     try {
       setAuthError(null);
@@ -163,6 +168,7 @@ export function App() {
           session={session}
         />
         <MonthlyReportPanel refreshKey={reportRefreshKey} session={session} />
+        <ImportPanel onImported={handleImported} session={session} />
         <TransactionsPanel
           onTransactionCreated={handleTransactionCreated}
           session={session}

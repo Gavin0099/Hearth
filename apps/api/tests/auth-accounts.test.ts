@@ -391,3 +391,93 @@ test("POST /api/transactions creates a manual transaction for an owned account",
     status: "ok",
   });
 });
+
+test("POST /api/import/transactions-csv imports normalized transaction csv rows", async () => {
+  let insertedRows: Array<Record<string, unknown>> = [];
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "transactions") {
+          return {
+            insert: async (values: Array<Record<string, unknown>>) => {
+              insertedRows = values;
+              return { error: null };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set(
+    "file",
+    new File(
+      [
+        "date,amount,currency,category,description\n2026-03-10,-150,TWD,餐飲,Dinner\n2026-03-11,3000,TWD,薪資,Bonus\n",
+      ],
+      "transactions.csv",
+      { type: "text/csv" },
+    ),
+  );
+
+  const response = await app.request(
+    "/api/import/transactions-csv",
+    {
+      method: "POST",
+      body: formData,
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    source: "transactions-csv",
+    imported: 2,
+    skipped: 0,
+    failed: 0,
+    runtime: "cloudflare-worker",
+    persistence: "supabase",
+    status: "ok",
+    errors: [],
+  });
+  assert.deepEqual(insertedRows, [
+    {
+      account_id: "account-1",
+      date: "2026-03-10",
+      amount: -150,
+      currency: "TWD",
+      category: "餐飲",
+      description: "Dinner",
+      source: "csv_import",
+    },
+    {
+      account_id: "account-1",
+      date: "2026-03-11",
+      amount: 3000,
+      currency: "TWD",
+      category: "薪資",
+      description: "Bonus",
+      source: "csv_import",
+    },
+  ]);
+});
