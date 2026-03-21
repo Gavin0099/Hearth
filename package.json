@@ -1,0 +1,20 @@
+{
+  "name": "hearth",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace @hearth/web run dev",
+    "dev:api": "npm --workspace @hearth/api run dev",
+    "deploy:web": "npm --workspace @hearth/web run deploy",
+    "deploy:api": "npm --workspace @hearth/api run deploy",
+    "build": "npm run build --workspaces",
+    "check": "npm run check --workspaces"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
