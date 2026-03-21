@@ -499,6 +499,7 @@ test("POST /api/import/transactions-csv imports normalized transaction csv rows"
     status: "ok",
     errors: [],
     warnings: [],
+    recurringCandidates: [],
   });
   assert.deepEqual(insertedRows, [
     {
@@ -598,6 +599,7 @@ test("POST /api/import/sinopac-tw maps minimal Sinopac csv rows into transaction
     status: "ok",
     errors: [],
     warnings: [],
+    recurringCandidates: [],
   });
   assert.deepEqual(insertedRows, [
     {
@@ -703,6 +705,7 @@ test("POST /api/import/transactions-csv skips duplicate rows by source hash", as
     status: "ok",
     errors: [],
     warnings: [],
+    recurringCandidates: [],
   });
   assert.deepEqual(insertedRows, []);
 });
@@ -780,6 +783,7 @@ test("POST /api/import/excel-monthly imports simplified calendar workbook rows",
     status: "ok",
     errors: [],
     warnings: [],
+    recurringCandidates: [],
   });
   assert.deepEqual(insertedRows, [
     {
@@ -900,6 +904,7 @@ test("POST /api/import/excel-monthly imports horizontal calendar workbook with c
     status: "ok",
     errors: [],
     warnings: [],
+    recurringCandidates: [],
   });
   assert.deepEqual(insertedRows, [
     {
@@ -1031,6 +1036,14 @@ test("POST /api/import/excel-monthly aggregates parsable rows across multiple mo
     warnings: [
       "[March] ignored recurring/sidebar row: 週期支出 / 幼稚園",
     ],
+    recurringCandidates: [
+      {
+        sheet: "March",
+        kind: "recurring_sidebar",
+        section: "週期支出",
+        label: "幼稚園",
+      },
+    ],
   });
   assert.deepEqual(insertedRows, [
     {
@@ -1145,6 +1158,7 @@ test("POST /api/import/excel-monthly expands merged header and category cells be
     status: "ok",
     errors: [],
     warnings: [],
+    recurringCandidates: [],
   });
   assert.deepEqual(insertedRows, [
     {
@@ -1247,6 +1261,7 @@ test("POST /api/import/excel-monthly infers year and month from sheet name when 
     status: "ok",
     errors: [],
     warnings: [],
+    recurringCandidates: [],
   });
   assert.deepEqual(insertedRows, [
     {

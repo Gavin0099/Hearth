@@ -1,3 +1,10 @@
+export type RecurringImportCandidate = {
+  sheet: string;
+  section: string;
+  label: string | null;
+  kind: "recurring_sidebar";
+};
+
 export type TransactionCsvImportResult = {
   source: "transactions-csv" | "sinopac-tw" | "excel-monthly";
   imported: number;
@@ -8,6 +15,7 @@ export type TransactionCsvImportResult = {
   status: "ok";
   errors: string[];
   warnings?: string[];
+  recurringCandidates?: RecurringImportCandidate[];
 };
 
 export type TransactionCsvImportResponse =

@@ -57,10 +57,11 @@ Example:
 - keeps `source = excel_monthly`
 - applies `source_hash` dedupe through the shared import insertion path
 - emits import warnings for recurring/sidebar rows detected inside supported monthly sheets
+- emits structured `recurringCandidates` for recurring/sidebar rows detected inside supported monthly sheets
 
 ## Current limitations
 
-- does not yet convert recurring/sidebar detections into saved recurring-expense templates
+- does not yet persist recurring/sidebar detections into saved recurring-expense templates
 - assumes TWD for this first slice
 - still assumes a controlled left-side boundary pattern rather than arbitrary spreadsheet decoration or formula-heavy layouts
 - still does not evaluate live Excel formulas when the workbook does not contain cached values

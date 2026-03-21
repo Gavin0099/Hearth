@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type {
   CreateTransactionInput,
+  RecurringImportCandidate,
   TransactionCsvImportResponse,
 } from "@hearth/shared";
 import { parseCsv } from "../lib/csv";
@@ -46,6 +47,7 @@ async function importNormalizedRows(
   existingErrors: string[] = [],
   existingSkipped = 0,
   warnings: string[] = [],
+  recurringCandidates: RecurringImportCandidate[] = [],
 ) {
   const withHashes = rows.map((row) => ({
     ...row,
@@ -111,6 +113,7 @@ async function importNormalizedRows(
       status: "ok" as const,
       errors: existingErrors,
       warnings,
+      recurringCandidates,
     },
     status: 200,
   };
@@ -415,7 +418,7 @@ importRoutes.post("/excel-monthly", (c) =>
     }
 
     const buffer = await file.arrayBuffer();
-    const { normalized, errors, skipped, warnings } = parseMonthlyExcel(buffer, accountId);
+    const { normalized, errors, skipped, warnings, recurringCandidates } = parseMonthlyExcel(buffer, accountId);
     if (normalized.length === 0) {
       return c.json<TransactionCsvImportResponse>(
         {
@@ -434,6 +437,7 @@ importRoutes.post("/excel-monthly", (c) =>
       errors,
       skipped,
       warnings,
+      recurringCandidates,
     );
     return c.json<TransactionCsvImportResponse>(result.response, result.status as 200 | 500);
   })(),

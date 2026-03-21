@@ -90,6 +90,9 @@ export function ImportPanel({ session, onImported }: ImportPanelProps) {
     setMessage(
       [
         `匯入完成：成功 ${result.imported} 筆，跳過 ${result.skipped} 筆，失敗 ${result.failed} 筆。`,
+        result.recurringCandidates?.length
+          ? `辨識到 ${result.recurringCandidates.length} 筆週期/側欄候選。`
+          : null,
         result.warnings?.length ? `提醒：${result.warnings.join("；")}` : null,
       ].filter(Boolean).join(" "),
     );

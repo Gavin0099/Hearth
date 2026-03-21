@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import type { CreateTransactionInput } from "@hearth/shared";
+import type { CreateTransactionInput, RecurringImportCandidate } from "@hearth/shared";
 
 const categoryAliases = ["分類", "category"];
 const descriptionAliases = ["項目", "摘要", "內容", "description"];
@@ -116,7 +116,10 @@ function hasValuesBeforeIndex(row: unknown[], endExclusive: number) {
   return row.slice(0, endExclusive).some((cell) => normalizeText(cell) !== "");
 }
 
-function detectSidebarCandidate(row: unknown[], endExclusive: number) {
+function detectSidebarCandidate(
+  row: unknown[],
+  endExclusive: number,
+): Omit<RecurringImportCandidate, "sheet"> | null {
   const leftCells = row.slice(0, endExclusive).map((cell) => normalizeText(cell)).filter(Boolean);
   if (leftCells.length === 0) {
     return null;
@@ -130,9 +133,17 @@ function detectSidebarCandidate(row: unknown[], endExclusive: number) {
   }
 
   const detail = leftCells.find((cell) => cell !== matchedSection) ?? null;
-  return detail
-    ? `ignored recurring/sidebar row: ${matchedSection} / ${detail}`
-    : `ignored recurring/sidebar row: ${matchedSection}`;
+  return {
+    kind: "recurring_sidebar",
+    section: matchedSection,
+    label: detail,
+  };
+}
+
+function formatSidebarWarning(candidate: Omit<RecurringImportCandidate, "sheet">) {
+  return candidate.label
+    ? `ignored recurring/sidebar row: ${candidate.section} / ${candidate.label}`
+    : `ignored recurring/sidebar row: ${candidate.section}`;
 }
 
 function parseSheetDateContext(sheetName: string): DateContext {
@@ -234,6 +245,7 @@ function parseCalendarPairColumns(
   const normalized: CreateTransactionInput[] = [];
   const errors: string[] = [];
   const warnings = new Set<string>();
+  const recurringCandidates = new Map<string, RecurringImportCandidate>();
   let skipped = 0;
   let activeCategory: string | null = null;
 
@@ -251,12 +263,16 @@ function parseCalendarPairColumns(
       ({ itemIndex, amountIndex }) =>
         normalizeText(row[itemIndex]) !== "" || normalizeAmount(row[amountIndex]) !== null,
     );
-    const sidebarWarning = detectSidebarCandidate(row, leftBoundary);
+    const sidebarCandidate = detectSidebarCandidate(row, leftBoundary);
 
     if (leftLabel && !hasCalendarValues) {
       activeCategory = normalizeCategory(leftLabel);
-      if (sidebarWarning) {
-        warnings.add(sidebarWarning);
+      if (sidebarCandidate) {
+        warnings.add(formatSidebarWarning(sidebarCandidate));
+        recurringCandidates.set(
+          `${sidebarCandidate.section}::${sidebarCandidate.label ?? ""}`,
+          { ...sidebarCandidate, sheet: sheetName },
+        );
       }
       skipped += 1;
       return;
@@ -290,8 +306,12 @@ function parseCalendarPairColumns(
     if (emitted === 0 && hasCalendarValues) {
       errors.push(`line ${line}: row has no importable calendar entries`);
     } else if (!hasCalendarValues && hasValuesBeforeIndex(row, leftBoundary)) {
-      if (sidebarWarning) {
-        warnings.add(sidebarWarning);
+      if (sidebarCandidate) {
+        warnings.add(formatSidebarWarning(sidebarCandidate));
+        recurringCandidates.set(
+          `${sidebarCandidate.section}::${sidebarCandidate.label ?? ""}`,
+          { ...sidebarCandidate, sheet: sheetName },
+        );
       }
       skipped += 1;
     } else if (emitted === 0) {
@@ -303,6 +323,7 @@ function parseCalendarPairColumns(
     normalized,
     errors,
     warnings: [...warnings],
+    recurringCandidates: [...recurringCandidates.values()],
     skipped,
     sheetName: null as string | null,
   };
@@ -328,6 +349,7 @@ function parseGridColumns(
   const normalized: CreateTransactionInput[] = [];
   const errors: string[] = [];
   const warnings = new Set<string>();
+  const recurringCandidates = new Map<string, RecurringImportCandidate>();
   let skipped = 0;
   let activeCategory: string | null = null;
 
@@ -341,12 +363,16 @@ function parseGridColumns(
     const rawCategory = normalizeText(row[categoryIndex]);
     const description = normalizeText(row[descriptionIndex]);
     const hasAmounts = rowHasAmounts(row, dateColumns);
-    const sidebarWarning = detectSidebarCandidate(row, firstDateIndex);
+    const sidebarCandidate = detectSidebarCandidate(row, firstDateIndex);
 
     if (rawCategory && !description && !hasAmounts) {
       activeCategory = normalizeCategory(rawCategory);
-      if (sidebarWarning) {
-        warnings.add(sidebarWarning);
+      if (sidebarCandidate) {
+        warnings.add(formatSidebarWarning(sidebarCandidate));
+        recurringCandidates.set(
+          `${sidebarCandidate.section}::${sidebarCandidate.label ?? ""}`,
+          { ...sidebarCandidate, sheet: sheetName },
+        );
       }
       skipped += 1;
       return;
@@ -380,8 +406,12 @@ function parseGridColumns(
     });
 
     if (emitted === 0 && hasValuesBeforeIndex(row, firstDateIndex)) {
-      if (sidebarWarning) {
-        warnings.add(sidebarWarning);
+      if (sidebarCandidate) {
+        warnings.add(formatSidebarWarning(sidebarCandidate));
+        recurringCandidates.set(
+          `${sidebarCandidate.section}::${sidebarCandidate.label ?? ""}`,
+          { ...sidebarCandidate, sheet: sheetName },
+        );
       }
       skipped += 1;
     } else if (emitted === 0) {
@@ -393,6 +423,7 @@ function parseGridColumns(
     normalized,
     errors,
     warnings: [...warnings],
+    recurringCandidates: [...recurringCandidates.values()],
     skipped,
     sheetName: null as string | null,
   };
@@ -463,6 +494,7 @@ export function parseMonthlyExcel(buffer: ArrayBuffer, accountId: string) {
   const normalized: CreateTransactionInput[] = [];
   const errors: string[] = [];
   const warnings = new Set<string>();
+  const recurringCandidates = new Map<string, RecurringImportCandidate>();
   let skipped = 0;
   const parsedSheets: string[] = [];
 
@@ -478,6 +510,12 @@ export function parseMonthlyExcel(buffer: ArrayBuffer, accountId: string) {
     normalized.push(...result.normalized);
     errors.push(...result.errors.map((message) => `[${sheetName}] ${message}`));
     result.warnings?.forEach((warning) => warnings.add(`[${sheetName}] ${warning}`));
+    result.recurringCandidates?.forEach((candidate: RecurringImportCandidate) => {
+      recurringCandidates.set(
+        `${candidate.sheet}::${candidate.section}::${candidate.label ?? ""}`,
+        candidate,
+      );
+    });
     skipped += result.skipped;
     parsedSheets.push(sheetName);
   });
@@ -495,6 +533,7 @@ export function parseMonthlyExcel(buffer: ArrayBuffer, accountId: string) {
     normalized,
     errors,
     warnings: [...warnings],
+    recurringCandidates: [...recurringCandidates.values()],
     skipped,
     sheetName: parsedSheets.join(", "),
   };
