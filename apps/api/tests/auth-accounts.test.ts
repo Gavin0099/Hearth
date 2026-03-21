@@ -1160,3 +1160,104 @@ test("POST /api/import/excel-monthly expands merged header and category cells be
     },
   ]);
 });
+
+test("POST /api/import/excel-monthly infers year and month from sheet name when headers use day-only dates", async () => {
+  let insertedRows: Array<Record<string, unknown>> = [];
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "transactions") {
+          return {
+            select: () => ({
+              in: async () => ({
+                data: [],
+                error: null,
+              }),
+            }),
+            insert: async (values: Array<Record<string, unknown>>) => {
+              insertedRows = values;
+              return { error: null };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set(
+    "file",
+    createExcelMonthlyWorkbook([
+      {
+        name: "2026-05",
+        rows: [
+          ["固定支出", "房租", ""],
+          ["分類", "項目", "1", "2"],
+          ["飲食費用", "早餐", 70, 90],
+        ],
+      },
+    ]),
+  );
+
+  const response = await app.request(
+    "/api/import/excel-monthly",
+    {
+      method: "POST",
+      body: formData,
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    source: "excel-monthly",
+    imported: 2,
+    skipped: 0,
+    failed: 0,
+    runtime: "cloudflare-worker",
+    persistence: "supabase",
+    status: "ok",
+    errors: [],
+  });
+  assert.deepEqual(insertedRows, [
+    {
+      account_id: "account-1",
+      date: "2026-05-01",
+      amount: -70,
+      currency: "TWD",
+      category: "餐飲",
+      description: "早餐",
+      source: "excel_monthly",
+      source_hash: insertedRows[0]?.source_hash,
+    },
+    {
+      account_id: "account-1",
+      date: "2026-05-02",
+      amount: -90,
+      currency: "TWD",
+      category: "餐飲",
+      description: "早餐",
+      source: "excel_monthly",
+      source_hash: insertedRows[1]?.source_hash,
+    },
+  ]);
+});

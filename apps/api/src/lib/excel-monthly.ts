@@ -12,6 +12,11 @@ const categoryMap: Record<string, string> = {
   "交通花費": "交通",
 };
 
+type DateContext = {
+  year?: number;
+  month?: number;
+};
+
 function normalizeText(value: unknown) {
   return String(value ?? "").trim();
 }
@@ -28,7 +33,7 @@ function isEmptyRow(row: unknown[]) {
   return row.every((cell) => normalizeText(cell) === "");
 }
 
-function parseDateHeader(value: unknown, fallbackYear?: number) {
+function parseDateHeader(value: unknown, context: DateContext = {}) {
   if (typeof value === "number" && Number.isFinite(value)) {
     const parsed = XLSX.SSF.parse_date_code(value);
     if (parsed) {
@@ -48,9 +53,15 @@ function parseDateHeader(value: unknown, fallbackYear?: number) {
   }
 
   const monthDayMatch = text.match(/^(\d{1,2})[\/-](\d{1,2})$/);
-  if (monthDayMatch && fallbackYear) {
+  if (monthDayMatch && context.year) {
     const [, month, day] = monthDayMatch;
-    return `${fallbackYear}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    return `${context.year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+
+  const dayOnlyMatch = text.match(/^(\d{1,2})$/);
+  if (dayOnlyMatch && context.year && context.month) {
+    const [, day] = dayOnlyMatch;
+    return `${context.year}-${String(context.month).padStart(2, "0")}-${day.padStart(2, "0")}`;
   }
 
   return null;
@@ -97,21 +108,52 @@ function hasValuesBeforeIndex(row: unknown[], endExclusive: number) {
   return row.slice(0, endExclusive).some((cell) => normalizeText(cell) !== "");
 }
 
-function getFallbackYear(headerRow: unknown[]) {
+function parseSheetDateContext(sheetName: string): DateContext {
+  const fullMatch = sheetName.match(/(20\d{2})[^\d]?(\d{1,2})/);
+  if (fullMatch) {
+    return {
+      year: Number(fullMatch[1]),
+      month: Number(fullMatch[2]),
+    };
+  }
+
+  const monthMatch = sheetName.match(/(\d{1,2})\s*月/);
+  if (monthMatch) {
+    return {
+      month: Number(monthMatch[1]),
+    };
+  }
+
+  return {};
+}
+
+function getDateContext(headerRow: unknown[], sheetName: string) {
+  const sheetContext = parseSheetDateContext(sheetName);
   const firstExplicitYear = headerRow
     .map((cell) => normalizeText(cell))
     .map((cell) => cell.match(/^(\d{4})[\/-]/)?.[1] ?? null)
     .find(Boolean);
 
-  return firstExplicitYear ? Number(firstExplicitYear) : undefined;
+  const firstExplicitMonth = headerRow
+    .map((cell) => normalizeText(cell))
+    .map((cell) => {
+      const match = cell.match(/^\d{4}[\/-](\d{1,2})[\/-]/) ?? cell.match(/^(\d{1,2})[\/-]\d{1,2}$/);
+      return match?.[1] ?? null;
+    })
+    .find(Boolean);
+
+  return {
+    year: firstExplicitYear ? Number(firstExplicitYear) : sheetContext.year,
+    month: firstExplicitMonth ? Number(firstExplicitMonth) : sheetContext.month,
+  };
 }
 
-function buildDateColumns(headerRow: unknown[]) {
-  const fallbackYear = getFallbackYear(headerRow);
+function buildDateColumns(headerRow: unknown[], sheetName: string) {
+  const dateContext = getDateContext(headerRow, sheetName);
   return headerRow
     .map((cell, index) => ({
       index,
-      date: parseDateHeader(cell, fallbackYear),
+      date: parseDateHeader(cell, dateContext),
     }))
     .filter((entry): entry is { index: number; date: string } => Boolean(entry.date));
 }
@@ -120,6 +162,7 @@ function parseCalendarPairColumns(
   rows: unknown[][],
   headerRowIndex: number,
   accountId: string,
+  sheetName: string,
 ) {
   const headerRow = rows[headerRowIndex] as unknown[];
   const pairHeaderRow = rows[headerRowIndex + 1];
@@ -127,13 +170,13 @@ function parseCalendarPairColumns(
     return null;
   }
 
-  const fallbackYear = getFallbackYear(headerRow);
+  const dateContext = getDateContext(headerRow, sheetName);
   const normalizedItemAliases = itemAliases.map((alias) => alias.toLowerCase());
   const normalizedAmountAliases = amountAliases.map((alias) => alias.toLowerCase());
 
   const pairColumns = headerRow
     .map((cell, index) => {
-      const date = parseDateHeader(cell, fallbackYear);
+      const date = parseDateHeader(cell, dateContext);
       if (!date) {
         return null;
       }
@@ -233,9 +276,10 @@ function parseGridColumns(
   rows: unknown[][],
   headerRowIndex: number,
   accountId: string,
+  sheetName: string,
 ) {
   const headerRow = rows[headerRowIndex] as unknown[];
-  const dateColumns = buildDateColumns(headerRow);
+  const dateColumns = buildDateColumns(headerRow, sheetName);
 
   if (dateColumns.length === 0) {
     return null;
@@ -309,21 +353,21 @@ function parseGridColumns(
   };
 }
 
-function parseMonthlySheet(rows: unknown[][], accountId: string) {
+function parseMonthlySheet(rows: unknown[][], accountId: string, sheetName: string) {
   const headerRowIndex = rows.findIndex((row) =>
-    Array.isArray(row) && row.some((cell) => parseDateHeader(cell) !== null),
+    Array.isArray(row) && row.some((cell) => parseDateHeader(cell, parseSheetDateContext(sheetName)) !== null),
   );
 
   if (headerRowIndex < 0) {
     return null;
   }
 
-  const calendarPairResult = parseCalendarPairColumns(rows, headerRowIndex, accountId);
+  const calendarPairResult = parseCalendarPairColumns(rows, headerRowIndex, accountId, sheetName);
   if (calendarPairResult) {
     return calendarPairResult;
   }
 
-  return parseGridColumns(rows, headerRowIndex, accountId);
+  return parseGridColumns(rows, headerRowIndex, accountId, sheetName);
 }
 
 function sheetToRows(sheet: XLSX.WorkSheet) {
@@ -380,7 +424,7 @@ export function parseMonthlyExcel(buffer: ArrayBuffer, accountId: string) {
     const sheet = workbook.Sheets[sheetName];
     const rows = sheetToRows(sheet);
 
-    const result = parseMonthlySheet(rows, accountId);
+    const result = parseMonthlySheet(rows, accountId, sheetName);
     if (!result) {
       return;
     }
