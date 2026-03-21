@@ -4,6 +4,7 @@ import { transactionCategories } from "@hearth/shared";
 import { env } from "./env";
 import { AccountsPanel } from "./components/AccountsPanel";
 import { AuthPanel } from "./components/AuthPanel";
+import { MonthlyReportPanel } from "./components/MonthlyReportPanel";
 import { getCurrentSession, signInWithGoogle, signOut } from "./lib/auth";
 import { getSupabaseBrowserClient } from "./lib/supabase";
 
@@ -155,6 +156,7 @@ export function App() {
           onSignOut={handleSignOut}
           session={session}
         />
+        <MonthlyReportPanel session={session} />
         <AccountsPanel session={session} />
         <article className="panel">
           <h2>資料匯入管線</h2>

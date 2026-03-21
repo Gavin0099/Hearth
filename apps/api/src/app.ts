@@ -32,7 +32,7 @@ export type AccountsInsertQuery = {
 };
 
 export type SupabaseAdminClient = {
-  from: (table: string) => AccountsQuery;
+  from: (table: string) => any;
 };
 
 export type AppDependencies = {

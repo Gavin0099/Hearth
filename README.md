@@ -48,3 +48,9 @@ This repo currently contains the initial implementation foundation:
 - add the local and production redirect URLs for Google OAuth
 - bind Worker secrets in Cloudflare
 - connect the route stubs to real queries, imports, and scheduled jobs
+
+## Current implemented slices
+
+- auth and accounts flow
+- local executable verification for auth/accounts/report routes
+- first monthly report aggregation slice backed by `transactions`

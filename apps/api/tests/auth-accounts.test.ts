@@ -212,3 +212,106 @@ test("POST /api/accounts creates a new account", async () => {
     status: "ok",
   });
 });
+
+test("GET /api/report/monthly summarizes income, expense, categories, and daily totals", async () => {
+  const transactions = [
+    {
+      id: "txn-1",
+      account_id: "account-1",
+      date: "2026-03-02",
+      amount: -120,
+      currency: "TWD",
+      category: "餐飲",
+      description: "Lunch",
+      source: "manual",
+      source_hash: null,
+      created_at: "2026-03-21T00:00:00Z",
+    },
+    {
+      id: "txn-2",
+      account_id: "account-1",
+      date: "2026-03-02",
+      amount: 5000,
+      currency: "TWD",
+      category: "薪資",
+      description: "Income",
+      source: "manual",
+      source_hash: null,
+      created_at: "2026-03-21T00:00:00Z",
+    },
+    {
+      id: "txn-3",
+      account_id: "account-1",
+      date: "2026-03-03",
+      amount: -80,
+      currency: "TWD",
+      category: "交通",
+      description: "Metro",
+      source: "manual",
+      source_hash: null,
+      created_at: "2026-03-21T00:00:00Z",
+    },
+  ];
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "transactions") {
+          return {
+            select: () => ({
+              in: () => ({
+                gte: () => ({
+                  lte: () => ({
+                    order: async () => ({
+                      data: transactions,
+                      error: null,
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/report/monthly?year=2026&month=3", {}, env);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    year: 2026,
+    month: 3,
+    provider: "supabase",
+    status: "ok",
+    summary: {
+      income: 5000,
+      expense: 200,
+      transactionCount: 3,
+      categories: [
+        { category: "餐飲", amount: 120 },
+        { category: "交通", amount: 80 },
+      ],
+      dailySeries: [
+        { date: "2026-03-02", expense: 120, income: 5000 },
+        { date: "2026-03-03", expense: 80, income: 0 },
+      ],
+    },
+  });
+});
