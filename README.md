@@ -58,3 +58,4 @@ This repo currently contains the initial implementation foundation:
 - first normalized CSV transaction import flow
 - first Sinopac-specific transaction CSV mapping layer
 - first Excel monthly workbook import slice
+- first recurring template data path

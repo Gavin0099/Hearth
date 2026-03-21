@@ -82,3 +82,18 @@ create table if not exists dividends (
   source_hash text unique,
   created_at timestamptz not null default now()
 );
+
+create table if not exists recurring_templates (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users,
+  name text not null,
+  category text,
+  amount numeric(12, 2),
+  currency text not null default 'TWD',
+  cadence text not null default 'monthly',
+  anchor_day integer,
+  source_kind text not null default 'manual',
+  source_section text,
+  notes text,
+  created_at timestamptz not null default now()
+);

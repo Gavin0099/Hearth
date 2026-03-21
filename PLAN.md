@@ -68,13 +68,14 @@
 - [x] 建立第一條 normalized CSV transaction 匯入路徑
 - [x] 建立第一個 `sinopac-tw` 銀行專屬 mapping 切片
 - [x] 建立第一個 `excel-monthly` Excel 匯入切片
+- [x] 建立第一條 recurring template 正式資料路徑
 - [ ] 建立 repo-specific engineering governance baseline
 
 ### 接下來
 
 1. 建立 repo-specific engineering governance baseline
-2. 擴大 `transactions` 路徑，加入更完整的歷史列表與驗證
-3. 把 `excel-monthly` 的 recurringCandidates 接成真正模板資料流
+2. 把 `excel-monthly` 的 recurringCandidates 接成真正模板建立動作
+3. 擴大 `transactions` 路徑，加入更完整的歷史列表與驗證
 4. 視需要補前端端到端驗證
 
 ---
@@ -113,6 +114,7 @@
 - [x] normalized CSV 匯入入口
 - [x] 第一個銀行專屬 mapping：`sinopac-tw`
 - [x] 第一個 `excel-monthly` 匯入切片
+- [x] recurring template list/create slice
 - [ ] 更完整的銀行 / 信用卡匯入入口
 - [ ] 月帳本 Excel parser recurring template / formula-heavy workbook 擴充
 - [x] 月度收支報表 API 與 dashboard 第一版骨架
@@ -175,3 +177,4 @@
 | 2026-03-21 | 擴充 `excel-monthly` 支援由 sheet 名稱推回完整日期 | 讓 header 只放 day number 的月帳本也能被匯入 |
 | 2026-03-21 | 擴充 `excel-monthly` 回傳 recurring/sidebar warnings | 讓固定區塊被跳過時有可見訊號，方便後續接成週期支出模板 |
 | 2026-03-21 | 擴充 `excel-monthly` 回傳結構化 recurring candidates | 讓後續 recurring template 不必重跑 parser 或重做辨識邏輯 |
+| 2026-03-21 | 建立 recurring template 正式資料路徑 | 讓固定支出與 Excel recurring candidates 有正式可存的 API / schema / UI 入口 |

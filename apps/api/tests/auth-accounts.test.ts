@@ -1286,3 +1286,124 @@ test("POST /api/import/excel-monthly infers year and month from sheet name when 
     },
   ]);
 });
+
+test("GET /api/recurring-templates returns user-scoped recurring template list", async () => {
+  const recurringTemplates = [
+    {
+      id: "rt-1",
+      user_id: "user-1",
+      name: "房租",
+      category: "固定支出",
+      amount: 12000,
+      currency: "TWD",
+      cadence: "monthly",
+      anchor_day: 5,
+      source_kind: "manual",
+      source_section: null,
+      notes: null,
+      created_at: "2026-03-21T00:00:00Z",
+    },
+  ];
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "recurring_templates") {
+          return {
+            select: () => ({
+              eq: () => ({
+                order: async () => ({
+                  data: recurringTemplates,
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/recurring-templates", {}, env);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    count: 1,
+    items: recurringTemplates,
+    status: "ok",
+  });
+});
+
+test("POST /api/recurring-templates creates a recurring template", async () => {
+  const createdTemplate = {
+    id: "rt-2",
+    user_id: "user-1",
+    name: "幼稚園",
+    category: "教育",
+    amount: 11000,
+    currency: "TWD",
+    cadence: "monthly",
+    anchor_day: 10,
+    source_kind: "excel_sidebar",
+    source_section: "週期支出",
+    notes: "from excel candidate",
+    created_at: "2026-03-21T00:00:00Z",
+  };
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "recurring_templates") {
+          return {
+            insert: () => ({
+              select: () => ({
+                single: async () => ({
+                  data: createdTemplate,
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request(
+    "/api/recurring-templates",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        name: "幼稚園",
+        category: "教育",
+        amount: 11000,
+        anchor_day: 10,
+        source_kind: "excel_sidebar",
+        source_section: "週期支出",
+        notes: "from excel candidate",
+      }),
+      headers: {
+        "content-type": "application/json",
+      },
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    count: 1,
+    items: [createdTemplate],
+    status: "ok",
+  });
+});

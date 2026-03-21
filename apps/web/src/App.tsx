@@ -6,6 +6,7 @@ import { AccountsPanel } from "./components/AccountsPanel";
 import { AuthPanel } from "./components/AuthPanel";
 import { ImportPanel } from "./components/ImportPanel";
 import { MonthlyReportPanel } from "./components/MonthlyReportPanel";
+import { RecurringTemplatesPanel } from "./components/RecurringTemplatesPanel";
 import { TransactionsPanel } from "./components/TransactionsPanel";
 import { getCurrentSession, signInWithGoogle, signOut } from "./lib/auth";
 import { getSupabaseBrowserClient } from "./lib/supabase";
@@ -169,6 +170,7 @@ export function App() {
         />
         <MonthlyReportPanel refreshKey={reportRefreshKey} session={session} />
         <ImportPanel onImported={handleImported} session={session} />
+        <RecurringTemplatesPanel session={session} />
         <TransactionsPanel
           onTransactionCreated={handleTransactionCreated}
           session={session}
