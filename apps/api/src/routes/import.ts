@@ -5,6 +5,7 @@ import type {
 } from "@hearth/shared";
 import { parseCsv } from "../lib/csv";
 import { parseSinopacTransactionsCsv } from "../lib/sinopac";
+import { buildTransactionSourceHash } from "../lib/transaction-hash";
 import type { ApiEnv } from "../types";
 
 const createImportStub = (source: string) => ({
@@ -34,6 +35,81 @@ async function resolveOwnedAccountIds(
     supabase,
     ownedAccounts,
     accountsError,
+  };
+}
+
+async function importNormalizedRows(
+  rows: CreateTransactionInput[],
+  source: "transactions-csv" | "sinopac-tw",
+  supabase: any,
+  existingErrors: string[] = [],
+  existingSkipped = 0,
+) {
+  const withHashes = rows.map((row) => ({
+    ...row,
+    source_hash: buildTransactionSourceHash(row),
+  }));
+
+  const sourceHashes = withHashes.map((row) => row.source_hash);
+  const { data: existing, error: existingError } = await supabase
+    .from("transactions")
+    .select("source_hash")
+    .in("source_hash", sourceHashes);
+
+  if (existingError) {
+    return {
+      response: {
+        code: "database_error" as const,
+        error: existingError.message,
+        status: "error" as const,
+      },
+      status: 500,
+    };
+  }
+
+  const existingHashes = new Set(
+    (existing ?? []).map((item: { source_hash: string | null }) => item.source_hash).filter(Boolean),
+  );
+  const freshRows = withHashes.filter((row) => !existingHashes.has(row.source_hash));
+
+  if (freshRows.length > 0) {
+    const { error } = await supabase.from("transactions").insert(
+      freshRows.map((row) => ({
+        account_id: row.account_id,
+        date: row.date,
+        amount: row.amount,
+        currency: row.currency ?? "TWD",
+        category: row.category ?? null,
+        description: row.description ?? null,
+        source: row.source ?? source,
+        source_hash: row.source_hash,
+      })),
+    );
+
+    if (error) {
+      return {
+        response: {
+          code: "database_error" as const,
+          error: error.message,
+          status: "error" as const,
+        },
+        status: 500,
+      };
+    }
+  }
+
+  return {
+    response: {
+      source,
+      imported: freshRows.length,
+      skipped: existingSkipped + (withHashes.length - freshRows.length),
+      failed: existingErrors.length,
+      runtime: "cloudflare-worker" as const,
+      persistence: "supabase" as const,
+      status: "ok" as const,
+      errors: existingErrors,
+    },
+    status: 200,
   };
 }
 
@@ -163,39 +239,13 @@ importRoutes.post("/transactions-csv", async (c) => {
     );
   }
 
-  const { error } = await supabase.from("transactions").insert(
-    normalized.map((row) => ({
-      account_id: row.account_id,
-      date: row.date,
-      amount: row.amount,
-      currency: row.currency ?? "TWD",
-      category: row.category ?? null,
-      description: row.description ?? null,
-      source: row.source ?? "csv_import",
-    })),
-  );
-
-  if (error) {
-    return c.json<TransactionCsvImportResponse>(
-      {
-        code: "database_error",
-        error: error.message,
-        status: "error",
-      },
-      500,
-    );
-  }
-
-  return c.json<TransactionCsvImportResponse>({
-    source: "transactions-csv",
-    imported: normalized.length,
-    skipped: 0,
-    failed: errors.length,
-    runtime: "cloudflare-worker",
-    persistence: "supabase",
-    status: "ok",
+  const result = await importNormalizedRows(
+    normalized,
+    "transactions-csv",
+    supabase,
     errors,
-  });
+  );
+  return c.json<TransactionCsvImportResponse>(result.response, result.status as 200 | 500);
 });
 
 importRoutes.post("/sinopac-tw", async (c) => {
@@ -269,7 +319,7 @@ importRoutes.post("/sinopac-tw", async (c) => {
   }
 
   const text = await file.text();
-  const { normalized, errors } = parseSinopacTransactionsCsv(text, accountId);
+  const { normalized, errors, skipped } = parseSinopacTransactionsCsv(text, accountId);
   if (normalized.length === 0) {
     return c.json<TransactionCsvImportResponse>(
       {
@@ -281,39 +331,14 @@ importRoutes.post("/sinopac-tw", async (c) => {
     );
   }
 
-  const { error } = await supabase.from("transactions").insert(
-    normalized.map((row) => ({
-      account_id: row.account_id,
-      date: row.date,
-      amount: row.amount,
-      currency: row.currency ?? "TWD",
-      category: row.category ?? null,
-      description: row.description ?? null,
-      source: row.source ?? "sinopac_bank",
-    })),
-  );
-
-  if (error) {
-    return c.json<TransactionCsvImportResponse>(
-      {
-        code: "database_error",
-        error: error.message,
-        status: "error",
-      },
-      500,
-    );
-  }
-
-  return c.json<TransactionCsvImportResponse>({
-    source: "sinopac-tw",
-    imported: normalized.length,
-    skipped: 0,
-    failed: errors.length,
-    runtime: "cloudflare-worker",
-    persistence: "supabase",
-    status: "ok",
+  const result = await importNormalizedRows(
+    normalized,
+    "sinopac-tw",
+    supabase,
     errors,
-  });
+    skipped,
+  );
+  return c.json<TransactionCsvImportResponse>(result.response, result.status as 200 | 500);
 });
 importRoutes.post("/excel-monthly", (c) =>
   c.json(createImportStub("excel-monthly")),

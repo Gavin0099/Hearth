@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createApp, type AuthenticatedUser, type SupabaseAdminClient } from "../src/app";
+import { buildTransactionSourceHash } from "../src/lib/transaction-hash";
 import type { WorkerBindings } from "../src/types";
 
 const env: WorkerBindings = {
@@ -415,6 +416,12 @@ test("POST /api/import/transactions-csv imports normalized transaction csv rows"
 
         if (table === "transactions") {
           return {
+            select: () => ({
+              in: async () => ({
+                data: [],
+                error: null,
+              }),
+            }),
             insert: async (values: Array<Record<string, unknown>>) => {
               insertedRows = values;
               return { error: null };
@@ -469,6 +476,7 @@ test("POST /api/import/transactions-csv imports normalized transaction csv rows"
       category: "餐飲",
       description: "Dinner",
       source: "csv_import",
+      source_hash: insertedRows[0]?.source_hash,
     },
     {
       account_id: "account-1",
@@ -478,6 +486,7 @@ test("POST /api/import/transactions-csv imports normalized transaction csv rows"
       category: "薪資",
       description: "Bonus",
       source: "csv_import",
+      source_hash: insertedRows[1]?.source_hash,
     },
   ]);
 });
@@ -505,6 +514,12 @@ test("POST /api/import/sinopac-tw maps minimal Sinopac csv rows into transaction
 
         if (table === "transactions") {
           return {
+            select: () => ({
+              in: async () => ({
+                data: [],
+                error: null,
+              }),
+            }),
             insert: async (values: Array<Record<string, unknown>>) => {
               insertedRows = values;
               return { error: null };
@@ -523,7 +538,7 @@ test("POST /api/import/sinopac-tw maps minimal Sinopac csv rows into transaction
     "file",
     new File(
       [
-        "日期,金額,摘要,幣別,收支別\n2026/03/12,120,午餐,TWD,支出\n2026/03/13,1500,退款,TWD,收入\n",
+        "日期,金額,摘要,幣別,收支別\n2026/03/12,120,午餐,TWD,支出\n小計,,,,\n2026/03/13,1500,退款,TWD,收入\n",
       ],
       "sinopac.csv",
       { type: "text/csv" },
@@ -543,7 +558,7 @@ test("POST /api/import/sinopac-tw maps minimal Sinopac csv rows into transaction
   assert.deepEqual(await response.json(), {
     source: "sinopac-tw",
     imported: 2,
-    skipped: 0,
+    skipped: 1,
     failed: 0,
     runtime: "cloudflare-worker",
     persistence: "supabase",
@@ -559,6 +574,7 @@ test("POST /api/import/sinopac-tw maps minimal Sinopac csv rows into transaction
       category: "餐飲",
       description: "午餐",
       source: "sinopac_bank",
+      source_hash: insertedRows[0]?.source_hash,
     },
     {
       account_id: "account-1",
@@ -568,6 +584,90 @@ test("POST /api/import/sinopac-tw maps minimal Sinopac csv rows into transaction
       category: "其他",
       description: "退款",
       source: "sinopac_bank",
+      source_hash: insertedRows[1]?.source_hash,
     },
   ]);
+});
+
+test("POST /api/import/transactions-csv skips duplicate rows by source hash", async () => {
+  let insertedRows: Array<Record<string, unknown>> = [];
+  const existingHash = buildTransactionSourceHash({
+    account_id: "account-1",
+    date: "2026-03-10",
+    amount: -150,
+    currency: "TWD",
+    category: "餐飲",
+    description: "Dinner",
+    source: "csv_import",
+  });
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "transactions") {
+          return {
+            select: () => ({
+              in: async () => ({
+                data: [{ source_hash: existingHash }],
+                error: null,
+              }),
+            }),
+            insert: async (values: Array<Record<string, unknown>>) => {
+              insertedRows = values;
+              return { error: null };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set(
+    "file",
+    new File(
+      ["date,amount,currency,category,description\n2026-03-10,-150,TWD,餐飲,Dinner\n"],
+      "transactions.csv",
+      { type: "text/csv" },
+    ),
+  );
+  const response = await app.request(
+    "/api/import/transactions-csv",
+    {
+      method: "POST",
+      body: formData,
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    source: "transactions-csv",
+    imported: 0,
+    skipped: 1,
+    failed: 0,
+    runtime: "cloudflare-worker",
+    persistence: "supabase",
+    status: "ok",
+    errors: [],
+  });
+  assert.deepEqual(insertedRows, []);
 });

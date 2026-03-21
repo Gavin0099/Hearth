@@ -8,6 +8,7 @@ const amountAliases = ["金額", "交易金額", "amount"];
 const descriptionAliases = ["摘要", "說明", "備註", "description"];
 const currencyAliases = ["幣別", "currency"];
 const typeAliases = ["收支別", "方向", "type"];
+const ignoredMarkerAliases = ["小計", "合計", "summary"];
 
 function getValue(row: SinopacRow, aliases: string[]) {
   for (const alias of aliases) {
@@ -17,6 +18,13 @@ function getValue(row: SinopacRow, aliases: string[]) {
     }
   }
   return "";
+}
+
+function shouldIgnoreRow(row: SinopacRow) {
+  const values = Object.values(row).map((value) => String(value).trim());
+  return values.some((value) =>
+    ignoredMarkerAliases.some((marker) => value.includes(marker)),
+  );
 }
 
 function inferCategory(description: string) {
@@ -32,7 +40,7 @@ function inferCategory(description: string) {
 }
 
 function normalizeAmount(rawAmount: string, rawDirection: string) {
-  const cleaned = rawAmount.replace(/,/g, "").trim();
+  const cleaned = rawAmount.replace(/[,\s]/g, "").trim();
   const numeric = Number(cleaned);
   if (!Number.isFinite(numeric) || numeric === 0) {
     return null;
@@ -62,9 +70,15 @@ export function parseSinopacTransactionsCsv(text: string, accountId: string) {
   const rows = parseCsv(text);
   const normalized: CreateTransactionInput[] = [];
   const errors: string[] = [];
+  let skipped = 0;
 
   rows.forEach((row, index) => {
     const line = index + 2;
+    if (shouldIgnoreRow(row)) {
+      skipped += 1;
+      return;
+    }
+
     const date = getValue(row, dateAliases).replace(/\//g, "-");
     const description = getValue(row, descriptionAliases);
     const rawAmount = getValue(row, amountAliases);
@@ -96,5 +110,6 @@ export function parseSinopacTransactionsCsv(text: string, accountId: string) {
   return {
     normalized,
     errors,
+    skipped,
   };
 }

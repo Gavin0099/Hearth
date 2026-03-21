@@ -25,6 +25,8 @@ Optional columns:
 - normalizes dates from `YYYY/MM/DD` to `YYYY-MM-DD`
 - infers sign from `收支別` when present
 - infers category from known transaction keywords
+- ignores simple summary/subtotal rows
+- computes `source_hash` and skips duplicates that already exist
 - inserts normalized rows into `transactions`
 
 ## Why this is intentionally small
@@ -38,4 +40,4 @@ This is not yet the full real-world Sinopac parser. It is the first specializati
 
 - support additional real Sinopac column names
 - handle encoding edge cases such as Big5
-- add duplicate detection through `source_hash`
+- tolerate more real export quirks and subtotal formats
