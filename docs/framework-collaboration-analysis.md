@@ -121,6 +121,56 @@ The practical lesson is:
 - repo-local plan and memory are required
 - repo-specific engineering governance is the next missing layer
 
+## Latest framework adoption status
+
+After pulling the latest `ai-governance-framework`, `Hearth` also ran the framework's official adoption tool:
+
+- `scripts/init-governance.sh --target D:/Hearth --adopt-existing`
+
+This changed the collaboration state in an important way:
+
+- `Hearth` is no longer only "framework-aware"
+- `Hearth` now has a framework-generated `.governance/baseline.yaml`
+- `AGENTS.base.md` is now the protected baseline file copied from the framework
+- `PLAN.md` section headings are now recorded as `plan_section_inventory`
+
+The framework's official drift checker now passes for `Hearth`, which means the repo has crossed from informal adoption into machine-verified baseline adoption.
+
+## Remaining issues after the latest adoption
+
+The current problems are narrower than before.
+
+### 1. Repo-specific engineering governance is still underdefined
+
+The framework baseline is now present and valid, but `Hearth` still has not yet filled in the repo-specific governance structure recommended by the framework template, especially around:
+
+- repo-specific risk levels
+- must-test paths
+- L1 to L2 escalation triggers
+- repo-specific forbidden behaviors
+
+This is no longer a baseline-adoption problem. It is now a repo-governance completeness problem.
+
+### 2. `contract.yaml` is structurally valid but still placeholder-shaped
+
+The current `contract.yaml` satisfies the framework's required fields, but values such as:
+
+- `name: <repo-name>-contract`
+- `domain: <domain>`
+
+still need to be made specific to `Hearth`.
+
+### 3. `PLAN.md` is inventoried, not governance-mandated
+
+Because `Hearth` used `--adopt-existing`, the framework intentionally did not impose `plan_required_sections`.
+
+That is the correct behavior for an existing repo, but it also means:
+
+- the current `PLAN.md` shape is recorded
+- the current `PLAN.md` shape is not yet enforced
+
+If `Hearth` later wants machine-enforced plan structure, that mandate still needs to be declared explicitly.
+
 ## Recommended next framework-related follow-up
 
 Not for immediate action inside `Hearth`, but worth tracking:

@@ -69,6 +69,7 @@
 - [x] 建立第一個 `sinopac-tw` 銀行專屬 mapping 切片
 - [x] 建立第一個 `excel-monthly` Excel 匯入切片
 - [x] 建立第一條 recurring template 正式資料路徑
+- [x] 對 `Hearth` 正式執行 framework `--adopt-existing` baseline adoption
 - [ ] 建立 repo-specific engineering governance baseline
 
 ### 接下來
@@ -178,3 +179,4 @@
 | 2026-03-21 | 擴充 `excel-monthly` 回傳 recurring/sidebar warnings | 讓固定區塊被跳過時有可見訊號，方便後續接成週期支出模板 |
 | 2026-03-21 | 擴充 `excel-monthly` 回傳結構化 recurring candidates | 讓後續 recurring template 不必重跑 parser 或重做辨識邏輯 |
 | 2026-03-21 | 建立 recurring template 正式資料路徑 | 讓固定支出與 Excel recurring candidates 有正式可存的 API / schema / UI 入口 |
+| 2026-03-21 | 對 `Hearth` 正式執行 framework `--adopt-existing` 並通過 drift checker | 讓 framework adoption 從人工約定升級成 machine-verified baseline adoption |

@@ -1,0 +1,41 @@
+# .governance/baseline.yaml
+# Written by scripts/init-governance.sh — do not edit manually.
+# Verified by: python governance_tools/governance_drift_checker.py --repo .
+
+schema_version: "1"
+baseline_version: 1.0.0
+source_commit: ffa0235f1660d5261e26f5d53bc04be94c45a658
+framework_root: /d/Hearth/ai-governance-framework
+initialized_at: 2026-03-21T15:30:22Z
+initialized_by: scripts/init-governance.sh
+
+# SHA256 hashes recorded at init time (prefix: sha256.<filename>)
+sha256.AGENTS.base.md: 30b5a6ad60120677628d3f58a0f1ceac1a852cef852ccad50a45e15c3b2947ec
+sha256.PLAN.md: 6d134cb4440fe51a4dc51c7dd917f845082d0f1273db44d6b7a6806ec24459bc
+sha256.contract.yaml: 230b16c483b20137dee2fe45691f769dbe55e1c98357e2ef3ffcace8e84e1942
+sha256.AGENTS.md: 9112928aff390c8336074e1760416cebecf5e6fc0e921cc9a76a4cedaadf824c
+
+# Overridability: "protected" = must not change, "overridable" = repo may extend
+overridable.AGENTS.base.md: protected
+overridable.PLAN.md: overridable
+overridable.contract.yaml: overridable
+overridable.AGENTS.md: overridable
+
+# Required fields in contract.yaml
+contract_required_fields:
+  - name
+  - framework_interface_version
+  - framework_compatible
+  - domain
+
+# plan_required_sections: governance mandate (only sections listed here are enforced)
+# plan_section_inventory: observed snapshot of ## headings (informational, not enforced)
+plan_section_inventory:
+  - "## 📋 專案目標"
+  - "## 🏗️ 當前階段"
+  - "## 🔥 本輪聚焦"
+  - "## 📦 Phase 詳細規劃"
+  - "## 🎯 當前決策"
+  - "## 🚫 現階段不要做"
+  - "## 📝 變更歷史"
+

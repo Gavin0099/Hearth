@@ -1,0 +1,13 @@
+name: <repo-name>-contract
+plugin_version: "1.0.0"
+framework_interface_version: "1"
+framework_compatible: ">=1.0.0,<2.0.0"
+domain: <domain>
+documents:
+  - AGENTS.base.md
+  - PLAN.md
+ai_behavior_override:
+  - AGENTS.base.md
+rule_roots:
+  - governance/rules
+validators:
