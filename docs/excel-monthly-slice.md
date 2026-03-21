@@ -42,12 +42,14 @@ Example:
 
 ## Current behavior
 
-- imports the first worksheet only
+- scans all worksheets and imports the ones that match a supported monthly layout
 - maps Excel categories into Hearth categories:
   - `飲食費用` -> `餐飲`
   - `生活雜費` -> `生活購物`
   - `交通花費` -> `交通`
 - supports category boundary rows for the horizontal calendar variant
+- ignores non-monthly summary sheets that do not contain a supported date-header pattern
+- ignores fixed-sidebar rows that live outside the calendar area and do not contain importable daily amounts
 - treats positive values as expenses and stores them as negative transaction amounts
 - writes imported rows through the same transaction import pipeline as CSV imports
 - keeps `source = excel_monthly`
@@ -56,7 +58,7 @@ Example:
 ## Current limitations
 
 - does not yet parse recurring-expense sidebars
-- does not yet support multiple monthly sheets in one workbook
+- does not convert left-side fixed sections into recurring-expense templates yet
 - assumes TWD for this first slice
 - still assumes a controlled left-side boundary pattern rather than arbitrary merged-cell workbook layouts
 

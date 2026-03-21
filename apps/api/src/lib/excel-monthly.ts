@@ -93,6 +93,10 @@ function rowHasAmounts(row: unknown[], dateColumns: Array<{ index: number; date:
   return dateColumns.some(({ index }) => normalizeAmount(row[index]) !== null);
 }
 
+function hasValuesBeforeIndex(row: unknown[], endExclusive: number) {
+  return row.slice(0, endExclusive).some((cell) => normalizeText(cell) !== "");
+}
+
 function getFallbackYear(headerRow: unknown[]) {
   const firstExplicitYear = headerRow
     .map((cell) => normalizeText(cell))
@@ -169,7 +173,8 @@ function parseCalendarPairColumns(
     }
 
     const line = headerRowIndex + offset + 3;
-    const leftCells = row.slice(0, pairColumns[0].itemIndex).map((cell) => normalizeText(cell));
+    const leftBoundary = pairColumns[0].itemIndex;
+    const leftCells = row.slice(0, leftBoundary).map((cell) => normalizeText(cell));
     const leftLabel = leftCells.find(Boolean) ?? "";
     const hasCalendarValues = pairColumns.some(
       ({ itemIndex, amountIndex }) =>
@@ -209,6 +214,8 @@ function parseCalendarPairColumns(
 
     if (emitted === 0 && hasCalendarValues) {
       errors.push(`line ${line}: row has no importable calendar entries`);
+    } else if (!hasCalendarValues && hasValuesBeforeIndex(row, leftBoundary)) {
+      skipped += 1;
     } else if (emitted === 0) {
       skipped += 1;
     }
@@ -222,62 +229,19 @@ function parseCalendarPairColumns(
   };
 }
 
-export function parseMonthlyExcel(buffer: ArrayBuffer, accountId: string) {
-  const workbook = XLSX.read(buffer, {
-    type: "array",
-    cellDates: false,
-  });
-
-  const sheetName = workbook.SheetNames[0];
-  if (!sheetName) {
-    return {
-      normalized: [] as CreateTransactionInput[],
-      errors: ["Workbook has no sheets."],
-      skipped: 0,
-      sheetName: null as string | null,
-    };
-  }
-
-  const sheet = workbook.Sheets[sheetName];
-  const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
-    header: 1,
-    raw: true,
-    defval: "",
-  });
-
-  const headerRowIndex = rows.findIndex((row) =>
-    Array.isArray(row) && row.some((cell) => parseDateHeader(cell) !== null),
-  );
-
-  if (headerRowIndex < 0) {
-    return {
-      normalized: [] as CreateTransactionInput[],
-      errors: ["Workbook is missing a date header row."],
-      skipped: 0,
-      sheetName,
-    };
-  }
-
-  const calendarPairResult = parseCalendarPairColumns(rows, headerRowIndex, accountId);
-  if (calendarPairResult) {
-    return {
-      ...calendarPairResult,
-      sheetName,
-    };
-  }
-
+function parseGridColumns(
+  rows: unknown[][],
+  headerRowIndex: number,
+  accountId: string,
+) {
   const headerRow = rows[headerRowIndex] as unknown[];
   const dateColumns = buildDateColumns(headerRow);
 
   if (dateColumns.length === 0) {
-    return {
-      normalized: [] as CreateTransactionInput[],
-      errors: ["Workbook does not contain parsable date columns."],
-      skipped: 0,
-      sheetName,
-    };
+    return null;
   }
 
+  const firstDateIndex = dateColumns[0].index;
   const categoryIndex = getColumnIndex(headerRow, categoryAliases, 0);
   const descriptionIndex = getColumnIndex(headerRow, descriptionAliases, 1);
 
@@ -330,7 +294,9 @@ export function parseMonthlyExcel(buffer: ArrayBuffer, accountId: string) {
       emitted += 1;
     });
 
-    if (emitted === 0) {
+    if (emitted === 0 && hasValuesBeforeIndex(row, firstDateIndex)) {
+      skipped += 1;
+    } else if (emitted === 0) {
       errors.push(`line ${line}: row has no importable daily amounts`);
     }
   });
@@ -339,6 +305,79 @@ export function parseMonthlyExcel(buffer: ArrayBuffer, accountId: string) {
     normalized,
     errors,
     skipped,
-    sheetName,
+    sheetName: null as string | null,
+  };
+}
+
+function parseMonthlySheet(rows: unknown[][], accountId: string) {
+  const headerRowIndex = rows.findIndex((row) =>
+    Array.isArray(row) && row.some((cell) => parseDateHeader(cell) !== null),
+  );
+
+  if (headerRowIndex < 0) {
+    return null;
+  }
+
+  const calendarPairResult = parseCalendarPairColumns(rows, headerRowIndex, accountId);
+  if (calendarPairResult) {
+    return calendarPairResult;
+  }
+
+  return parseGridColumns(rows, headerRowIndex, accountId);
+}
+
+export function parseMonthlyExcel(buffer: ArrayBuffer, accountId: string) {
+  const workbook = XLSX.read(buffer, {
+    type: "array",
+    cellDates: false,
+  });
+
+  if (workbook.SheetNames.length === 0) {
+    return {
+      normalized: [] as CreateTransactionInput[],
+      errors: ["Workbook has no sheets."],
+      skipped: 0,
+      sheetName: null as string | null,
+    };
+  }
+
+  const normalized: CreateTransactionInput[] = [];
+  const errors: string[] = [];
+  let skipped = 0;
+  const parsedSheets: string[] = [];
+
+  workbook.SheetNames.forEach((sheetName) => {
+    const sheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+      header: 1,
+      raw: true,
+      defval: "",
+    });
+
+    const result = parseMonthlySheet(rows, accountId);
+    if (!result) {
+      return;
+    }
+
+    normalized.push(...result.normalized);
+    errors.push(...result.errors.map((message) => `[${sheetName}] ${message}`));
+    skipped += result.skipped;
+    parsedSheets.push(sheetName);
+  });
+
+  if (parsedSheets.length === 0) {
+    return {
+      normalized: [] as CreateTransactionInput[],
+      errors: ["Workbook is missing a parsable monthly sheet."],
+      skipped: 0,
+      sheetName: null as string | null,
+    };
+  }
+
+  return {
+    normalized,
+    errors,
+    skipped,
+    sheetName: parsedSheets.join(", "),
   };
 }

@@ -22,6 +22,18 @@ function createExcelMonthlyFile(rows: unknown[][]) {
   });
 }
 
+function createExcelMonthlyWorkbook(sheets: Array<{ name: string; rows: unknown[][] }>) {
+  const workbook = XLSX.utils.book_new();
+  sheets.forEach(({ name, rows }) => {
+    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    XLSX.utils.book_append_sheet(workbook, worksheet, name);
+  });
+  const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+  return new File([buffer], "monthly.xlsx", {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+}
+
 function createTestApp(options?: {
   user?: AuthenticatedUser | null;
   accounts?: Array<Record<string, unknown>>;
@@ -900,6 +912,134 @@ test("POST /api/import/excel-monthly imports horizontal calendar workbook with c
       account_id: "account-1",
       date: "2026-03-01",
       amount: -50,
+      currency: "TWD",
+      category: "交通",
+      description: "捷運",
+      source: "excel_monthly",
+      source_hash: insertedRows[2]?.source_hash,
+    },
+  ]);
+});
+
+test("POST /api/import/excel-monthly aggregates parsable rows across multiple monthly sheets and ignores sidebar rows", async () => {
+  let insertedRows: Array<Record<string, unknown>> = [];
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "transactions") {
+          return {
+            select: () => ({
+              in: async () => ({
+                data: [],
+                error: null,
+              }),
+            }),
+            insert: async (values: Array<Record<string, unknown>>) => {
+              insertedRows = values;
+              return { error: null };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set(
+    "file",
+    createExcelMonthlyWorkbook([
+      {
+        name: "Summary",
+        rows: [
+          ["年度總表", "", ""],
+          ["備註", "這頁不該被匯入", ""],
+        ],
+      },
+      {
+        name: "March",
+        rows: [
+          ["固定支出", "房租", "", "", "", ""],
+          ["分類", "", "2026/03/01", "", "2026/03/02", ""],
+          ["", "", "項目", "金額", "項目", "金額"],
+          ["飲食費用", "", "", "", "", ""],
+          ["", "", "早餐", 80, "午餐", 120],
+          ["週期支出", "幼稚園", "", "", "", ""],
+        ],
+      },
+      {
+        name: "April",
+        rows: [
+          ["分類", "項目", "2026/04/01"],
+          ["交通花費", "捷運", 60],
+        ],
+      },
+    ]),
+  );
+
+  const response = await app.request(
+    "/api/import/excel-monthly",
+    {
+      method: "POST",
+      body: formData,
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    source: "excel-monthly",
+    imported: 3,
+    skipped: 2,
+    failed: 0,
+    runtime: "cloudflare-worker",
+    persistence: "supabase",
+    status: "ok",
+    errors: [],
+  });
+  assert.deepEqual(insertedRows, [
+    {
+      account_id: "account-1",
+      date: "2026-03-01",
+      amount: -80,
+      currency: "TWD",
+      category: "餐飲",
+      description: "早餐",
+      source: "excel_monthly",
+      source_hash: insertedRows[0]?.source_hash,
+    },
+    {
+      account_id: "account-1",
+      date: "2026-03-02",
+      amount: -120,
+      currency: "TWD",
+      category: "餐飲",
+      description: "午餐",
+      source: "excel_monthly",
+      source_hash: insertedRows[1]?.source_hash,
+    },
+    {
+      account_id: "account-1",
+      date: "2026-04-01",
+      amount: -60,
       currency: "TWD",
       category: "交通",
       description: "捷運",
