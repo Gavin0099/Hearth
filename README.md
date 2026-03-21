@@ -54,3 +54,4 @@ This repo currently contains the initial implementation foundation:
 - auth and accounts flow
 - local executable verification for auth/accounts/report routes
 - first monthly report aggregation slice backed by `transactions`
+- first manual transaction entry flow feeding the monthly report

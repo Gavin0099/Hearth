@@ -315,3 +315,79 @@ test("GET /api/report/monthly summarizes income, expense, categories, and daily 
     },
   });
 });
+
+test("POST /api/transactions creates a manual transaction for an owned account", async () => {
+  const createdTransaction = {
+    id: "txn-9",
+    account_id: "account-1",
+    date: "2026-03-21",
+    amount: -180,
+    currency: "TWD",
+    category: "餐飲",
+    description: "Dinner",
+    source: "manual",
+    source_hash: null,
+    created_at: "2026-03-21T00:00:00Z",
+  };
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "transactions") {
+          return {
+            insert: () => ({
+              select: () => ({
+                single: async () => ({
+                  data: createdTransaction,
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request(
+    "/api/transactions",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        account_id: "account-1",
+        date: "2026-03-21",
+        amount: -180,
+        category: "餐飲",
+        description: "Dinner",
+      }),
+      headers: {
+        "content-type": "application/json",
+      },
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    count: 1,
+    items: [createdTransaction],
+    status: "ok",
+  });
+});

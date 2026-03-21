@@ -5,6 +5,7 @@ import { env } from "./env";
 import { AccountsPanel } from "./components/AccountsPanel";
 import { AuthPanel } from "./components/AuthPanel";
 import { MonthlyReportPanel } from "./components/MonthlyReportPanel";
+import { TransactionsPanel } from "./components/TransactionsPanel";
 import { getCurrentSession, signInWithGoogle, signOut } from "./lib/auth";
 import { getSupabaseBrowserClient } from "./lib/supabase";
 
@@ -37,6 +38,7 @@ export function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [reportRefreshKey, setReportRefreshKey] = useState(0);
   const isSupabaseConfigured = Boolean(env.supabaseUrl && env.supabaseAnonKey);
 
   useEffect(() => {
@@ -88,6 +90,10 @@ export function App() {
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "Unable to start sign-in.");
     }
+  }
+
+  function handleTransactionCreated() {
+    setReportRefreshKey((current) => current + 1);
   }
 
   async function handleSignOut() {
@@ -156,7 +162,11 @@ export function App() {
           onSignOut={handleSignOut}
           session={session}
         />
-        <MonthlyReportPanel session={session} />
+        <MonthlyReportPanel refreshKey={reportRefreshKey} session={session} />
+        <TransactionsPanel
+          onTransactionCreated={handleTransactionCreated}
+          session={session}
+        />
         <AccountsPanel session={session} />
         <article className="panel">
           <h2>資料匯入管線</h2>

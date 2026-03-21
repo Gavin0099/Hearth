@@ -5,6 +5,7 @@ import { fetchMonthlyReport } from "../lib/report";
 
 type MonthlyReportPanelProps = {
   session: Session | null;
+  refreshKey: number;
 };
 
 type LoadState =
@@ -15,7 +16,7 @@ type LoadState =
       report: Extract<MonthlyReportResponse, { status: "ok" }>;
     };
 
-export function MonthlyReportPanel({ session }: MonthlyReportPanelProps) {
+export function MonthlyReportPanel({ session, refreshKey }: MonthlyReportPanelProps) {
   const [state, setState] = useState<LoadState>({ status: "idle" });
 
   useEffect(() => {
@@ -46,7 +47,7 @@ export function MonthlyReportPanel({ session }: MonthlyReportPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [session]);
+  }, [session, refreshKey]);
 
   return (
     <article className="panel">

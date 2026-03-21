@@ -11,6 +11,28 @@ export type TransactionRecord = {
   created_at: string;
 };
 
+export type CreateTransactionInput = {
+  account_id: string;
+  date: string;
+  amount: number;
+  currency?: string;
+  category?: string | null;
+  description?: string | null;
+  source?: string | null;
+};
+
+export type TransactionsResponse =
+  | {
+      items: TransactionRecord[];
+      count: number;
+      status: "ok";
+    }
+  | {
+      code: "unauthorized" | "validation_error" | "database_error";
+      error: string;
+      status: "error";
+    };
+
 export type MonthlyCategorySummary = {
   category: string;
   amount: number;

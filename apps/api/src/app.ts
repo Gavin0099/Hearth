@@ -3,6 +3,7 @@ import { reportRoutes } from "./routes/report";
 import { portfolioRoutes } from "./routes/portfolio";
 import { importRoutes } from "./routes/import";
 import { accountsRoutes } from "./routes/accounts";
+import { transactionsRoutes } from "./routes/transactions";
 import type { ApiEnv, WorkerBindings } from "./types";
 import { resolveAuthenticatedUser as resolveAuthenticatedUserDefault } from "./lib/auth";
 import { createSupabaseAdminClient as createSupabaseAdminClientDefault } from "./lib/supabase";
@@ -98,6 +99,7 @@ export function createApp(dependencies: Partial<AppDependencies> = {}) {
   app.route("/api/portfolio", portfolioRoutes);
   app.route("/api/import", importRoutes);
   app.route("/api/accounts", accountsRoutes);
+  app.route("/api/transactions", transactionsRoutes);
 
   return app;
 }
