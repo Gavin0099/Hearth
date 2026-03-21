@@ -11,6 +11,14 @@ const categoryMap: Record<string, string> = {
   "生活雜費": "生活購物",
   "交通花費": "交通",
 };
+const recurringSectionKeywords = [
+  "固定支出",
+  "週期支出",
+  "常態收入",
+  "常態扣除",
+  "儲蓄",
+  "定期定額",
+];
 
 type DateContext = {
   year?: number;
@@ -106,6 +114,25 @@ function rowHasAmounts(row: unknown[], dateColumns: Array<{ index: number; date:
 
 function hasValuesBeforeIndex(row: unknown[], endExclusive: number) {
   return row.slice(0, endExclusive).some((cell) => normalizeText(cell) !== "");
+}
+
+function detectSidebarCandidate(row: unknown[], endExclusive: number) {
+  const leftCells = row.slice(0, endExclusive).map((cell) => normalizeText(cell)).filter(Boolean);
+  if (leftCells.length === 0) {
+    return null;
+  }
+
+  const matchedSection = leftCells.find((cell) =>
+    recurringSectionKeywords.some((keyword) => cell.includes(keyword)),
+  );
+  if (!matchedSection) {
+    return null;
+  }
+
+  const detail = leftCells.find((cell) => cell !== matchedSection) ?? null;
+  return detail
+    ? `ignored recurring/sidebar row: ${matchedSection} / ${detail}`
+    : `ignored recurring/sidebar row: ${matchedSection}`;
 }
 
 function parseSheetDateContext(sheetName: string): DateContext {
@@ -206,6 +233,7 @@ function parseCalendarPairColumns(
 
   const normalized: CreateTransactionInput[] = [];
   const errors: string[] = [];
+  const warnings = new Set<string>();
   let skipped = 0;
   let activeCategory: string | null = null;
 
@@ -223,9 +251,13 @@ function parseCalendarPairColumns(
       ({ itemIndex, amountIndex }) =>
         normalizeText(row[itemIndex]) !== "" || normalizeAmount(row[amountIndex]) !== null,
     );
+    const sidebarWarning = detectSidebarCandidate(row, leftBoundary);
 
     if (leftLabel && !hasCalendarValues) {
       activeCategory = normalizeCategory(leftLabel);
+      if (sidebarWarning) {
+        warnings.add(sidebarWarning);
+      }
       skipped += 1;
       return;
     }
@@ -258,6 +290,9 @@ function parseCalendarPairColumns(
     if (emitted === 0 && hasCalendarValues) {
       errors.push(`line ${line}: row has no importable calendar entries`);
     } else if (!hasCalendarValues && hasValuesBeforeIndex(row, leftBoundary)) {
+      if (sidebarWarning) {
+        warnings.add(sidebarWarning);
+      }
       skipped += 1;
     } else if (emitted === 0) {
       skipped += 1;
@@ -267,6 +302,7 @@ function parseCalendarPairColumns(
   return {
     normalized,
     errors,
+    warnings: [...warnings],
     skipped,
     sheetName: null as string | null,
   };
@@ -291,6 +327,7 @@ function parseGridColumns(
 
   const normalized: CreateTransactionInput[] = [];
   const errors: string[] = [];
+  const warnings = new Set<string>();
   let skipped = 0;
   let activeCategory: string | null = null;
 
@@ -304,9 +341,13 @@ function parseGridColumns(
     const rawCategory = normalizeText(row[categoryIndex]);
     const description = normalizeText(row[descriptionIndex]);
     const hasAmounts = rowHasAmounts(row, dateColumns);
+    const sidebarWarning = detectSidebarCandidate(row, firstDateIndex);
 
     if (rawCategory && !description && !hasAmounts) {
       activeCategory = normalizeCategory(rawCategory);
+      if (sidebarWarning) {
+        warnings.add(sidebarWarning);
+      }
       skipped += 1;
       return;
     }
@@ -339,6 +380,9 @@ function parseGridColumns(
     });
 
     if (emitted === 0 && hasValuesBeforeIndex(row, firstDateIndex)) {
+      if (sidebarWarning) {
+        warnings.add(sidebarWarning);
+      }
       skipped += 1;
     } else if (emitted === 0) {
       errors.push(`line ${line}: row has no importable daily amounts`);
@@ -348,6 +392,7 @@ function parseGridColumns(
   return {
     normalized,
     errors,
+    warnings: [...warnings],
     skipped,
     sheetName: null as string | null,
   };
@@ -417,6 +462,7 @@ export function parseMonthlyExcel(buffer: ArrayBuffer, accountId: string) {
 
   const normalized: CreateTransactionInput[] = [];
   const errors: string[] = [];
+  const warnings = new Set<string>();
   let skipped = 0;
   const parsedSheets: string[] = [];
 
@@ -431,6 +477,7 @@ export function parseMonthlyExcel(buffer: ArrayBuffer, accountId: string) {
 
     normalized.push(...result.normalized);
     errors.push(...result.errors.map((message) => `[${sheetName}] ${message}`));
+    result.warnings?.forEach((warning) => warnings.add(`[${sheetName}] ${warning}`));
     skipped += result.skipped;
     parsedSheets.push(sheetName);
   });
@@ -447,6 +494,7 @@ export function parseMonthlyExcel(buffer: ArrayBuffer, accountId: string) {
   return {
     normalized,
     errors,
+    warnings: [...warnings],
     skipped,
     sheetName: parsedSheets.join(", "),
   };

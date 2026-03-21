@@ -74,7 +74,7 @@
 
 1. 建立 repo-specific engineering governance baseline
 2. 擴大 `transactions` 路徑，加入更完整的歷史列表與驗證
-3. 把 `excel-monthly` 再往 recurring template 與無 cached formula 的真實帳本落地
+3. 把 `excel-monthly` 的 recurring/sidebar detections 接成真正模板資料流
 4. 視需要補前端端到端驗證
 
 ---
@@ -173,3 +173,4 @@
 | 2026-03-21 | 擴充 `excel-monthly` 支援多 sheet 與 sidebar 忽略規則 | 讓一份 workbook 可包含摘要頁與多月份資料，同時避免左側固定區塊誤判成交易 |
 | 2026-03-21 | 擴充 `excel-monthly` 支援 merged cells 展開 | 讓合併的日期群組與分類 header 也能被現有 parser 正確辨識 |
 | 2026-03-21 | 擴充 `excel-monthly` 支援由 sheet 名稱推回完整日期 | 讓 header 只放 day number 的月帳本也能被匯入 |
+| 2026-03-21 | 擴充 `excel-monthly` 回傳 recurring/sidebar warnings | 讓固定區塊被跳過時有可見訊號，方便後續接成週期支出模板 |

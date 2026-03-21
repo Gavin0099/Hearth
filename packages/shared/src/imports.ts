@@ -7,6 +7,7 @@ export type TransactionCsvImportResult = {
   persistence: "supabase";
   status: "ok";
   errors: string[];
+  warnings?: string[];
 };
 
 export type TransactionCsvImportResponse =

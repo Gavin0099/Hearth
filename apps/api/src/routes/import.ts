@@ -45,6 +45,7 @@ async function importNormalizedRows(
   supabase: any,
   existingErrors: string[] = [],
   existingSkipped = 0,
+  warnings: string[] = [],
 ) {
   const withHashes = rows.map((row) => ({
     ...row,
@@ -109,6 +110,7 @@ async function importNormalizedRows(
       persistence: "supabase" as const,
       status: "ok" as const,
       errors: existingErrors,
+      warnings,
     },
     status: 200,
   };
@@ -413,7 +415,7 @@ importRoutes.post("/excel-monthly", (c) =>
     }
 
     const buffer = await file.arrayBuffer();
-    const { normalized, errors, skipped } = parseMonthlyExcel(buffer, accountId);
+    const { normalized, errors, skipped, warnings } = parseMonthlyExcel(buffer, accountId);
     if (normalized.length === 0) {
       return c.json<TransactionCsvImportResponse>(
         {
@@ -431,6 +433,7 @@ importRoutes.post("/excel-monthly", (c) =>
       supabase,
       errors,
       skipped,
+      warnings,
     );
     return c.json<TransactionCsvImportResponse>(result.response, result.status as 200 | 500);
   })(),

@@ -498,6 +498,7 @@ test("POST /api/import/transactions-csv imports normalized transaction csv rows"
     persistence: "supabase",
     status: "ok",
     errors: [],
+    warnings: [],
   });
   assert.deepEqual(insertedRows, [
     {
@@ -596,6 +597,7 @@ test("POST /api/import/sinopac-tw maps minimal Sinopac csv rows into transaction
     persistence: "supabase",
     status: "ok",
     errors: [],
+    warnings: [],
   });
   assert.deepEqual(insertedRows, [
     {
@@ -700,6 +702,7 @@ test("POST /api/import/transactions-csv skips duplicate rows by source hash", as
     persistence: "supabase",
     status: "ok",
     errors: [],
+    warnings: [],
   });
   assert.deepEqual(insertedRows, []);
 });
@@ -776,6 +779,7 @@ test("POST /api/import/excel-monthly imports simplified calendar workbook rows",
     persistence: "supabase",
     status: "ok",
     errors: [],
+    warnings: [],
   });
   assert.deepEqual(insertedRows, [
     {
@@ -895,6 +899,7 @@ test("POST /api/import/excel-monthly imports horizontal calendar workbook with c
     persistence: "supabase",
     status: "ok",
     errors: [],
+    warnings: [],
   });
   assert.deepEqual(insertedRows, [
     {
@@ -1023,6 +1028,9 @@ test("POST /api/import/excel-monthly aggregates parsable rows across multiple mo
     persistence: "supabase",
     status: "ok",
     errors: [],
+    warnings: [
+      "[March] ignored recurring/sidebar row: 週期支出 / 幼稚園",
+    ],
   });
   assert.deepEqual(insertedRows, [
     {
@@ -1136,6 +1144,7 @@ test("POST /api/import/excel-monthly expands merged header and category cells be
     persistence: "supabase",
     status: "ok",
     errors: [],
+    warnings: [],
   });
   assert.deepEqual(insertedRows, [
     {
@@ -1237,6 +1246,7 @@ test("POST /api/import/excel-monthly infers year and month from sheet name when 
     persistence: "supabase",
     status: "ok",
     errors: [],
+    warnings: [],
   });
   assert.deepEqual(insertedRows, [
     {
