@@ -425,6 +425,129 @@ test("POST /api/transactions creates a manual transaction for an owned account",
   });
 });
 
+test("DELETE /api/transactions/:transactionId deletes an owned transaction", async () => {
+  const deletedTransaction = {
+    id: "txn-9",
+    account_id: "account-1",
+    date: "2026-03-21",
+    amount: -180,
+    currency: "TWD",
+    category: "餐飲",
+    description: "Dinner",
+    source: "manual",
+    source_hash: null,
+    created_at: "2026-03-21T00:00:00Z",
+  };
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "transactions") {
+          return {
+            delete: () => ({
+              eq: () => ({
+                in: () => ({
+                  select: async () => ({
+                    data: [deletedTransaction],
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request(
+    "/api/transactions/txn-9",
+    {
+      method: "DELETE",
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    count: 1,
+    items: [deletedTransaction],
+    status: "ok",
+  });
+});
+
+test("DELETE /api/transactions/:transactionId rejects transactions outside the user's owned accounts", async () => {
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "transactions") {
+          return {
+            delete: () => ({
+              eq: () => ({
+                in: () => ({
+                  select: async () => ({
+                    data: [],
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request(
+    "/api/transactions/txn-404",
+    {
+      method: "DELETE",
+    },
+    env,
+  );
+
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), {
+    code: "validation_error",
+    error: "Transaction does not belong to the current user.",
+    status: "error",
+  });
+});
+
 test("POST /api/import/transactions-csv imports normalized transaction csv rows", async () => {
   let insertedRows: Array<Record<string, unknown>> = [];
 

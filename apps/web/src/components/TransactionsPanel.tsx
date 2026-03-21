@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import type { AccountRecord, CreateTransactionInput, TransactionRecord } from "@hearth/shared";
 import { fetchAccounts } from "../lib/accounts";
-import { createTransaction, fetchTransactions } from "../lib/transactions";
+import { createTransaction, deleteTransaction, fetchTransactions } from "../lib/transactions";
 
 type TransactionsPanelProps = {
   session: Session | null;
@@ -26,6 +26,7 @@ export function TransactionsPanel({
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
   const [form, setForm] = useState<CreateTransactionInput>({
     account_id: "",
     date: today,
@@ -144,6 +145,32 @@ export function TransactionsPanel({
     onTransactionCreated();
   }
 
+  async function handleDeleteTransaction(transactionId: string) {
+    setFormError(null);
+    setFormSuccess(null);
+    setDeletingTransactionId(transactionId);
+    const result = await deleteTransaction(transactionId);
+    setDeletingTransactionId(null);
+
+    if (result.status === "error") {
+      setFormError(result.error);
+      return;
+    }
+
+    setState((current) => {
+      if (current.status !== "success") {
+        return current;
+      }
+
+      return {
+        ...current,
+        transactions: current.transactions.filter((transaction) => transaction.id !== transactionId),
+      };
+    });
+    setFormSuccess("交易已刪除，月報會在下一次讀取時反映。");
+    onTransactionCreated();
+  }
+
   return (
     <article className="panel">
       <h2>手動交易</h2>
@@ -210,7 +237,15 @@ export function TransactionsPanel({
               {recentTransactions.map((transaction) => (
                 <li key={transaction.id}>
                   {transaction.date} | {transaction.category ?? "未分類"} | NT${" "}
-                  {Number(transaction.amount).toFixed(2)}
+                  {Number(transaction.amount).toFixed(2)}{" "}
+                  <button
+                    className="action-button"
+                    disabled={deletingTransactionId === transaction.id}
+                    onClick={() => void handleDeleteTransaction(transaction.id)}
+                    type="button"
+                  >
+                    {deletingTransactionId === transaction.id ? "刪除中..." : "刪除"}
+                  </button>
                 </li>
               ))}
             </ul>

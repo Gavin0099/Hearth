@@ -195,3 +195,95 @@ transactionsRoutes.post("/", async (c) => {
     status: "ok",
   });
 });
+
+transactionsRoutes.delete("/:transactionId", async (c) => {
+  const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
+  const user = await resolveAuthenticatedUser(c.req.raw, c.env);
+  if (!user) {
+    return c.json<TransactionsResponse>(
+      {
+        code: "unauthorized",
+        error: "Missing or invalid Supabase bearer token.",
+        status: "error",
+      },
+      401,
+    );
+  }
+
+  const transactionId = c.req.param("transactionId")?.trim();
+  if (!transactionId) {
+    return c.json<TransactionsResponse>(
+      {
+        code: "validation_error",
+        error: "transactionId is required.",
+        status: "error",
+      },
+      400,
+    );
+  }
+
+  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
+  const supabase = createSupabaseAdminClient(c.env);
+  const { data: ownedAccounts, error: accountsError } = await supabase
+    .from("accounts")
+    .select("id")
+    .eq("user_id", user.id);
+
+  if (accountsError) {
+    return c.json<TransactionsResponse>(
+      {
+        code: "database_error",
+        error: accountsError.message,
+        status: "error",
+      },
+      500,
+    );
+  }
+
+  const accountIds = (ownedAccounts ?? []).map((account: { id: string }) => account.id);
+  if (accountIds.length === 0) {
+    return c.json<TransactionsResponse>(
+      {
+        code: "validation_error",
+        error: "Transaction does not belong to the current user.",
+        status: "error",
+      },
+      400,
+    );
+  }
+
+  const { data, error } = await supabase
+    .from("transactions")
+    .delete()
+    .eq("id", transactionId)
+    .in("account_id", accountIds)
+    .select("id, account_id, date, amount, currency, category, description, source, source_hash, created_at");
+
+  if (error) {
+    return c.json<TransactionsResponse>(
+      {
+        code: "database_error",
+        error: error.message,
+        status: "error",
+      },
+      500,
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return c.json<TransactionsResponse>(
+      {
+        code: "validation_error",
+        error: "Transaction does not belong to the current user.",
+        status: "error",
+      },
+      400,
+    );
+  }
+
+  return c.json<TransactionsResponse>({
+    items: data as TransactionRecord[],
+    count: data.length,
+    status: "ok",
+  });
+});

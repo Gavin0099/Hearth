@@ -20,3 +20,11 @@ export async function createTransaction(payload: CreateTransactionInput) {
 
   return (await response.json()) as TransactionsResponse;
 }
+
+export async function deleteTransaction(transactionId: string) {
+  const response = await apiFetch(`/api/transactions/${transactionId}`, {
+    method: "DELETE",
+  });
+
+  return (await response.json()) as TransactionsResponse;
+}
