@@ -1,6 +1,11 @@
+import { useEffect, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
 import { transactionCategories } from "@hearth/shared";
 import { env } from "./env";
 import { AccountsPanel } from "./components/AccountsPanel";
+import { AuthPanel } from "./components/AuthPanel";
+import { getCurrentSession, signInWithGoogle, signOut } from "./lib/auth";
+import { getSupabaseBrowserClient } from "./lib/supabase";
 
 const dashboardCards = [
   {
@@ -28,6 +33,72 @@ const importTracks = [
 ];
 
 export function App() {
+  const [session, setSession] = useState<Session | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const isSupabaseConfigured = Boolean(env.supabaseUrl && env.supabaseAnonKey);
+
+  useEffect(() => {
+    const client = getSupabaseBrowserClient();
+    if (!client) {
+      setAuthLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    void getCurrentSession()
+      .then((currentSession) => {
+        if (!isMounted) {
+          return;
+        }
+        setSession(currentSession);
+        setAuthLoading(false);
+      })
+      .catch((error: Error) => {
+        if (!isMounted) {
+          return;
+        }
+        setAuthError(error.message);
+        setAuthLoading(false);
+      });
+
+    const {
+      data: { subscription },
+    } = client.auth.onAuthStateChange((_event, nextSession) => {
+      if (!isMounted) {
+        return;
+      }
+      setSession(nextSession);
+      setAuthError(null);
+      setAuthLoading(false);
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  async function handleSignIn() {
+    try {
+      setAuthError(null);
+      await signInWithGoogle();
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Unable to start sign-in.");
+    }
+  }
+
+  async function handleSignOut() {
+    try {
+      setAuthError(null);
+      await signOut();
+      setSession(null);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Unable to sign out.");
+    }
+  }
+
   return (
     <main className="app-shell">
       <section className="hero">
@@ -76,7 +147,15 @@ export function App() {
             <li>需帶 Supabase session bearer token</li>
           </ul>
         </article>
-        <AccountsPanel />
+        <AuthPanel
+          error={authError}
+          isConfigured={isSupabaseConfigured}
+          isLoading={authLoading}
+          onSignIn={handleSignIn}
+          onSignOut={handleSignOut}
+          session={session}
+        />
+        <AccountsPanel session={session} />
         <article className="panel">
           <h2>資料匯入管線</h2>
           <ul>

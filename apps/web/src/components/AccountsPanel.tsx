@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
 import type { AccountRecord } from "@hearth/shared";
 import { fetchAccounts } from "../lib/accounts";
 
@@ -7,10 +8,19 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "success"; items: AccountRecord[] };
 
-export function AccountsPanel() {
+type AccountsPanelProps = {
+  session: Session | null;
+};
+
+export function AccountsPanel({ session }: AccountsPanelProps) {
   const [state, setState] = useState<LoadState>({ status: "idle" });
 
   useEffect(() => {
+    if (!session) {
+      setState({ status: "idle" });
+      return;
+    }
+
     let cancelled = false;
 
     async function load() {
@@ -32,13 +42,14 @@ export function AccountsPanel() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [session]);
 
   return (
     <article className="panel">
       <h2>帳戶狀態</h2>
+      {!session ? <p>登入後會自動讀取目前使用者的帳戶資料。</p> : null}
       {state.status === "loading" || state.status === "idle" ? (
-        <p>正在向 Cloudflare Worker 讀取 Supabase 帳戶資料...</p>
+        session ? <p>正在向 Cloudflare Worker 讀取 Supabase 帳戶資料...</p> : null
       ) : null}
       {state.status === "error" ? (
         <p>

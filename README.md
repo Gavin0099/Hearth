@@ -44,5 +44,6 @@ This repo currently contains the initial implementation foundation:
 
 - create the Supabase project
 - configure Google OAuth in Supabase Auth
+- add the local and production redirect URLs for Google OAuth
 - bind Worker secrets in Cloudflare
 - connect the route stubs to real queries, imports, and scheduled jobs

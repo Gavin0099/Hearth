@@ -114,6 +114,26 @@ body {
   padding: 24px;
 }
 
+.action-button {
+  border: 0;
+  border-radius: 999px;
+  background: #8c4d22;
+  color: #fffaf5;
+  padding: 11px 16px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.action-button.secondary {
+  background: #e7d4c3;
+  color: #55341f;
+}
+
+.action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .category-list {
   display: flex;
   flex-wrap: wrap;
