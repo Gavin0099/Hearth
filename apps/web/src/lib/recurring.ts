@@ -1,4 +1,6 @@
 import type {
+  ApplyRecurringTemplatesInput,
+  ApplyRecurringTemplatesResponse,
   CreateRecurringTemplatesFromCandidatesInput,
   CreateRecurringTemplateInput,
   RecurringTemplatesResponse,
@@ -34,4 +36,16 @@ export async function createRecurringTemplatesFromCandidates(
   });
 
   return (await response.json()) as RecurringTemplatesResponse;
+}
+
+export async function applyRecurringTemplates(input: ApplyRecurringTemplatesInput) {
+  const response = await apiFetch("/api/recurring-templates/apply", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+
+  return (await response.json()) as ApplyRecurringTemplatesResponse;
 }

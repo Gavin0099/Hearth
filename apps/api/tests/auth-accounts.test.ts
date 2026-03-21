@@ -1292,6 +1292,7 @@ test("GET /api/recurring-templates returns user-scoped recurring template list",
     {
       id: "rt-1",
       user_id: "user-1",
+      account_id: "account-1",
       name: "房租",
       category: "固定支出",
       amount: 12000,
@@ -1343,6 +1344,7 @@ test("POST /api/recurring-templates creates a recurring template", async () => {
   const createdTemplate = {
     id: "rt-2",
     user_id: "user-1",
+    account_id: "account-1",
     name: "幼稚園",
     category: "教育",
     amount: 11000,
@@ -1362,6 +1364,17 @@ test("POST /api/recurring-templates creates a recurring template", async () => {
     }),
     createSupabaseAdminClient: () => ({
       from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
         if (table === "recurring_templates") {
           return {
             insert: () => ({
@@ -1385,6 +1398,7 @@ test("POST /api/recurring-templates creates a recurring template", async () => {
     {
       method: "POST",
       body: JSON.stringify({
+        account_id: "account-1",
         name: "幼稚園",
         category: "教育",
         amount: 11000,
@@ -1413,6 +1427,7 @@ test("POST /api/recurring-templates/from-import-candidates creates templates fro
     {
       id: "rt-3",
       user_id: "user-1",
+      account_id: "account-1",
       name: "房租",
       category: "固定支出",
       amount: null,
@@ -1427,6 +1442,7 @@ test("POST /api/recurring-templates/from-import-candidates creates templates fro
     {
       id: "rt-4",
       user_id: "user-1",
+      account_id: "account-1",
       name: "幼稚園",
       category: "週期支出",
       amount: null,
@@ -1448,6 +1464,17 @@ test("POST /api/recurring-templates/from-import-candidates creates templates fro
     }),
     createSupabaseAdminClient: () => ({
       from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
         if (table === "recurring_templates") {
           return {
             select: () => ({
@@ -1478,6 +1505,7 @@ test("POST /api/recurring-templates/from-import-candidates creates templates fro
     {
       method: "POST",
       body: JSON.stringify({
+        account_id: "account-1",
         candidates: [
           {
             sheet: "March",
@@ -1510,6 +1538,7 @@ test("POST /api/recurring-templates/from-import-candidates creates templates fro
   assert.deepEqual(insertedRows, [
     {
       user_id: "user-1",
+      account_id: "account-1",
       name: "房租",
       category: "固定支出",
       amount: null,
@@ -1522,6 +1551,7 @@ test("POST /api/recurring-templates/from-import-candidates creates templates fro
     },
     {
       user_id: "user-1",
+      account_id: "account-1",
       name: "幼稚園",
       category: "週期支出",
       amount: null,
@@ -1545,11 +1575,22 @@ test("POST /api/recurring-templates/from-import-candidates skips duplicates alre
     }),
     createSupabaseAdminClient: () => ({
       from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
         if (table === "recurring_templates") {
           return {
             select: () => ({
               eq: async () => ({
-                data: [{ name: "房租", source_section: "固定支出" }],
+                data: [{ name: "房租", source_section: "固定支出", account_id: "account-1" }],
                 error: null,
               }),
             }),
@@ -1561,6 +1602,7 @@ test("POST /api/recurring-templates/from-import-candidates skips duplicates alre
                     {
                       id: "rt-5",
                       user_id: "user-1",
+                      account_id: "account-1",
                       name: "幼稚園",
                       category: "週期支出",
                       amount: null,
@@ -1590,6 +1632,7 @@ test("POST /api/recurring-templates/from-import-candidates skips duplicates alre
     {
       method: "POST",
       body: JSON.stringify({
+        account_id: "account-1",
         candidates: [
           {
             sheet: "March",
@@ -1625,6 +1668,7 @@ test("POST /api/recurring-templates/from-import-candidates skips duplicates alre
       {
         id: "rt-5",
         user_id: "user-1",
+        account_id: "account-1",
         name: "幼稚園",
         category: "週期支出",
         amount: null,
@@ -1643,6 +1687,7 @@ test("POST /api/recurring-templates/from-import-candidates skips duplicates alre
   assert.deepEqual(insertedRows, [
     {
       user_id: "user-1",
+      account_id: "account-1",
       name: "幼稚園",
       category: "週期支出",
       amount: null,
@@ -1652,6 +1697,154 @@ test("POST /api/recurring-templates/from-import-candidates skips duplicates alre
       source_kind: "excel_sidebar",
       source_section: "週期支出",
       notes: "Imported from Excel sheet: March",
+    },
+  ]);
+});
+
+test("POST /api/recurring-templates/apply creates this month's recurring transactions and skips duplicates", async () => {
+  let insertedRows: Array<Record<string, unknown>> = [];
+  const createdTransactions = [
+    {
+      id: "txn-rt-1",
+      account_id: "account-1",
+      date: "2026-03-05",
+      amount: -12000,
+      currency: "TWD",
+      category: "固定支出",
+      description: "房租",
+      source: "recurring_template",
+      source_hash: "hash-room-rent",
+      created_at: "2026-03-22T00:00:00Z",
+    },
+  ];
+
+  const existingDuplicateHash = buildTransactionSourceHash({
+    account_id: "account-1",
+    date: "2026-03-10",
+    amount: -11000,
+    currency: "TWD",
+    category: "教育",
+    description: "幼稚園",
+    source: "recurring_template",
+  });
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "recurring_templates") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [
+                  {
+                    id: "rt-1",
+                    user_id: "user-1",
+                    account_id: "account-1",
+                    name: "房租",
+                    category: "固定支出",
+                    amount: -12000,
+                    currency: "TWD",
+                    cadence: "monthly",
+                    anchor_day: 5,
+                    source_kind: "manual",
+                    source_section: "固定支出",
+                    notes: null,
+                    created_at: "2026-03-21T00:00:00Z",
+                  },
+                  {
+                    id: "rt-2",
+                    user_id: "user-1",
+                    account_id: "account-1",
+                    name: "幼稚園",
+                    category: "教育",
+                    amount: -11000,
+                    currency: "TWD",
+                    cadence: "monthly",
+                    anchor_day: 10,
+                    source_kind: "excel_sidebar",
+                    source_section: "週期支出",
+                    notes: null,
+                    created_at: "2026-03-21T00:00:00Z",
+                  },
+                ],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "transactions") {
+          return {
+            select: () => ({
+              in: async () => ({
+                data: [{ source_hash: existingDuplicateHash }],
+                error: null,
+              }),
+            }),
+            insert: (values: Array<Record<string, unknown>>) => {
+              insertedRows = values;
+              return {
+                select: async () => ({
+                  data: createdTransactions,
+                  error: null,
+                }),
+              };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request(
+    "/api/recurring-templates/apply",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        year: 2026,
+        month: 3,
+      }),
+      headers: {
+        "content-type": "application/json",
+      },
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    items: createdTransactions,
+    count: 1,
+    skipped: 1,
+    status: "ok",
+  });
+  assert.deepEqual(insertedRows, [
+    {
+      account_id: "account-1",
+      date: "2026-03-05",
+      amount: -12000,
+      currency: "TWD",
+      category: "固定支出",
+      description: "房租",
+      source: "recurring_template",
+      source_hash: insertedRows[0]?.source_hash,
     },
   ]);
 });

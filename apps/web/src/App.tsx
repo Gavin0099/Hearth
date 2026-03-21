@@ -107,6 +107,10 @@ export function App() {
     setRecurringRefreshKey((current) => current + 1);
   }
 
+  function handleRecurringTemplatesApplied() {
+    setReportRefreshKey((current) => current + 1);
+  }
+
   async function handleSignOut() {
     try {
       setAuthError(null);
@@ -179,9 +183,14 @@ export function App() {
           onRecurringTemplatesCreated={handleRecurringTemplatesCreated}
           session={session}
         />
-        <RecurringTemplatesPanel refreshKey={recurringRefreshKey} session={session} />
+        <RecurringTemplatesPanel
+          onTemplatesApplied={handleRecurringTemplatesApplied}
+          refreshKey={recurringRefreshKey}
+          session={session}
+        />
         <TransactionsPanel
           onTransactionCreated={handleTransactionCreated}
+          refreshKey={reportRefreshKey}
           session={session}
         />
         <AccountsPanel session={session} />

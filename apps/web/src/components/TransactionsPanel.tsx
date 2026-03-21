@@ -7,6 +7,7 @@ import { createTransaction, fetchTransactions } from "../lib/transactions";
 type TransactionsPanelProps = {
   session: Session | null;
   onTransactionCreated: () => void;
+  refreshKey?: number;
 };
 
 type LoadState =
@@ -19,6 +20,7 @@ const today = new Date().toISOString().slice(0, 10);
 export function TransactionsPanel({
   session,
   onTransactionCreated,
+  refreshKey = 0,
 }: TransactionsPanelProps) {
   const [state, setState] = useState<LoadState>({ status: "idle" });
   const [formError, setFormError] = useState<string | null>(null);
@@ -82,7 +84,7 @@ export function TransactionsPanel({
     return () => {
       cancelled = true;
     };
-  }, [session]);
+  }, [session, refreshKey]);
 
   const recentTransactions = useMemo(() => {
     if (state.status !== "success") {

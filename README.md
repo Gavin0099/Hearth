@@ -60,3 +60,4 @@ This repo currently contains the initial implementation foundation:
 - first Excel monthly workbook import slice
 - first recurring template data path
 - first bulk adoption flow from Excel recurring candidates into recurring templates
+- first recurring-template apply flow into monthly transactions

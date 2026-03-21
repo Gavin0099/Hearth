@@ -1,22 +1,30 @@
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import type {
+  AccountRecord,
   CreateRecurringTemplateInput,
   RecurringTemplateRecord,
 } from "@hearth/shared";
-import { createRecurringTemplate, fetchRecurringTemplates } from "../lib/recurring";
+import { fetchAccounts } from "../lib/accounts";
+import {
+  applyRecurringTemplates,
+  createRecurringTemplate,
+  fetchRecurringTemplates,
+} from "../lib/recurring";
 
 type RecurringTemplatesPanelProps = {
   session: Session | null;
   refreshKey?: number;
+  onTemplatesApplied?: () => void;
 };
 
 type LoadState =
   | { status: "idle" | "loading" }
   | { status: "error"; message: string }
-  | { status: "success"; items: RecurringTemplateRecord[] };
+  | { status: "success"; items: RecurringTemplateRecord[]; accounts: AccountRecord[] };
 
 const defaultForm: CreateRecurringTemplateInput = {
+  account_id: "",
   name: "",
   category: "固定支出",
   amount: null,
@@ -28,12 +36,18 @@ const defaultForm: CreateRecurringTemplateInput = {
   notes: "",
 };
 
-export function RecurringTemplatesPanel({ session, refreshKey = 0 }: RecurringTemplatesPanelProps) {
+export function RecurringTemplatesPanel({
+  session,
+  refreshKey = 0,
+  onTemplatesApplied,
+}: RecurringTemplatesPanelProps) {
   const [state, setState] = useState<LoadState>({ status: "idle" });
   const [form, setForm] = useState<CreateRecurringTemplateInput>(defaultForm);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [applyMessage, setApplyMessage] = useState<string | null>(null);
+  const [isApplying, setIsApplying] = useState(false);
 
   useEffect(() => {
     if (!session) {
@@ -41,6 +55,7 @@ export function RecurringTemplatesPanel({ session, refreshKey = 0 }: RecurringTe
       setForm(defaultForm);
       setFormError(null);
       setFormSuccess(null);
+      setApplyMessage(null);
       return;
     }
 
@@ -48,17 +63,30 @@ export function RecurringTemplatesPanel({ session, refreshKey = 0 }: RecurringTe
 
     async function load() {
       setState({ status: "loading" });
-      const result = await fetchRecurringTemplates();
+      const [accountsResult, recurringResult] = await Promise.all([
+        fetchAccounts(),
+        fetchRecurringTemplates(),
+      ]);
       if (cancelled) {
         return;
       }
 
-      if (result.status === "error") {
-        setState({ status: "error", message: result.error });
+      if (accountsResult.status === "error") {
+        setState({ status: "error", message: accountsResult.error });
         return;
       }
 
-      setState({ status: "success", items: result.items });
+      if (recurringResult.status === "error") {
+        setState({ status: "error", message: recurringResult.error });
+        return;
+      }
+
+      const accounts = accountsResult.items;
+      setState({ status: "success", items: recurringResult.items, accounts });
+      setForm((current) => ({
+        ...current,
+        account_id: current.account_id || accounts[0]?.id || "",
+      }));
     }
 
     void load();
@@ -81,15 +109,22 @@ export function RecurringTemplatesPanel({ session, refreshKey = 0 }: RecurringTe
     event.preventDefault();
     setFormError(null);
     setFormSuccess(null);
+    setApplyMessage(null);
 
     if (!form.name?.trim()) {
       setFormError("請先填寫模板名稱。");
       return;
     }
 
+    if (!form.account_id?.trim()) {
+      setFormError("請先選擇帳戶。");
+      return;
+    }
+
     setIsSubmitting(true);
     const result = await createRecurringTemplate({
       ...form,
+      account_id: form.account_id,
       name: form.name.trim(),
       source_section: form.source_section?.trim() || null,
       notes: form.notes?.trim() || null,
@@ -107,20 +142,47 @@ export function RecurringTemplatesPanel({ session, refreshKey = 0 }: RecurringTe
 
     const created = result.items[0];
     setState((current) => {
-      if (current.status !== "success" || !created) {
-        return {
-          status: "success",
-          items: created ? [created] : [],
-        };
+      if (current.status !== "success") {
+        return current;
+      }
+
+      if (!created) {
+        return current;
       }
 
       return {
         status: "success",
+        accounts: current.accounts,
         items: [created, ...current.items],
       };
     });
-    setForm(defaultForm);
+    setForm((current) => ({
+      ...defaultForm,
+      account_id: current.account_id,
+    }));
     setFormSuccess("週期模板已建立。");
+  }
+
+  async function handleApplyCurrentMonth() {
+    setFormError(null);
+    setFormSuccess(null);
+    setApplyMessage(null);
+
+    const now = new Date();
+    setIsApplying(true);
+    const result = await applyRecurringTemplates({
+      year: now.getFullYear(),
+      month: now.getMonth() + 1,
+    });
+    setIsApplying(false);
+
+    if (result.status === "error") {
+      setApplyMessage(`套用失敗: ${result.error}`);
+      return;
+    }
+
+    setApplyMessage(`本月已建立 ${result.count} 筆週期交易，跳過 ${result.skipped} 筆既有資料。`);
+    onTemplatesApplied?.();
   }
 
   return (
@@ -131,6 +193,21 @@ export function RecurringTemplatesPanel({ session, refreshKey = 0 }: RecurringTe
       {state.status === "error" ? <p>週期模板載入失敗: {state.message}</p> : null}
       {session ? (
         <form className="account-form" onSubmit={handleSubmit}>
+          {state.status === "success" ? (
+            <label>
+              帳戶
+              <select
+                value={form.account_id}
+                onChange={(event) => updateForm("account_id", event.target.value)}
+              >
+                {state.accounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <label>
             模板名稱
             <input
@@ -187,8 +264,17 @@ export function RecurringTemplatesPanel({ session, refreshKey = 0 }: RecurringTe
           <button className="action-button" disabled={isSubmitting} type="submit">
             {isSubmitting ? "建立中..." : "新增模板"}
           </button>
+          <button
+            className="action-button"
+            disabled={isApplying}
+            onClick={() => void handleApplyCurrentMonth()}
+            type="button"
+          >
+            {isApplying ? "套用中..." : "套用本月模板"}
+          </button>
           {formError ? <p>建立失敗: {formError}</p> : null}
           {formSuccess ? <p>{formSuccess}</p> : null}
+          {applyMessage ? <p>{applyMessage}</p> : null}
         </form>
       ) : null}
       {state.status === "success" ? (

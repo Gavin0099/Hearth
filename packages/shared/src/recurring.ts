@@ -1,3 +1,5 @@
+import type { TransactionRecord } from "./transactions";
+
 export const recurringCadences = ["monthly"] as const;
 export type RecurringCadence = (typeof recurringCadences)[number];
 
@@ -7,6 +9,7 @@ export type RecurringSourceKind = (typeof recurringSourceKinds)[number];
 export type RecurringTemplateRecord = {
   id: string;
   user_id: string;
+  account_id: string;
   name: string;
   category: string | null;
   amount: number | null;
@@ -20,6 +23,7 @@ export type RecurringTemplateRecord = {
 };
 
 export type CreateRecurringTemplateInput = {
+  account_id: string;
   name: string;
   category?: string | null;
   amount?: number | null;
@@ -32,6 +36,7 @@ export type CreateRecurringTemplateInput = {
 };
 
 export type CreateRecurringTemplatesFromCandidatesInput = {
+  account_id: string;
   candidates: Array<{
     sheet: string;
     section: string;
@@ -40,12 +45,30 @@ export type CreateRecurringTemplatesFromCandidatesInput = {
   }>;
 };
 
+export type ApplyRecurringTemplatesInput = {
+  year: number;
+  month: number;
+};
+
 export type RecurringTemplatesResponse =
   | {
       items: RecurringTemplateRecord[];
       count: number;
       status: "ok";
       skipped?: number;
+    }
+  | {
+      code: "unauthorized" | "validation_error" | "database_error";
+      error: string;
+      status: "error";
+    };
+
+export type ApplyRecurringTemplatesResponse =
+  | {
+      items: TransactionRecord[];
+      count: number;
+      skipped: number;
+      status: "ok";
     }
   | {
       code: "unauthorized" | "validation_error" | "database_error";

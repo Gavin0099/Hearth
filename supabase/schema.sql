@@ -86,6 +86,7 @@ create table if not exists dividends (
 create table if not exists recurring_templates (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users,
+  account_id uuid not null references accounts,
   name text not null,
   category text,
   amount numeric(12, 2),

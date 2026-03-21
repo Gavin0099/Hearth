@@ -3,7 +3,7 @@
 > **專案類型**: 家庭資產管理系統
 > **技術棧**: React / TypeScript / Hono / Supabase / Cloudflare
 > **複雜度**: L1 → L2（依資料安全與匯入邏輯升級）
-> **最後更新**: 2026-03-21
+> **最後更新**: 2026-03-22
 > **Owner**: GavinWu
 > **Freshness**: Sprint (7d)
 
@@ -70,14 +70,15 @@
 - [x] 建立第一個 `excel-monthly` Excel 匯入切片
 - [x] 建立第一條 recurring template 正式資料路徑
 - [x] 把 `recurringCandidates` 接成 recurring template 批次建立流程
+- [x] 讓 recurring template 可套用成當月 transactions
 - [x] 對 `Hearth` 正式執行 framework `--adopt-existing` baseline adoption
 - [ ] 建立 repo-specific engineering governance baseline
 
 ### 接下來
 
 1. 建立 repo-specific engineering governance baseline
-2. 把 `excel-monthly` 的 recurringCandidates 接成真正模板建立動作
-3. 擴大 `transactions` 路徑，加入更完整的歷史列表與驗證
+2. 擴大 `transactions` 路徑，加入更完整的歷史列表與驗證
+3. 擴充更完整的銀行 / 信用卡匯入入口
 4. 視需要補前端端到端驗證
 
 ---
@@ -118,6 +119,7 @@
 - [x] 第一個 `excel-monthly` 匯入切片
 - [x] recurring template list/create slice
 - [x] recurring candidates -> recurring template bulk-create flow
+- [x] recurring template -> monthly transaction apply flow
 - [ ] 更完整的銀行 / 信用卡匯入入口
 - [ ] 月帳本 Excel parser recurring template / formula-heavy workbook 擴充
 - [x] 月度收支報表 API 與 dashboard 第一版骨架
@@ -183,3 +185,4 @@
 | 2026-03-21 | 建立 recurring template 正式資料路徑 | 讓固定支出與 Excel recurring candidates 有正式可存的 API / schema / UI 入口 |
 | 2026-03-21 | 建立 recurring candidates 批次建立 recurring template 流程 | 讓 Excel 偵測到的固定區塊不只可見，還能直接落成正式模板 |
 | 2026-03-21 | 對 `Hearth` 正式執行 framework `--adopt-existing` 並通過 drift checker | 讓 framework adoption 從人工約定升級成 machine-verified baseline adoption |
+| 2026-03-22 | 讓 recurring template 可套用成當月 transactions | 讓模板正式參與 `transactions -> monthly report` 主資料流，而不只是停留在設定層 |

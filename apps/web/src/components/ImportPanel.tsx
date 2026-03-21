@@ -118,6 +118,7 @@ export function ImportPanel({
 
     setIsCreatingRecurring(true);
     const result = await createRecurringTemplatesFromCandidates({
+      account_id: selectedAccountId,
       candidates: latestRecurringCandidates,
     });
     setIsCreatingRecurring(false);
