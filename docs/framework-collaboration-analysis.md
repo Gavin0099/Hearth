@@ -1,0 +1,130 @@
+# AI Governance Framework Collaboration Analysis
+
+Last updated: 2026-03-21
+
+This note captures what happened while applying `ai-governance-framework` to `Hearth`, including both the friction and the value.
+
+## Observed problems
+
+### 1. Submodule import created a false sense of completion
+
+At first, `Hearth` imported `ai-governance-framework` as a submodule, but did not yet have:
+
+- local `AGENTS.md`
+- local `PLAN.md`
+- local `MEMORY.md`
+- local `memory/YYYY-MM-DD.md`
+
+That meant the framework was present in the tree, but not yet operating as a local workflow.
+
+### 2. Framework planning and product planning were easy to confuse
+
+The framework's own `PLAN.md` describes framework evolution, not the `Hearth` product roadmap.
+
+Without a local `Hearth` `PLAN.md`, there was a risk of mixing:
+
+- governance-framework progress
+- product delivery progress
+
+### 3. Repo-specific engineering governance is still missing
+
+The framework helped establish planning and memory, but `Hearth` still does not yet have its own engineering governance baseline for:
+
+- risk classification
+- required verification per change type
+- secrets handling
+- escalation rules for auth/import/portfolio work
+
+### 4. Governance syncing is still manual
+
+The project now updates:
+
+- `PLAN.md`
+- `MEMORY.md`
+- daily memory
+- milestone docs
+
+This is useful, but still manual. Without future automation or stricter freshness enforcement, drift can return.
+
+### 5. Environment setup issues became more visible
+
+Framework-guided collaboration made setup problems surface early:
+
+- missing Git author identity
+- GitHub token/push authentication issues
+- missing local dependencies before tests could run
+
+These were not caused by the framework, but the framework made them impossible to ignore.
+
+## Observed benefits
+
+### 1. Conversations became persistent project state
+
+The biggest benefit was turning chat-driven progress into repo-state:
+
+- local plan
+- local long-term memory
+- daily implementation memory
+- milestone notes
+
+That made `Hearth` more durable across sessions.
+
+### 2. Milestone-based progress became natural
+
+Instead of one large stream of changes, the work naturally broke into milestone commits:
+
+- initial scaffold
+- local framework adoption
+- reference analysis
+- frontend auth
+- account creation
+- local verification
+
+This made AI collaboration easier to reason about and review.
+
+### 3. Decision context stayed attached to the codebase
+
+Important context is now captured in docs instead of disappearing into chat history:
+
+- reference product analysis
+- auth setup
+- local verification strategy
+
+That will make future iteration easier.
+
+### 4. Verification entered the workflow earlier
+
+The framework pushed the project toward executable checks instead of stopping at implementation.
+
+As a result, `Hearth` now has local route tests for the current auth/accounts slice.
+
+### 5. It helped keep the project on one main line
+
+`Hearth` has multiple possible axes:
+
+- product UX
+- auth
+- data model
+- imports
+- portfolio
+- deployment
+
+The plan/memory structure helped keep the team focused on the current phase instead of jumping randomly between tracks.
+
+## Current conclusion
+
+Applying `ai-governance-framework` to `Hearth` was valuable, but only after local adoption files were added.
+
+The practical lesson is:
+
+- framework reference alone is not enough
+- repo-local plan and memory are required
+- repo-specific engineering governance is the next missing layer
+
+## Recommended next framework-related follow-up
+
+Not for immediate action inside `Hearth`, but worth tracking:
+
+- define a lighter repo-specific engineering governance baseline
+- clarify secret-handling expectations during AI collaboration
+- reduce manual synchronization burden where possible
