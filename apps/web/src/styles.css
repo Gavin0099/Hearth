@@ -134,6 +134,30 @@ body {
   opacity: 0.6;
 }
 
+.account-form {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.account-form label {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+  color: #5d4331;
+}
+
+.account-form input,
+.account-form select {
+  width: 100%;
+  border: 1px solid rgba(91, 66, 44, 0.18);
+  border-radius: 14px;
+  padding: 10px 12px;
+  font: inherit;
+  background: #fffdf9;
+  color: #241b15;
+}
+
 .category-list {
   display: flex;
   flex-wrap: wrap;
