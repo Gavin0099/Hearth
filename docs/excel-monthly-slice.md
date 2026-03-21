@@ -2,10 +2,11 @@
 
 This slice adds the first `excel-monthly` ingestion seam for Hearth.
 
-## Supported first-pass workbook shape
+## Supported workbook shapes
 
-The current parser intentionally supports a constrained worksheet layout:
+The current parser intentionally supports two constrained worksheet layouts:
 
+### 1. Grid layout
 - first sheet only
 - one header row containing date columns such as `2026/03/01` or `2026-03-01`
 - left-side columns:
@@ -22,6 +23,23 @@ Example:
 | 交通花費 | 捷運 |  | 50 |
 | 生活雜費 | 日用品 | 300 |  |
 
+### 2. Horizontal calendar layout
+- first sheet only
+- first row contains date groups
+- second row contains repeated `項目 / 金額` markers under each date
+- category boundary rows appear on the left side, such as `飲食費用` or `交通花費`
+- detail rows place the description in the `項目` column and amount in the paired `金額` column
+
+Example:
+
+| 分類 |  | 2026/03/01 |  | 2026/03/02 |  |
+| --- | --- | --- | --- | --- | --- |
+|  |  | 項目 | 金額 | 項目 | 金額 |
+| 飲食費用 |  |  |  |  |  |
+|  |  | 早餐 | 80 | 午餐 | 120 |
+| 交通花費 |  |  |  |  |  |
+|  |  | 捷運 | 50 |  |  |
+
 ## Current behavior
 
 - imports the first worksheet only
@@ -29,6 +47,7 @@ Example:
   - `飲食費用` -> `餐飲`
   - `生活雜費` -> `生活購物`
   - `交通花費` -> `交通`
+- supports category boundary rows for the horizontal calendar variant
 - treats positive values as expenses and stores them as negative transaction amounts
 - writes imported rows through the same transaction import pipeline as CSV imports
 - keeps `source = excel_monthly`
@@ -36,10 +55,10 @@ Example:
 
 ## Current limitations
 
-- does not yet parse the real horizontal calendar workbook with category boundary rows and paired item/amount columns per day
 - does not yet parse recurring-expense sidebars
 - does not yet support multiple monthly sheets in one workbook
 - assumes TWD for this first slice
+- still assumes a controlled left-side boundary pattern rather than arbitrary merged-cell workbook layouts
 
 ## Why this shape first
 

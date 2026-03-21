@@ -74,7 +74,7 @@
 
 1. 建立 repo-specific engineering governance baseline
 2. 擴大 `transactions` 路徑，加入更完整的歷史列表與驗證
-3. 把 `excel-monthly` 從受控版型擴大到更接近真實月帳本格式
+3. 把 `excel-monthly` 再往真實月帳本左側固定區塊與多 sheet 結構擴大
 4. 視需要補前端端到端驗證
 
 ---
@@ -114,7 +114,7 @@
 - [x] 第一個銀行專屬 mapping：`sinopac-tw`
 - [x] 第一個 `excel-monthly` 匯入切片
 - [ ] 更完整的銀行 / 信用卡匯入入口
-- [ ] 月帳本 Excel parser 真實帳本格式擴充
+- [ ] 月帳本 Excel parser 左側固定區塊 / 多 sheet 擴充
 - [x] 月度收支報表 API 與 dashboard 第一版骨架
 
 ### Phase D: 投資匯入與淨值計算
@@ -169,3 +169,4 @@
 | 2026-03-21 | 建立第一條 normalized CSV transaction 匯入路徑 | 先把通用匯入管線打通，再往銀行/帳本專屬 parser 演進 |
 | 2026-03-21 | 建立第一個 `sinopac-tw` 銀行專屬 mapping 切片 | 驗證銀行專屬欄位映射可以建立在通用匯入管線之上 |
 | 2026-03-21 | 建立第一個 `excel-monthly` 受控 Excel 匯入切片 | 先把 workbook ingestion seam 建立起來，再依真實月帳本格式擴充 parser |
+| 2026-03-21 | 擴充 `excel-monthly` 支援橫向日曆與分類邊界列 | 讓 Excel 匯入更接近 `Hearth-plan.md` 描述的月帳本結構 |

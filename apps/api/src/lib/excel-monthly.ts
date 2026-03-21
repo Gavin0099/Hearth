@@ -3,6 +3,8 @@ import type { CreateTransactionInput } from "@hearth/shared";
 
 const categoryAliases = ["分類", "category"];
 const descriptionAliases = ["項目", "摘要", "內容", "description"];
+const itemAliases = ["項目", "item"];
+const amountAliases = ["金額", "amount"];
 
 const categoryMap: Record<string, string> = {
   "飲食費用": "餐飲",
@@ -91,6 +93,135 @@ function rowHasAmounts(row: unknown[], dateColumns: Array<{ index: number; date:
   return dateColumns.some(({ index }) => normalizeAmount(row[index]) !== null);
 }
 
+function getFallbackYear(headerRow: unknown[]) {
+  const firstExplicitYear = headerRow
+    .map((cell) => normalizeText(cell))
+    .map((cell) => cell.match(/^(\d{4})[\/-]/)?.[1] ?? null)
+    .find(Boolean);
+
+  return firstExplicitYear ? Number(firstExplicitYear) : undefined;
+}
+
+function buildDateColumns(headerRow: unknown[]) {
+  const fallbackYear = getFallbackYear(headerRow);
+  return headerRow
+    .map((cell, index) => ({
+      index,
+      date: parseDateHeader(cell, fallbackYear),
+    }))
+    .filter((entry): entry is { index: number; date: string } => Boolean(entry.date));
+}
+
+function parseCalendarPairColumns(
+  rows: unknown[][],
+  headerRowIndex: number,
+  accountId: string,
+) {
+  const headerRow = rows[headerRowIndex] as unknown[];
+  const pairHeaderRow = rows[headerRowIndex + 1];
+  if (!Array.isArray(pairHeaderRow)) {
+    return null;
+  }
+
+  const fallbackYear = getFallbackYear(headerRow);
+  const normalizedItemAliases = itemAliases.map((alias) => alias.toLowerCase());
+  const normalizedAmountAliases = amountAliases.map((alias) => alias.toLowerCase());
+
+  const pairColumns = headerRow
+    .map((cell, index) => {
+      const date = parseDateHeader(cell, fallbackYear);
+      if (!date) {
+        return null;
+      }
+
+      const itemLabel = normalizeText(pairHeaderRow[index]).toLowerCase();
+      const amountLabel = normalizeText(pairHeaderRow[index + 1]).toLowerCase();
+      if (
+        !normalizedItemAliases.includes(itemLabel) ||
+        !normalizedAmountAliases.includes(amountLabel)
+      ) {
+        return null;
+      }
+
+      return {
+        date,
+        itemIndex: index,
+        amountIndex: index + 1,
+      };
+    })
+    .filter(
+      (entry): entry is { date: string; itemIndex: number; amountIndex: number } => Boolean(entry),
+    );
+
+  if (pairColumns.length === 0) {
+    return null;
+  }
+
+  const normalized: CreateTransactionInput[] = [];
+  const errors: string[] = [];
+  let skipped = 0;
+  let activeCategory: string | null = null;
+
+  rows.slice(headerRowIndex + 2).forEach((row, offset) => {
+    if (!Array.isArray(row) || isEmptyRow(row)) {
+      skipped += 1;
+      return;
+    }
+
+    const line = headerRowIndex + offset + 3;
+    const leftCells = row.slice(0, pairColumns[0].itemIndex).map((cell) => normalizeText(cell));
+    const leftLabel = leftCells.find(Boolean) ?? "";
+    const hasCalendarValues = pairColumns.some(
+      ({ itemIndex, amountIndex }) =>
+        normalizeText(row[itemIndex]) !== "" || normalizeAmount(row[amountIndex]) !== null,
+    );
+
+    if (leftLabel && !hasCalendarValues) {
+      activeCategory = normalizeCategory(leftLabel);
+      skipped += 1;
+      return;
+    }
+
+    let emitted = 0;
+    pairColumns.forEach(({ date, itemIndex, amountIndex }) => {
+      const description = normalizeText(row[itemIndex]);
+      const amount = normalizeAmount(row[amountIndex]);
+      if (!description && amount === null) {
+        return;
+      }
+
+      if (amount === null) {
+        errors.push(`line ${line}: ${date} amount is missing or invalid`);
+        return;
+      }
+
+      normalized.push({
+        account_id: accountId,
+        date,
+        amount,
+        currency: "TWD",
+        category: activeCategory ?? "其他",
+        description: description || activeCategory || "未命名項目",
+        source: "excel_monthly",
+      });
+      emitted += 1;
+    });
+
+    if (emitted === 0 && hasCalendarValues) {
+      errors.push(`line ${line}: row has no importable calendar entries`);
+    } else if (emitted === 0) {
+      skipped += 1;
+    }
+  });
+
+  return {
+    normalized,
+    errors,
+    skipped,
+    sheetName: null as string | null,
+  };
+}
+
 export function parseMonthlyExcel(buffer: ArrayBuffer, accountId: string) {
   const workbook = XLSX.read(buffer, {
     type: "array",
@@ -127,18 +258,16 @@ export function parseMonthlyExcel(buffer: ArrayBuffer, accountId: string) {
     };
   }
 
+  const calendarPairResult = parseCalendarPairColumns(rows, headerRowIndex, accountId);
+  if (calendarPairResult) {
+    return {
+      ...calendarPairResult,
+      sheetName,
+    };
+  }
+
   const headerRow = rows[headerRowIndex] as unknown[];
-  const firstExplicitYear = headerRow
-    .map((cell) => normalizeText(cell))
-    .map((cell) => cell.match(/^(\d{4})[\/-]/)?.[1] ?? null)
-    .find(Boolean);
-  const fallbackYear = firstExplicitYear ? Number(firstExplicitYear) : undefined;
-  const dateColumns = headerRow
-    .map((cell, index) => ({
-      index,
-      date: parseDateHeader(cell, fallbackYear),
-    }))
-    .filter((entry): entry is { index: number; date: string } => Boolean(entry.date));
+  const dateColumns = buildDateColumns(headerRow);
 
   if (dateColumns.length === 0) {
     return {

@@ -799,3 +799,112 @@ test("POST /api/import/excel-monthly imports simplified calendar workbook rows",
     },
   ]);
 });
+
+test("POST /api/import/excel-monthly imports horizontal calendar workbook with category boundary rows", async () => {
+  let insertedRows: Array<Record<string, unknown>> = [];
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "transactions") {
+          return {
+            select: () => ({
+              in: async () => ({
+                data: [],
+                error: null,
+              }),
+            }),
+            insert: async (values: Array<Record<string, unknown>>) => {
+              insertedRows = values;
+              return { error: null };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set(
+    "file",
+    createExcelMonthlyFile([
+      ["分類", "", "2026/03/01", "", "2026/03/02", ""],
+      ["", "", "項目", "金額", "項目", "金額"],
+      ["飲食費用", "", "", "", "", ""],
+      ["", "", "早餐", 80, "午餐", 120],
+      ["交通花費", "", "", "", "", ""],
+      ["", "", "捷運", 50, "", ""],
+    ]),
+  );
+
+  const response = await app.request(
+    "/api/import/excel-monthly",
+    {
+      method: "POST",
+      body: formData,
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    source: "excel-monthly",
+    imported: 3,
+    skipped: 2,
+    failed: 0,
+    runtime: "cloudflare-worker",
+    persistence: "supabase",
+    status: "ok",
+    errors: [],
+  });
+  assert.deepEqual(insertedRows, [
+    {
+      account_id: "account-1",
+      date: "2026-03-01",
+      amount: -80,
+      currency: "TWD",
+      category: "餐飲",
+      description: "早餐",
+      source: "excel_monthly",
+      source_hash: insertedRows[0]?.source_hash,
+    },
+    {
+      account_id: "account-1",
+      date: "2026-03-02",
+      amount: -120,
+      currency: "TWD",
+      category: "餐飲",
+      description: "午餐",
+      source: "excel_monthly",
+      source_hash: insertedRows[1]?.source_hash,
+    },
+    {
+      account_id: "account-1",
+      date: "2026-03-01",
+      amount: -50,
+      currency: "TWD",
+      category: "交通",
+      description: "捷運",
+      source: "excel_monthly",
+      source_hash: insertedRows[2]?.source_hash,
+    },
+  ]);
+});
