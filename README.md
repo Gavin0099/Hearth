@@ -63,3 +63,4 @@ This repo currently contains the initial implementation foundation:
 - first recurring-template apply flow into monthly transactions
 - first transaction delete flow for quick corrections
 - first transaction filter flow for account/date/category/keyword lookup
+- first transaction edit flow for quick corrections

@@ -2,6 +2,7 @@ import type {
   CreateTransactionInput,
   TransactionsQuery,
   TransactionsResponse,
+  UpdateTransactionInput,
 } from "@hearth/shared";
 import { apiFetch } from "./api";
 
@@ -43,6 +44,21 @@ export async function createTransaction(payload: CreateTransactionInput) {
 export async function deleteTransaction(transactionId: string) {
   const response = await apiFetch(`/api/transactions/${transactionId}`, {
     method: "DELETE",
+  });
+
+  return (await response.json()) as TransactionsResponse;
+}
+
+export async function updateTransaction(
+  transactionId: string,
+  payload: UpdateTransactionInput,
+) {
+  const response = await apiFetch(`/api/transactions/${transactionId}`, {
+    method: "PUT",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(payload),
   });
 
   return (await response.json()) as TransactionsResponse;

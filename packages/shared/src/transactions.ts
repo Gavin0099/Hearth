@@ -21,6 +21,14 @@ export type CreateTransactionInput = {
   source?: string | null;
 };
 
+export type UpdateTransactionInput = {
+  date?: string;
+  amount?: number;
+  currency?: string;
+  category?: string | null;
+  description?: string | null;
+};
+
 export type TransactionsResponse =
   | {
       items: TransactionRecord[];

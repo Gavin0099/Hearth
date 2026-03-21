@@ -7,10 +7,12 @@ This slice adds the first real transaction write path to `Hearth`.
 - `GET /api/transactions`
 - `POST /api/transactions`
 - `DELETE /api/transactions/:transactionId`
+- `PUT /api/transactions/:transactionId`
 - frontend manual transaction entry panel
 - monthly report refresh after successful transaction creation
 - recent transaction deletion for quick correction
 - transaction filter controls (account / date range / category / keyword)
+- inline transaction editing for quick correction
 
 ## Why this matters
 
@@ -28,4 +30,3 @@ Now the product has the first full path:
 - CSV import flows
 - Excel import flow
 - richer transaction history UI
-- transaction editing

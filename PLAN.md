@@ -73,13 +73,14 @@
 - [x] 讓 recurring template 可套用成當月 transactions
 - [x] 補上 transaction delete flow 方便修正資料
 - [x] 補上 transaction filter flow（帳戶/日期/類別/關鍵字）
+- [x] 補上 transaction edit flow 方便修正資料
 - [x] 對 `Hearth` 正式執行 framework `--adopt-existing` baseline adoption
 - [ ] 建立 repo-specific engineering governance baseline
 
 ### 接下來
 
 1. 建立 repo-specific engineering governance baseline
-2. 擴大 `transactions` 路徑，加入更完整的歷史列表與編輯
+2. 擴大 `transactions` 路徑，加入更完整的歷史列表與彙總互動
 3. 擴充更完整的銀行 / 信用卡匯入入口
 4. 視需要補前端端到端驗證
 
@@ -124,6 +125,7 @@
 - [x] recurring template -> monthly transaction apply flow
 - [x] transaction delete flow
 - [x] transaction filter flow
+- [x] transaction edit flow
 - [ ] 更完整的銀行 / 信用卡匯入入口
 - [ ] 月帳本 Excel parser recurring template / formula-heavy workbook 擴充
 - [x] 月度收支報表 API 與 dashboard 第一版骨架
@@ -192,3 +194,4 @@
 | 2026-03-22 | 讓 recurring template 可套用成當月 transactions | 讓模板正式參與 `transactions -> monthly report` 主資料流，而不只是停留在設定層 |
 | 2026-03-22 | 補上 transaction delete flow | 讓手動新增、匯入、模板套用進來的資料有最基本的修正能力，朝第一版可用性前進 |
 | 2026-03-22 | 補上 transaction filter flow | 讓第一版可用性從「能看資料」前進到「可用條件檢索資料」，降低日常使用摩擦 |
+| 2026-03-22 | 補上 transaction edit flow | 讓第一版交易操作形成完整閉環（新增/篩選/編輯/刪除），提高日常可用性 |

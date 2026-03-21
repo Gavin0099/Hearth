@@ -5,9 +5,15 @@ import type {
   CreateTransactionInput,
   TransactionRecord,
   TransactionsQuery,
+  UpdateTransactionInput,
 } from "@hearth/shared";
 import { fetchAccounts } from "../lib/accounts";
-import { createTransaction, deleteTransaction, fetchTransactions } from "../lib/transactions";
+import {
+  createTransaction,
+  deleteTransaction,
+  fetchTransactions,
+  updateTransaction,
+} from "../lib/transactions";
 
 type TransactionsPanelProps = {
   session: Session | null;
@@ -33,6 +39,13 @@ export function TransactionsPanel({
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
+  const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<UpdateTransactionInput>({
+    date: today,
+    amount: -100,
+    category: "",
+    description: "",
+  });
   const [filters, setFilters] = useState<TransactionsQuery>({
     date_from: monthStart,
     date_to: today,
@@ -204,6 +217,61 @@ export function TransactionsPanel({
     onTransactionCreated();
   }
 
+  function startEdit(transaction: TransactionRecord) {
+    setFormError(null);
+    setFormSuccess(null);
+    setEditingTransactionId(transaction.id);
+    setEditForm({
+      date: transaction.date,
+      amount: Number(transaction.amount),
+      currency: transaction.currency,
+      category: transaction.category ?? "",
+      description: transaction.description ?? "",
+    });
+  }
+
+  function cancelEdit() {
+    setEditingTransactionId(null);
+  }
+
+  async function saveEdit(transactionId: string) {
+    setFormError(null);
+    setFormSuccess(null);
+
+    const result = await updateTransaction(transactionId, {
+      date: editForm.date,
+      amount: Number(editForm.amount),
+      currency: editForm.currency,
+      category: editForm.category ?? null,
+      description: editForm.description ?? null,
+    });
+
+    if (result.status === "error") {
+      setFormError(result.error);
+      return;
+    }
+
+    const updated = result.items[0];
+    if (updated) {
+      setState((current) => {
+        if (current.status !== "success") {
+          return current;
+        }
+
+        return {
+          ...current,
+          transactions: current.transactions.map((transaction) =>
+            transaction.id === transactionId ? updated : transaction,
+          ),
+        };
+      });
+    }
+
+    setEditingTransactionId(null);
+    setFormSuccess("交易已更新。");
+    onTransactionCreated();
+  }
+
   return (
     <article className="panel">
       <h2>手動交易</h2>
@@ -317,16 +385,78 @@ export function TransactionsPanel({
             <ul>
               {visibleTransactions.map((transaction) => (
                 <li key={transaction.id}>
-                  {transaction.date} | {transaction.category ?? "未分類"} | NT${" "}
-                  {Number(transaction.amount).toFixed(2)}{" "}
-                  <button
-                    className="action-button"
-                    disabled={deletingTransactionId === transaction.id}
-                    onClick={() => void handleDeleteTransaction(transaction.id)}
-                    type="button"
-                  >
-                    {deletingTransactionId === transaction.id ? "刪除中..." : "刪除"}
-                  </button>
+                  {editingTransactionId === transaction.id ? (
+                    <>
+                      <input
+                        type="date"
+                        value={editForm.date ?? ""}
+                        onChange={(event) =>
+                          setEditForm((current) => ({
+                            ...current,
+                            date: event.target.value,
+                          }))
+                        }
+                      />{" "}
+                      <input
+                        type="number"
+                        value={editForm.amount ?? 0}
+                        onChange={(event) =>
+                          setEditForm((current) => ({
+                            ...current,
+                            amount: Number(event.target.value),
+                          }))
+                        }
+                      />{" "}
+                      <input
+                        value={editForm.category ?? ""}
+                        onChange={(event) =>
+                          setEditForm((current) => ({
+                            ...current,
+                            category: event.target.value,
+                          }))
+                        }
+                      />{" "}
+                      <input
+                        value={editForm.description ?? ""}
+                        onChange={(event) =>
+                          setEditForm((current) => ({
+                            ...current,
+                            description: event.target.value,
+                          }))
+                        }
+                      />{" "}
+                      <button
+                        className="action-button"
+                        onClick={() => void saveEdit(transaction.id)}
+                        type="button"
+                      >
+                        儲存
+                      </button>{" "}
+                      <button className="action-button" onClick={cancelEdit} type="button">
+                        取消
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {transaction.date} | {transaction.category ?? "未分類"} | NT${" "}
+                      {Number(transaction.amount).toFixed(2)}{" "}
+                      <button
+                        className="action-button"
+                        onClick={() => startEdit(transaction)}
+                        type="button"
+                      >
+                        編輯
+                      </button>{" "}
+                      <button
+                        className="action-button"
+                        disabled={deletingTransactionId === transaction.id}
+                        onClick={() => void handleDeleteTransaction(transaction.id)}
+                        type="button"
+                      >
+                        {deletingTransactionId === transaction.id ? "刪除中..." : "刪除"}
+                      </button>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>

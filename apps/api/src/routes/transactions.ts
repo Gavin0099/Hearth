@@ -4,6 +4,7 @@ import type {
   TransactionRecord,
   TransactionsQuery,
   TransactionsResponse,
+  UpdateTransactionInput,
 } from "@hearth/shared";
 import type { ApiEnv } from "../types";
 
@@ -307,6 +308,164 @@ transactionsRoutes.delete("/:transactionId", async (c) => {
   const { data, error } = await supabase
     .from("transactions")
     .delete()
+    .eq("id", transactionId)
+    .in("account_id", accountIds)
+    .select("id, account_id, date, amount, currency, category, description, source, source_hash, created_at");
+
+  if (error) {
+    return c.json<TransactionsResponse>(
+      {
+        code: "database_error",
+        error: error.message,
+        status: "error",
+      },
+      500,
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return c.json<TransactionsResponse>(
+      {
+        code: "validation_error",
+        error: "Transaction does not belong to the current user.",
+        status: "error",
+      },
+      400,
+    );
+  }
+
+  return c.json<TransactionsResponse>({
+    items: data as TransactionRecord[],
+    count: data.length,
+    status: "ok",
+  });
+});
+
+transactionsRoutes.put("/:transactionId", async (c) => {
+  const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
+  const user = await resolveAuthenticatedUser(c.req.raw, c.env);
+  if (!user) {
+    return c.json<TransactionsResponse>(
+      {
+        code: "unauthorized",
+        error: "Missing or invalid Supabase bearer token.",
+        status: "error",
+      },
+      401,
+    );
+  }
+
+  const transactionId = c.req.param("transactionId")?.trim();
+  if (!transactionId) {
+    return c.json<TransactionsResponse>(
+      {
+        code: "validation_error",
+        error: "transactionId is required.",
+        status: "error",
+      },
+      400,
+    );
+  }
+
+  let payload: UpdateTransactionInput;
+  try {
+    payload = await c.req.json<UpdateTransactionInput>();
+  } catch {
+    return c.json<TransactionsResponse>(
+      {
+        code: "validation_error",
+        error: "Invalid JSON body.",
+        status: "error",
+      },
+      400,
+    );
+  }
+
+  const updateFields: Record<string, unknown> = {};
+  if (payload.date !== undefined) {
+    if (!payload.date?.trim()) {
+      return c.json<TransactionsResponse>(
+        {
+          code: "validation_error",
+          error: "date must not be empty when provided.",
+          status: "error",
+        },
+        400,
+      );
+    }
+    updateFields.date = payload.date.trim();
+  }
+
+  if (payload.amount !== undefined) {
+    if (!Number.isFinite(Number(payload.amount)) || Number(payload.amount) === 0) {
+      return c.json<TransactionsResponse>(
+        {
+          code: "validation_error",
+          error: "amount must be a non-zero number when provided.",
+          status: "error",
+        },
+        400,
+      );
+    }
+    updateFields.amount = Number(payload.amount);
+  }
+
+  if (payload.currency !== undefined) {
+    updateFields.currency = payload.currency?.trim().toUpperCase() || "TWD";
+  }
+
+  if (payload.category !== undefined) {
+    updateFields.category = payload.category?.trim() || null;
+  }
+
+  if (payload.description !== undefined) {
+    updateFields.description = payload.description?.trim() || null;
+  }
+
+  if (Object.keys(updateFields).length === 0) {
+    return c.json<TransactionsResponse>(
+      {
+        code: "validation_error",
+        error: "At least one updatable field is required.",
+        status: "error",
+      },
+      400,
+    );
+  }
+
+  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
+  const supabase = createSupabaseAdminClient(c.env);
+  const { data: ownedAccounts, error: accountsError } = await supabase
+    .from("accounts")
+    .select("id")
+    .eq("user_id", user.id);
+
+  if (accountsError) {
+    return c.json<TransactionsResponse>(
+      {
+        code: "database_error",
+        error: accountsError.message,
+        status: "error",
+      },
+      500,
+    );
+  }
+
+  const accountIds = (ownedAccounts ?? []).map((account: { id: string }) => account.id);
+  if (accountIds.length === 0) {
+    return c.json<TransactionsResponse>(
+      {
+        code: "validation_error",
+        error: "Transaction does not belong to the current user.",
+        status: "error",
+      },
+      400,
+    );
+  }
+
+  const { data, error } = await supabase
+    .from("transactions")
+    .update(updateFields)
     .eq("id", transactionId)
     .in("account_id", accountIds)
     .select("id, account_id, date, amount, currency, category, description, source, source_hash, created_at");
