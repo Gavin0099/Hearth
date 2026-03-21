@@ -41,6 +41,17 @@ This repo currently contains the initial implementation foundation:
 5. Run `npm run dev:web` and `npm run dev:api`
 6. Run `npm --workspace @hearth/api run test` for the current auth/accounts verification slice
 
+## First release readiness
+
+- Code-only readiness check:
+  - `npm run readiness:first:codeonly`
+- Fast readiness check:
+  - `npm run readiness:first`
+- Strict readiness check:
+  - `npm run readiness:first:strict`
+
+Read the full checklist in `docs/first-release-readiness.md`.
+
 ## External setup still required
 
 - create the Supabase project

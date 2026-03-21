@@ -11,6 +11,9 @@
     "dev:api": "npm --workspace @hearth/api run dev",
     "deploy:web": "npm --workspace @hearth/web run deploy",
     "deploy:api": "npm --workspace @hearth/api run deploy",
+    "readiness:first:codeonly": "powershell -ExecutionPolicy Bypass -File scripts/first-release-readiness.ps1 -SkipEnv -SkipWebBuild",
+    "readiness:first": "powershell -ExecutionPolicy Bypass -File scripts/first-release-readiness.ps1 -SkipWebBuild",
+    "readiness:first:strict": "powershell -ExecutionPolicy Bypass -File scripts/first-release-readiness.ps1",
     "build": "npm run build --workspaces",
     "check": "npm run check --workspaces"
   },
