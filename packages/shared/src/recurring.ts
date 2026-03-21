@@ -31,11 +31,21 @@ export type CreateRecurringTemplateInput = {
   notes?: string | null;
 };
 
+export type CreateRecurringTemplatesFromCandidatesInput = {
+  candidates: Array<{
+    sheet: string;
+    section: string;
+    label: string | null;
+    kind: "recurring_sidebar";
+  }>;
+};
+
 export type RecurringTemplatesResponse =
   | {
       items: RecurringTemplateRecord[];
       count: number;
       status: "ok";
+      skipped?: number;
     }
   | {
       code: "unauthorized" | "validation_error" | "database_error";

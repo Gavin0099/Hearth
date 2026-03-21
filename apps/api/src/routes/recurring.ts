@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import {
+  type CreateRecurringTemplatesFromCandidatesInput,
   isRecurringCadence,
   isRecurringSourceKind,
   normalizeCurrency,
@@ -10,6 +11,10 @@ import {
 import type { ApiEnv } from "../types";
 
 export const recurringRoutes = new Hono<ApiEnv>();
+
+function normalizeCandidateKey(name: string, sourceSection: string | null) {
+  return `${name.trim().toLowerCase()}::${(sourceSection ?? "").trim().toLowerCase()}`;
+}
 
 recurringRoutes.get("/", async (c) => {
   const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
@@ -179,6 +184,141 @@ recurringRoutes.post("/", async (c) => {
   return c.json<RecurringTemplatesResponse>({
     items: [data as RecurringTemplateRecord],
     count: 1,
+    status: "ok",
+  });
+});
+
+recurringRoutes.post("/from-import-candidates", async (c) => {
+  const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
+  const user = await resolveAuthenticatedUser(c.req.raw, c.env);
+  if (!user) {
+    return c.json<RecurringTemplatesResponse>(
+      {
+        code: "unauthorized",
+        error: "Missing or invalid Supabase bearer token.",
+        status: "error",
+      },
+      401,
+    );
+  }
+
+  let payload: CreateRecurringTemplatesFromCandidatesInput;
+  try {
+    payload = await c.req.json<CreateRecurringTemplatesFromCandidatesInput>();
+  } catch {
+    return c.json<RecurringTemplatesResponse>(
+      {
+        code: "validation_error",
+        error: "Invalid JSON body.",
+        status: "error",
+      },
+      400,
+    );
+  }
+
+  if (!Array.isArray(payload.candidates) || payload.candidates.length === 0) {
+    return c.json<RecurringTemplatesResponse>(
+      {
+        code: "validation_error",
+        error: "At least one recurring import candidate is required.",
+        status: "error",
+      },
+      400,
+    );
+  }
+
+  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
+  const supabase = createSupabaseAdminClient(c.env);
+
+  const { data: existingTemplates, error: existingError } = await supabase
+    .from("recurring_templates")
+    .select("name, source_section")
+    .eq("user_id", user.id);
+
+  if (existingError) {
+    return c.json<RecurringTemplatesResponse>(
+      {
+        code: "database_error",
+        error: existingError.message,
+        status: "error",
+      },
+      500,
+    );
+  }
+
+  const existingKeys = new Set(
+    (existingTemplates ?? []).map((item: { name: string; source_section: string | null }) =>
+      normalizeCandidateKey(item.name, item.source_section),
+    ),
+  );
+
+  const rowsToInsert: Array<Record<string, unknown>> = [];
+  let skipped = 0;
+
+  payload.candidates.forEach((candidate) => {
+    if (candidate.kind !== "recurring_sidebar") {
+      skipped += 1;
+      return;
+    }
+
+    const name = candidate.label?.trim() || candidate.section.trim();
+    const sourceSection = candidate.section.trim() || null;
+
+    if (!name) {
+      skipped += 1;
+      return;
+    }
+
+    const key = normalizeCandidateKey(name, sourceSection);
+    if (existingKeys.has(key)) {
+      skipped += 1;
+      return;
+    }
+
+    existingKeys.add(key);
+    rowsToInsert.push({
+      user_id: user.id,
+      name,
+      category: sourceSection,
+      amount: null,
+      currency: "TWD",
+      cadence: "monthly",
+      anchor_day: null,
+      source_kind: "excel_sidebar",
+      source_section: sourceSection,
+      notes: `Imported from Excel sheet: ${candidate.sheet}`,
+    });
+  });
+
+  if (rowsToInsert.length === 0) {
+    return c.json<RecurringTemplatesResponse>({
+      items: [],
+      count: 0,
+      skipped,
+      status: "ok",
+    });
+  }
+
+  const { data, error } = await supabase
+    .from("recurring_templates")
+    .insert(rowsToInsert)
+    .select("id, user_id, name, category, amount, currency, cadence, anchor_day, source_kind, source_section, notes, created_at");
+
+  if (error) {
+    return c.json<RecurringTemplatesResponse>(
+      {
+        code: "database_error",
+        error: error.message,
+        status: "error",
+      },
+      500,
+    );
+  }
+
+  return c.json<RecurringTemplatesResponse>({
+    items: (data ?? []) as RecurringTemplateRecord[],
+    count: data?.length ?? 0,
+    skipped,
     status: "ok",
   });
 });

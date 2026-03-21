@@ -9,7 +9,9 @@ This slice adds the first formal recurring-template data path for Hearth.
 - Worker API:
   - `GET /api/recurring-templates`
   - `POST /api/recurring-templates`
+  - `POST /api/recurring-templates/from-import-candidates`
 - frontend recurring template panel for list + create
+- frontend import panel action for turning Excel recurring candidates into templates
 
 ## Current model
 
@@ -28,10 +30,17 @@ Each recurring template stores:
 ## Why this matters
 
 The Excel import work already detects recurring/sidebar candidates.
-This slice creates the first official persistence seam for those candidates to eventually land in.
+This slice creates the first official persistence seam for those candidates to land in.
+
+The follow-up import action now allows the user to take the candidates returned
+by `excel-monthly` import and bulk-create recurring templates without manually
+retyping each sidebar item.
 
 ## Current limitations
 
-- import candidates are not yet auto-created into templates
 - recurring templates are not yet auto-applied into transactions
 - cadence is currently constrained to `monthly`
+- imported candidates currently infer:
+  - `name` from the candidate label
+  - `category` and `source_section` from the detected sidebar section
+  - `notes` from the source sheet name

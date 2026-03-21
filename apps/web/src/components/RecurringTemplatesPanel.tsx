@@ -8,6 +8,7 @@ import { createRecurringTemplate, fetchRecurringTemplates } from "../lib/recurri
 
 type RecurringTemplatesPanelProps = {
   session: Session | null;
+  refreshKey?: number;
 };
 
 type LoadState =
@@ -27,7 +28,7 @@ const defaultForm: CreateRecurringTemplateInput = {
   notes: "",
 };
 
-export function RecurringTemplatesPanel({ session }: RecurringTemplatesPanelProps) {
+export function RecurringTemplatesPanel({ session, refreshKey = 0 }: RecurringTemplatesPanelProps) {
   const [state, setState] = useState<LoadState>({ status: "idle" });
   const [form, setForm] = useState<CreateRecurringTemplateInput>(defaultForm);
   const [formError, setFormError] = useState<string | null>(null);
@@ -64,7 +65,7 @@ export function RecurringTemplatesPanel({ session }: RecurringTemplatesPanelProp
     return () => {
       cancelled = true;
     };
-  }, [session]);
+  }, [session, refreshKey]);
 
   function updateForm<K extends keyof CreateRecurringTemplateInput>(
     field: K,

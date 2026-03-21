@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import type { AccountRecord } from "@hearth/shared";
+import type { AccountRecord, RecurringImportCandidate } from "@hearth/shared";
 import { fetchAccounts } from "../lib/accounts";
 import {
   importExcelMonthly,
   importSinopacTransactionsCsv,
   importTransactionsCsv,
 } from "../lib/imports";
+import { createRecurringTemplatesFromCandidates } from "../lib/recurring";
 
 type ImportPanelProps = {
   session: Session | null;
   onImported: () => void;
+  onRecurringTemplatesCreated: () => void;
 };
 
 type LoadState =
@@ -18,13 +20,19 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "success"; accounts: AccountRecord[] };
 
-export function ImportPanel({ session, onImported }: ImportPanelProps) {
+export function ImportPanel({
+  session,
+  onImported,
+  onRecurringTemplatesCreated,
+}: ImportPanelProps) {
   const [state, setState] = useState<LoadState>({ status: "idle" });
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importMode, setImportMode] = useState<"normalized" | "sinopac-tw" | "excel-monthly">("normalized");
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [latestRecurringCandidates, setLatestRecurringCandidates] = useState<RecurringImportCandidate[]>([]);
+  const [isCreatingRecurring, setIsCreatingRecurring] = useState(false);
 
   useEffect(() => {
     if (!session) {
@@ -32,6 +40,7 @@ export function ImportPanel({ session, onImported }: ImportPanelProps) {
       setSelectedAccountId("");
       setSelectedFile(null);
       setMessage(null);
+      setLatestRecurringCandidates([]);
       return;
     }
 
@@ -83,9 +92,12 @@ export function ImportPanel({ session, onImported }: ImportPanelProps) {
     setIsSubmitting(false);
 
     if (result.status === "error") {
+      setLatestRecurringCandidates([]);
       setMessage(`匯入失敗: ${result.error}`);
       return;
     }
+
+    setLatestRecurringCandidates(result.recurringCandidates ?? []);
 
     setMessage(
       [
@@ -99,9 +111,32 @@ export function ImportPanel({ session, onImported }: ImportPanelProps) {
     onImported();
   }
 
+  async function handleCreateRecurringTemplates() {
+    if (latestRecurringCandidates.length === 0) {
+      return;
+    }
+
+    setIsCreatingRecurring(true);
+    const result = await createRecurringTemplatesFromCandidates({
+      candidates: latestRecurringCandidates,
+    });
+    setIsCreatingRecurring(false);
+
+    if (result.status === "error") {
+      setMessage(`建立週期模板失敗: ${result.error}`);
+      return;
+    }
+
+    setMessage(
+      `已建立 ${result.count} 筆週期模板，跳過 ${result.skipped ?? 0} 筆已存在或無效候選。`,
+    );
+    setLatestRecurringCandidates([]);
+    onRecurringTemplatesCreated();
+  }
+
   return (
     <article className="panel">
-      <h2>CSV 匯入</h2>
+      <h2>資料匯入</h2>
       {!session ? <p>登入後可以匯入標準化交易 CSV。</p> : null}
       {state.status === "loading" ? <p>正在載入可用帳戶...</p> : null}
       {state.status === "error" ? <p>匯入面板載入失敗: {state.message}</p> : null}
@@ -157,6 +192,19 @@ export function ImportPanel({ session, onImported }: ImportPanelProps) {
               {isSubmitting ? "匯入中..." : importMode === "excel-monthly" ? "匯入 Excel" : "匯入 CSV"}
             </button>
           </form>
+          {latestRecurringCandidates.length > 0 ? (
+            <>
+              <p>可直接建立週期模板的候選: {latestRecurringCandidates.length} 筆。</p>
+              <button
+                className="action-button"
+                disabled={isCreatingRecurring}
+                onClick={() => void handleCreateRecurringTemplates()}
+                type="button"
+              >
+                {isCreatingRecurring ? "建立模板中..." : "從候選建立週期模板"}
+              </button>
+            </>
+          ) : null}
           {message ? <p>{message}</p> : null}
         </>
       ) : null}

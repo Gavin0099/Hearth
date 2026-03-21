@@ -1407,3 +1407,251 @@ test("POST /api/recurring-templates creates a recurring template", async () => {
     status: "ok",
   });
 });
+
+test("POST /api/recurring-templates/from-import-candidates creates templates from excel candidates", async () => {
+  const createdTemplates = [
+    {
+      id: "rt-3",
+      user_id: "user-1",
+      name: "房租",
+      category: "固定支出",
+      amount: null,
+      currency: "TWD",
+      cadence: "monthly",
+      anchor_day: null,
+      source_kind: "excel_sidebar",
+      source_section: "固定支出",
+      notes: "Imported from Excel sheet: March",
+      created_at: "2026-03-21T00:00:00Z",
+    },
+    {
+      id: "rt-4",
+      user_id: "user-1",
+      name: "幼稚園",
+      category: "週期支出",
+      amount: null,
+      currency: "TWD",
+      cadence: "monthly",
+      anchor_day: null,
+      source_kind: "excel_sidebar",
+      source_section: "週期支出",
+      notes: "Imported from Excel sheet: March",
+      created_at: "2026-03-21T00:00:00Z",
+    },
+  ];
+  let insertedRows: Array<Record<string, unknown>> = [];
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "recurring_templates") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [],
+                error: null,
+              }),
+            }),
+            insert: (values: Array<Record<string, unknown>>) => {
+              insertedRows = values;
+              return {
+                select: async () => ({
+                  data: createdTemplates,
+                  error: null,
+                }),
+              };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request(
+    "/api/recurring-templates/from-import-candidates",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        candidates: [
+          {
+            sheet: "March",
+            kind: "recurring_sidebar",
+            section: "固定支出",
+            label: "房租",
+          },
+          {
+            sheet: "March",
+            kind: "recurring_sidebar",
+            section: "週期支出",
+            label: "幼稚園",
+          },
+        ],
+      }),
+      headers: {
+        "content-type": "application/json",
+      },
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    count: 2,
+    items: createdTemplates,
+    skipped: 0,
+    status: "ok",
+  });
+  assert.deepEqual(insertedRows, [
+    {
+      user_id: "user-1",
+      name: "房租",
+      category: "固定支出",
+      amount: null,
+      currency: "TWD",
+      cadence: "monthly",
+      anchor_day: null,
+      source_kind: "excel_sidebar",
+      source_section: "固定支出",
+      notes: "Imported from Excel sheet: March",
+    },
+    {
+      user_id: "user-1",
+      name: "幼稚園",
+      category: "週期支出",
+      amount: null,
+      currency: "TWD",
+      cadence: "monthly",
+      anchor_day: null,
+      source_kind: "excel_sidebar",
+      source_section: "週期支出",
+      notes: "Imported from Excel sheet: March",
+    },
+  ]);
+});
+
+test("POST /api/recurring-templates/from-import-candidates skips duplicates already present or repeated in payload", async () => {
+  let insertedRows: Array<Record<string, unknown>> = [];
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "recurring_templates") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ name: "房租", source_section: "固定支出" }],
+                error: null,
+              }),
+            }),
+            insert: (values: Array<Record<string, unknown>>) => {
+              insertedRows = values;
+              return {
+                select: async () => ({
+                  data: [
+                    {
+                      id: "rt-5",
+                      user_id: "user-1",
+                      name: "幼稚園",
+                      category: "週期支出",
+                      amount: null,
+                      currency: "TWD",
+                      cadence: "monthly",
+                      anchor_day: null,
+                      source_kind: "excel_sidebar",
+                      source_section: "週期支出",
+                      notes: "Imported from Excel sheet: March",
+                      created_at: "2026-03-21T00:00:00Z",
+                    },
+                  ],
+                  error: null,
+                }),
+              };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request(
+    "/api/recurring-templates/from-import-candidates",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        candidates: [
+          {
+            sheet: "March",
+            kind: "recurring_sidebar",
+            section: "固定支出",
+            label: "房租",
+          },
+          {
+            sheet: "March",
+            kind: "recurring_sidebar",
+            section: "週期支出",
+            label: "幼稚園",
+          },
+          {
+            sheet: "April",
+            kind: "recurring_sidebar",
+            section: "週期支出",
+            label: "幼稚園",
+          },
+        ],
+      }),
+      headers: {
+        "content-type": "application/json",
+      },
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    count: 1,
+    items: [
+      {
+        id: "rt-5",
+        user_id: "user-1",
+        name: "幼稚園",
+        category: "週期支出",
+        amount: null,
+        currency: "TWD",
+        cadence: "monthly",
+        anchor_day: null,
+        source_kind: "excel_sidebar",
+        source_section: "週期支出",
+        notes: "Imported from Excel sheet: March",
+        created_at: "2026-03-21T00:00:00Z",
+      },
+    ],
+    skipped: 2,
+    status: "ok",
+  });
+  assert.deepEqual(insertedRows, [
+    {
+      user_id: "user-1",
+      name: "幼稚園",
+      category: "週期支出",
+      amount: null,
+      currency: "TWD",
+      cadence: "monthly",
+      anchor_day: null,
+      source_kind: "excel_sidebar",
+      source_section: "週期支出",
+      notes: "Imported from Excel sheet: March",
+    },
+  ]);
+});

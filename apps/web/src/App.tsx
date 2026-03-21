@@ -41,6 +41,7 @@ export function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [reportRefreshKey, setReportRefreshKey] = useState(0);
+  const [recurringRefreshKey, setRecurringRefreshKey] = useState(0);
   const isSupabaseConfigured = Boolean(env.supabaseUrl && env.supabaseAnonKey);
 
   useEffect(() => {
@@ -100,6 +101,10 @@ export function App() {
 
   function handleImported() {
     setReportRefreshKey((current) => current + 1);
+  }
+
+  function handleRecurringTemplatesCreated() {
+    setRecurringRefreshKey((current) => current + 1);
   }
 
   async function handleSignOut() {
@@ -169,8 +174,12 @@ export function App() {
           session={session}
         />
         <MonthlyReportPanel refreshKey={reportRefreshKey} session={session} />
-        <ImportPanel onImported={handleImported} session={session} />
-        <RecurringTemplatesPanel session={session} />
+        <ImportPanel
+          onImported={handleImported}
+          onRecurringTemplatesCreated={handleRecurringTemplatesCreated}
+          session={session}
+        />
+        <RecurringTemplatesPanel refreshKey={recurringRefreshKey} session={session} />
         <TransactionsPanel
           onTransactionCreated={handleTransactionCreated}
           session={session}
