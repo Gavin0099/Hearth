@@ -22,10 +22,19 @@ function createExcelMonthlyFile(rows: unknown[][]) {
   });
 }
 
-function createExcelMonthlyWorkbook(sheets: Array<{ name: string; rows: unknown[][] }>) {
+function createExcelMonthlyWorkbook(
+  sheets: Array<{
+    name: string;
+    rows: unknown[][];
+    merges?: string[];
+  }>,
+) {
   const workbook = XLSX.utils.book_new();
-  sheets.forEach(({ name, rows }) => {
+  sheets.forEach(({ name, rows, merges }) => {
     const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    if (merges?.length) {
+      worksheet["!merges"] = merges.map((range) => XLSX.utils.decode_range(range));
+    }
     XLSX.utils.book_append_sheet(workbook, worksheet, name);
   });
   const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
@@ -1045,6 +1054,109 @@ test("POST /api/import/excel-monthly aggregates parsable rows across multiple mo
       description: "捷運",
       source: "excel_monthly",
       source_hash: insertedRows[2]?.source_hash,
+    },
+  ]);
+});
+
+test("POST /api/import/excel-monthly expands merged header and category cells before parsing", async () => {
+  let insertedRows: Array<Record<string, unknown>> = [];
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "transactions") {
+          return {
+            select: () => ({
+              in: async () => ({
+                data: [],
+                error: null,
+              }),
+            }),
+            insert: async (values: Array<Record<string, unknown>>) => {
+              insertedRows = values;
+              return { error: null };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set(
+    "file",
+    createExcelMonthlyWorkbook([
+      {
+        name: "March",
+        rows: [
+          ["分類", "", "2026/03/01", "", "2026/03/02", ""],
+          ["", "", "項目", "金額", "項目", "金額"],
+          ["飲食費用", "", "", "", "", ""],
+          ["", "", "早餐", 80, "午餐", 120],
+        ],
+        merges: ["A3:B3", "C1:D1", "E1:F1"],
+      },
+    ]),
+  );
+
+  const response = await app.request(
+    "/api/import/excel-monthly",
+    {
+      method: "POST",
+      body: formData,
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    source: "excel-monthly",
+    imported: 2,
+    skipped: 1,
+    failed: 0,
+    runtime: "cloudflare-worker",
+    persistence: "supabase",
+    status: "ok",
+    errors: [],
+  });
+  assert.deepEqual(insertedRows, [
+    {
+      account_id: "account-1",
+      date: "2026-03-01",
+      amount: -80,
+      currency: "TWD",
+      category: "餐飲",
+      description: "早餐",
+      source: "excel_monthly",
+      source_hash: insertedRows[0]?.source_hash,
+    },
+    {
+      account_id: "account-1",
+      date: "2026-03-02",
+      amount: -120,
+      currency: "TWD",
+      category: "餐飲",
+      description: "午餐",
+      source: "excel_monthly",
+      source_hash: insertedRows[1]?.source_hash,
     },
   ]);
 });

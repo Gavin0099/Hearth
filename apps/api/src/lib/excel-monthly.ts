@@ -326,6 +326,36 @@ function parseMonthlySheet(rows: unknown[][], accountId: string) {
   return parseGridColumns(rows, headerRowIndex, accountId);
 }
 
+function sheetToRows(sheet: XLSX.WorkSheet) {
+  const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    header: 1,
+    raw: true,
+    defval: "",
+  });
+
+  const merges = (sheet["!merges"] ?? []) as Array<{
+    s: { r: number; c: number };
+    e: { r: number; c: number };
+  }>;
+
+  merges.forEach((merge) => {
+    const sourceValue = rows[merge.s.r]?.[merge.s.c];
+    for (let rowIndex = merge.s.r; rowIndex <= merge.e.r; rowIndex += 1) {
+      if (!rows[rowIndex]) {
+        rows[rowIndex] = [];
+      }
+
+      for (let columnIndex = merge.s.c; columnIndex <= merge.e.c; columnIndex += 1) {
+        if (rows[rowIndex][columnIndex] === "" || rows[rowIndex][columnIndex] === undefined) {
+          rows[rowIndex][columnIndex] = sourceValue ?? "";
+        }
+      }
+    }
+  });
+
+  return rows;
+}
+
 export function parseMonthlyExcel(buffer: ArrayBuffer, accountId: string) {
   const workbook = XLSX.read(buffer, {
     type: "array",
@@ -348,11 +378,7 @@ export function parseMonthlyExcel(buffer: ArrayBuffer, accountId: string) {
 
   workbook.SheetNames.forEach((sheetName) => {
     const sheet = workbook.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
-      header: 1,
-      raw: true,
-      defval: "",
-    });
+    const rows = sheetToRows(sheet);
 
     const result = parseMonthlySheet(rows, accountId);
     if (!result) {

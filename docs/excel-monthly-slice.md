@@ -50,6 +50,7 @@ Example:
 - supports category boundary rows for the horizontal calendar variant
 - ignores non-monthly summary sheets that do not contain a supported date-header pattern
 - ignores fixed-sidebar rows that live outside the calendar area and do not contain importable daily amounts
+- expands merged cells before parsing so merged date groups and category headers can still be recognized
 - treats positive values as expenses and stores them as negative transaction amounts
 - writes imported rows through the same transaction import pipeline as CSV imports
 - keeps `source = excel_monthly`
@@ -60,7 +61,7 @@ Example:
 - does not yet parse recurring-expense sidebars
 - does not convert left-side fixed sections into recurring-expense templates yet
 - assumes TWD for this first slice
-- still assumes a controlled left-side boundary pattern rather than arbitrary merged-cell workbook layouts
+- still assumes a controlled left-side boundary pattern rather than arbitrary spreadsheet decoration or formula-heavy layouts
 
 ## Why this shape first
 
