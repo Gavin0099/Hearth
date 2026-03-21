@@ -1,11 +1,30 @@
 import type {
   CreateTransactionInput,
+  TransactionsQuery,
   TransactionsResponse,
 } from "@hearth/shared";
 import { apiFetch } from "./api";
 
-export async function fetchTransactions() {
-  const response = await apiFetch("/api/transactions");
+export async function fetchTransactions(query?: TransactionsQuery) {
+  const search = new URLSearchParams();
+  if (query?.account_id) {
+    search.set("account_id", query.account_id);
+  }
+  if (query?.category) {
+    search.set("category", query.category);
+  }
+  if (query?.date_from) {
+    search.set("date_from", query.date_from);
+  }
+  if (query?.date_to) {
+    search.set("date_to", query.date_to);
+  }
+  if (query?.q) {
+    search.set("q", query.q);
+  }
+
+  const suffix = search.toString() ? `?${search.toString()}` : "";
+  const response = await apiFetch(`/api/transactions${suffix}`);
   return (await response.json()) as TransactionsResponse;
 }
 

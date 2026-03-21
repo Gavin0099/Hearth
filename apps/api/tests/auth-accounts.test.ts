@@ -425,6 +425,153 @@ test("POST /api/transactions creates a manual transaction for an owned account",
   });
 });
 
+test("GET /api/transactions supports account/date/category/keyword filters", async () => {
+  const transactions = [
+    {
+      id: "txn-1",
+      account_id: "account-1",
+      date: "2026-03-10",
+      amount: -100,
+      currency: "TWD",
+      category: "餐飲",
+      description: "Lunch",
+      source: "manual",
+      source_hash: null,
+      created_at: "2026-03-22T00:00:00Z",
+    },
+    {
+      id: "txn-2",
+      account_id: "account-1",
+      date: "2026-03-11",
+      amount: -200,
+      currency: "TWD",
+      category: "交通",
+      description: "Taxi",
+      source: "manual",
+      source_hash: null,
+      created_at: "2026-03-22T00:00:00Z",
+    },
+    {
+      id: "txn-3",
+      account_id: "account-2",
+      date: "2026-03-12",
+      amount: -300,
+      currency: "TWD",
+      category: "餐飲",
+      description: "Dinner",
+      source: "manual",
+      source_hash: null,
+      created_at: "2026-03-22T00:00:00Z",
+    },
+  ];
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }, { id: "account-2" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "transactions") {
+          let filtered = [...transactions];
+          return {
+            select: () => ({
+              in: (_column: string, ids: string[]) => {
+                filtered = filtered.filter((item) => ids.includes(item.account_id));
+                return {
+                  eq: (_eqColumn: string, value: string) => {
+                    filtered = filtered.filter((item) => String((item as Record<string, unknown>)[_eqColumn]) === value);
+                    return {
+                      gte: (_gteColumn: string, gteValue: string) => {
+                        filtered = filtered.filter((item) => String((item as Record<string, unknown>)[_gteColumn]) >= gteValue);
+                        return {
+                          lte: (_lteColumn: string, lteValue: string) => {
+                            filtered = filtered.filter((item) => String((item as Record<string, unknown>)[_lteColumn]) <= lteValue);
+                            return {
+                              ilike: (_ilikeColumn: string, pattern: string) => {
+                                const keyword = pattern.replace(/%/g, "").toLowerCase();
+                                filtered = filtered.filter((item) =>
+                                  String((item as Record<string, unknown>)[_ilikeColumn] ?? "")
+                                    .toLowerCase()
+                                    .includes(keyword),
+                                );
+                                return {
+                                  order: async () => ({
+                                    data: filtered,
+                                    error: null,
+                                  }),
+                                };
+                              },
+                            };
+                          },
+                        };
+                      },
+                    };
+                  },
+                  gte: (_gteColumn: string, gteValue: string) => {
+                    filtered = filtered.filter((item) => String((item as Record<string, unknown>)[_gteColumn]) >= gteValue);
+                    return {
+                      lte: (_lteColumn: string, lteValue: string) => {
+                        filtered = filtered.filter((item) => String((item as Record<string, unknown>)[_lteColumn]) <= lteValue);
+                        return {
+                          ilike: (_ilikeColumn: string, pattern: string) => {
+                            const keyword = pattern.replace(/%/g, "").toLowerCase();
+                            filtered = filtered.filter((item) =>
+                              String((item as Record<string, unknown>)[_ilikeColumn] ?? "")
+                                .toLowerCase()
+                                .includes(keyword),
+                            );
+                            return {
+                              order: async () => ({
+                                data: filtered,
+                                error: null,
+                              }),
+                            };
+                          },
+                        };
+                      },
+                    };
+                  },
+                  order: async () => ({
+                    data: filtered,
+                    error: null,
+                  }),
+                };
+              },
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request(
+    "/api/transactions?account_id=account-1&category=%E9%A4%90%E9%A3%B2&date_from=2026-03-01&date_to=2026-03-31&q=Lunch",
+    {},
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    count: 1,
+    items: [transactions[0]],
+    status: "ok",
+  });
+});
+
 test("DELETE /api/transactions/:transactionId deletes an owned transaction", async () => {
   const deletedTransaction = {
     id: "txn-9",

@@ -10,6 +10,7 @@ This slice adds the first real transaction write path to `Hearth`.
 - frontend manual transaction entry panel
 - monthly report refresh after successful transaction creation
 - recent transaction deletion for quick correction
+- transaction filter controls (account / date range / category / keyword)
 
 ## Why this matters
 

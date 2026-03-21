@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import type { AccountRecord, CreateTransactionInput, TransactionRecord } from "@hearth/shared";
+import type {
+  AccountRecord,
+  CreateTransactionInput,
+  TransactionRecord,
+  TransactionsQuery,
+} from "@hearth/shared";
 import { fetchAccounts } from "../lib/accounts";
 import { createTransaction, deleteTransaction, fetchTransactions } from "../lib/transactions";
 
@@ -16,6 +21,7 @@ type LoadState =
   | { status: "success"; accounts: AccountRecord[]; transactions: TransactionRecord[] };
 
 const today = new Date().toISOString().slice(0, 10);
+const monthStart = `${today.slice(0, 8)}01`;
 
 export function TransactionsPanel({
   session,
@@ -27,6 +33,10 @@ export function TransactionsPanel({
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
+  const [filters, setFilters] = useState<TransactionsQuery>({
+    date_from: monthStart,
+    date_to: today,
+  });
   const [form, setForm] = useState<CreateTransactionInput>({
     account_id: "",
     date: today,
@@ -49,10 +59,7 @@ export function TransactionsPanel({
 
     async function load() {
       setState({ status: "loading" });
-      const [accountsResult, transactionsResult] = await Promise.all([
-        fetchAccounts(),
-        fetchTransactions(),
-      ]);
+      const accountsResult = await fetchAccounts();
 
       if (cancelled) {
         return;
@@ -63,12 +70,22 @@ export function TransactionsPanel({
         return;
       }
 
+      const accounts = accountsResult.items;
+      const resolvedFilters: TransactionsQuery = {
+        ...filters,
+        account_id: filters.account_id || accounts[0]?.id || undefined,
+      };
+
+      const transactionsResult = await fetchTransactions(resolvedFilters);
+      if (cancelled) {
+        return;
+      }
+
       if (transactionsResult.status === "error") {
         setState({ status: "error", message: transactionsResult.error });
         return;
       }
 
-      const accounts = accountsResult.items;
       setState({
         status: "success",
         accounts,
@@ -79,19 +96,25 @@ export function TransactionsPanel({
         ...current,
         account_id: current.account_id || accounts[0]?.id || "",
       }));
+      if (!filters.account_id && accounts[0]?.id) {
+        setFilters((current) => ({
+          ...current,
+          account_id: current.account_id || accounts[0]?.id,
+        }));
+      }
     }
 
     void load();
     return () => {
       cancelled = true;
     };
-  }, [session, refreshKey]);
+  }, [session, refreshKey, filters.account_id, filters.category, filters.date_from, filters.date_to, filters.q]);
 
-  const recentTransactions = useMemo(() => {
+  const visibleTransactions = useMemo(() => {
     if (state.status !== "success") {
       return [];
     }
-    return state.transactions.slice(0, 5);
+    return state.transactions.slice(0, 20);
   }, [state]);
 
   function updateForm<K extends keyof CreateTransactionInput>(
@@ -101,6 +124,16 @@ export function TransactionsPanel({
     setForm((current) => ({
       ...current,
       [field]: value,
+    }));
+  }
+
+  function updateFilters<K extends keyof TransactionsQuery>(
+    key: K,
+    value: TransactionsQuery[K],
+  ) {
+    setFilters((current) => ({
+      ...current,
+      [key]: value,
     }));
   }
 
@@ -232,9 +265,57 @@ export function TransactionsPanel({
             {formSuccess ? <p>{formSuccess}</p> : null}
           </form>
 
-          {recentTransactions.length > 0 ? (
+          <form className="account-form" onSubmit={(event) => event.preventDefault()}>
+            <label>
+              檢視帳戶
+              <select
+                value={filters.account_id ?? ""}
+                onChange={(event) => updateFilters("account_id", event.target.value || undefined)}
+              >
+                {state.accounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              起始日
+              <input
+                type="date"
+                value={filters.date_from ?? ""}
+                onChange={(event) => updateFilters("date_from", event.target.value || undefined)}
+              />
+            </label>
+            <label>
+              結束日
+              <input
+                type="date"
+                value={filters.date_to ?? ""}
+                onChange={(event) => updateFilters("date_to", event.target.value || undefined)}
+              />
+            </label>
+            <label>
+              類別
+              <input
+                placeholder="例如：餐飲"
+                value={filters.category ?? ""}
+                onChange={(event) => updateFilters("category", event.target.value || undefined)}
+              />
+            </label>
+            <label>
+              關鍵字
+              <input
+                placeholder="描述關鍵字"
+                value={filters.q ?? ""}
+                onChange={(event) => updateFilters("q", event.target.value || undefined)}
+              />
+            </label>
+          </form>
+
+          {visibleTransactions.length > 0 ? (
             <ul>
-              {recentTransactions.map((transaction) => (
+              {visibleTransactions.map((transaction) => (
                 <li key={transaction.id}>
                   {transaction.date} | {transaction.category ?? "未分類"} | NT${" "}
                   {Number(transaction.amount).toFixed(2)}{" "}
@@ -250,7 +331,7 @@ export function TransactionsPanel({
               ))}
             </ul>
           ) : (
-            <p>目前還沒有交易資料，先新增第一筆來驗證月報路徑。</p>
+            <p>目前找不到符合篩選條件的交易。</p>
           )}
         </>
       ) : null}

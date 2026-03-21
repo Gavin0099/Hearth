@@ -62,3 +62,4 @@ This repo currently contains the initial implementation foundation:
 - first bulk adoption flow from Excel recurring candidates into recurring templates
 - first recurring-template apply flow into monthly transactions
 - first transaction delete flow for quick corrections
+- first transaction filter flow for account/date/category/keyword lookup

@@ -33,6 +33,14 @@ export type TransactionsResponse =
       status: "error";
     };
 
+export type TransactionsQuery = {
+  account_id?: string;
+  category?: string;
+  date_from?: string;
+  date_to?: string;
+  q?: string;
+};
+
 export type MonthlyCategorySummary = {
   category: string;
   amount: number;
