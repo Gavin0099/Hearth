@@ -39,6 +39,7 @@ This repo currently contains the initial implementation foundation:
 3. Copy `apps/api/.dev.vars.example` to `apps/api/.dev.vars` for Worker secrets
 4. Create the Supabase project and apply `supabase/schema.sql`
 5. Run `npm run dev:web` and `npm run dev:api`
+6. Run `npm --workspace @hearth/api run test` for the current auth/accounts verification slice
 
 ## External setup still required
 

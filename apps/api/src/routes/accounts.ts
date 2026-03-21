@@ -5,8 +5,6 @@ import {
   type AccountRecord,
   type CreateAccountInput,
 } from "@hearth/shared";
-import { resolveAuthenticatedUser } from "../lib/auth";
-import { createSupabaseAdminClient } from "../lib/supabase";
 import type { ApiEnv } from "../types";
 
 type AccountsResponse =
@@ -24,6 +22,7 @@ type AccountsResponse =
 export const accountsRoutes = new Hono<ApiEnv>();
 
 accountsRoutes.get("/", async (c) => {
+  const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
   const user = await resolveAuthenticatedUser(c.req.raw, c.env);
   if (!user) {
     return c.json<AccountsResponse>(
@@ -36,6 +35,7 @@ accountsRoutes.get("/", async (c) => {
     );
   }
 
+  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
   const supabase = createSupabaseAdminClient(c.env);
   const { data, error } = await supabase
     .from("accounts")
@@ -62,6 +62,7 @@ accountsRoutes.get("/", async (c) => {
 });
 
 accountsRoutes.post("/", async (c) => {
+  const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
   const user = await resolveAuthenticatedUser(c.req.raw, c.env);
   if (!user) {
     return c.json<AccountsResponse>(
@@ -111,6 +112,7 @@ accountsRoutes.post("/", async (c) => {
     );
   }
 
+  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
   const supabase = createSupabaseAdminClient(c.env);
   const { data, error } = await supabase
     .from("accounts")

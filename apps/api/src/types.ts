@@ -7,4 +7,18 @@ export type WorkerBindings = {
 
 export type ApiEnv = {
   Bindings: WorkerBindings;
+  Variables: {
+    resolveAuthenticatedUser: (
+      request: Request,
+      env: WorkerBindings,
+    ) => Promise<{ id: string; email: string | null } | null>;
+    createSupabaseAdminClient: (
+      env: WorkerBindings,
+    ) => {
+      from: (table: string) => {
+        select: (columns: string) => unknown;
+        insert: (values: Record<string, unknown>) => unknown;
+      };
+    };
+  };
 };

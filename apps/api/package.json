@@ -7,6 +7,7 @@
     "dev": "wrangler dev",
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test --import tsx tests/**/*.test.ts",
     "deploy": "wrangler deploy"
   },
   "dependencies": {
@@ -16,6 +17,8 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250311.0",
+    "@types/node": "^22.13.10",
+    "tsx": "^4.19.3",
     "typescript": "^5.8.2",
     "wrangler": "^4.7.1"
   }

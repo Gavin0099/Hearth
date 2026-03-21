@@ -66,10 +66,10 @@
 
 ### 接下來
 
-1. 完成 Google login / logout 與 session 顯示
-2. 為 `accounts` 和 auth flow 補本地可執行驗證
-3. 建立 repo-specific engineering governance baseline
-4. 進入現金流匯入與月報切片
+1. 為 `accounts` 和 auth flow 補本地可執行驗證
+2. 建立 repo-specific engineering governance baseline
+3. 進入現金流匯入與月報切片
+4. 視需要補前端端到端驗證
 
 ---
 
@@ -94,6 +94,7 @@
 - [x] Supabase Auth UI 接線
 - [x] `GET /api/auth/me` 與前端 session flow 串接
 - [x] 帳戶列表與新增帳戶 UI
+- [x] `accounts + auth` 本地可執行驗證
 - [ ] 初步資料安全邊界整理
 
 ### Phase C: 現金流匯入與月報
@@ -152,3 +153,4 @@
 | 2026-03-21 | 建立初始 `PLAN.md` | 將 `Hearth-plan.md` 轉成活的實作與治理計畫 |
 | 2026-03-21 | 完成前端 Supabase Auth UI 與 Worker `/api/auth/me` 串接 | 推進 Phase B，讓現有 bearer-token API 真正可從前端使用 |
 | 2026-03-21 | 完成帳戶列表與新增帳戶 UI | 建立第一條完整的前端寫入路徑，讓 auth -> worker -> supabase -> UI 閉環成立 |
+| 2026-03-21 | 完成 `accounts + auth` 本地可執行驗證 | 以可重複執行的 API tests 鎖住目前核心路徑，降低後續迭代回歸風險 |
