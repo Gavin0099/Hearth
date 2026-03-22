@@ -35,6 +35,12 @@ Also verify monthly report API in the same run:
 powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseTransactions -ExerciseReport
 ```
 
+Verify import and recurring routes (safe validation path, no data writes):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseImports -ExerciseRecurring
+```
+
 ## What it verifies
 
 1. `GET <api>/health` responds `2xx` and payload has `status: "ok"`
@@ -48,6 +54,12 @@ powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerTo
    - `DELETE /api/transactions/:id` removes the probe transaction
 5. When `-ExerciseReport` is also provided:
    - `GET /api/report/monthly` returns `status: "ok"` and includes `summary`
+6. When `-ExerciseImports` is provided:
+   - import endpoints respond with expected validation errors on missing file payload
+   - this confirms auth + route wiring without writing data
+7. When `-ExerciseRecurring` is provided:
+   - `GET /api/recurring-templates` returns `status: "ok"`
+   - `POST /api/recurring-templates/apply` invalid payload returns expected validation error
 
 ## Scope note
 
@@ -55,4 +67,6 @@ This smoke check validates availability and basic wiring.
 Without `-BearerToken`, authenticated API checks are skipped.
 Without `-ExerciseTransactions`, transaction CRUD checks are skipped.
 Without `-ExerciseReport`, monthly report API check is skipped.
+Without `-ExerciseImports`, import-route validation checks are skipped.
+Without `-ExerciseRecurring`, recurring-route validation checks are skipped.
 Imports/report still need checklist-driven functional validation.

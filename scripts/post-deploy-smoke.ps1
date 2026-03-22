@@ -5,6 +5,8 @@ param(
   [string]$AccountId = "",
   [switch]$ExerciseTransactions,
   [switch]$ExerciseReport,
+  [switch]$ExerciseImports,
+  [switch]$ExerciseRecurring,
   [int]$TimeoutSec = 30
 )
 
@@ -77,6 +79,133 @@ function Invoke-ApiJson {
   return $json
 }
 
+function Resolve-OwnedAccountId {
+  param(
+    [hashtable]$Headers,
+    [string]$PreferredAccountId
+  )
+
+  if (-not [string]::IsNullOrWhiteSpace($PreferredAccountId)) {
+    return $PreferredAccountId
+  }
+
+  $accountsJson = Assert-ApiOk -Name "api accounts list (resolve account)" -Url "$ApiBaseUrl/api/accounts" -Headers $Headers
+  if (-not $accountsJson.items -or $accountsJson.items.Count -lt 1) {
+    throw "[smoke] requires at least one owned account."
+  }
+
+  $resolvedAccountId = [string]$accountsJson.items[0].id
+  Write-Host "[smoke] using first owned account: $resolvedAccountId"
+  return $resolvedAccountId
+}
+
+function Invoke-MultipartValidationCheck {
+  param(
+    [string]$Name,
+    [string]$Url,
+    [hashtable]$Headers,
+    [hashtable]$Fields,
+    [string]$ExpectedCode = "validation_error"
+  )
+
+  Write-Host "[smoke] check $Name => multipart $Url"
+
+  $handler = New-Object System.Net.Http.HttpClientHandler
+  $client = New-Object System.Net.Http.HttpClient($handler)
+  try {
+    foreach ($kv in $Headers.GetEnumerator()) {
+      if ($kv.Key -ieq "content-type") {
+        continue
+      }
+      $client.DefaultRequestHeaders.Remove($kv.Key) | Out-Null
+      $client.DefaultRequestHeaders.Add($kv.Key, [string]$kv.Value)
+    }
+
+    $content = New-Object System.Net.Http.MultipartFormDataContent
+    foreach ($field in $Fields.GetEnumerator()) {
+      $stringContent = New-Object System.Net.Http.StringContent([string]$field.Value)
+      $content.Add($stringContent, [string]$field.Key)
+    }
+
+    $response = $client.PostAsync($Url, $content).GetAwaiter().GetResult()
+    $statusCode = [int]$response.StatusCode
+    $body = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+    $json = $body | ConvertFrom-Json
+
+    if ($statusCode -ne 400) {
+      throw "[smoke] $Name expected HTTP 400, got $statusCode"
+    }
+    if ($json.status -ne "error") {
+      throw "[smoke] $Name expected status=error"
+    }
+    if ($json.code -ne $ExpectedCode) {
+      throw "[smoke] $Name expected code=$ExpectedCode, got $($json.code)"
+    }
+  }
+  finally {
+    if ($null -ne $client) {
+      $client.Dispose()
+    }
+    if ($null -ne $handler) {
+      $handler.Dispose()
+    }
+  }
+}
+
+function Invoke-ApiExpectError {
+  param(
+    [string]$Name,
+    [string]$Method,
+    [string]$Url,
+    [hashtable]$Headers,
+    [string]$Body,
+    [int]$ExpectedStatusCode,
+    [string]$ExpectedCode = "validation_error"
+  )
+
+  Write-Host "[smoke] check $Name => expect error $Method $Url"
+
+  $handler = New-Object System.Net.Http.HttpClientHandler
+  $client = New-Object System.Net.Http.HttpClient($handler)
+  try {
+    foreach ($kv in $Headers.GetEnumerator()) {
+      if ($kv.Key -ieq "content-type") {
+        continue
+      }
+      $client.DefaultRequestHeaders.Remove($kv.Key) | Out-Null
+      $client.DefaultRequestHeaders.Add($kv.Key, [string]$kv.Value)
+    }
+
+    $request = New-Object System.Net.Http.HttpRequestMessage([System.Net.Http.HttpMethod]::$Method, $Url)
+    if (-not [string]::IsNullOrWhiteSpace($Body)) {
+      $request.Content = New-Object System.Net.Http.StringContent($Body, [System.Text.Encoding]::UTF8, "application/json")
+    }
+
+    $response = $client.SendAsync($request).GetAwaiter().GetResult()
+    $statusCode = [int]$response.StatusCode
+    $responseBody = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+    $json = $responseBody | ConvertFrom-Json
+
+    if ($statusCode -ne $ExpectedStatusCode) {
+      throw "[smoke] $Name expected HTTP $ExpectedStatusCode, got $statusCode"
+    }
+    if ($json.status -ne "error") {
+      throw "[smoke] $Name expected status=error"
+    }
+    if ($json.code -ne $ExpectedCode) {
+      throw "[smoke] $Name expected code=$ExpectedCode, got $($json.code)"
+    }
+  }
+  finally {
+    if ($null -ne $client) {
+      $client.Dispose()
+    }
+    if ($null -ne $handler) {
+      $handler.Dispose()
+    }
+  }
+}
+
 Write-Host "[smoke] Hearth post-deploy smoke test"
 Write-Host "[smoke] api: $ApiBaseUrl"
 Write-Host "[smoke] web: $WebUrl"
@@ -97,15 +226,7 @@ if (-not [string]::IsNullOrWhiteSpace($BearerToken)) {
   $null = Assert-ApiOk -Name "api accounts list" -Url "$ApiBaseUrl/api/accounts" -Headers $headers
 
   if ($ExerciseTransactions) {
-    $resolvedAccountId = $AccountId
-    if ([string]::IsNullOrWhiteSpace($resolvedAccountId)) {
-      $accountsJson = Assert-ApiOk -Name "api accounts list (resolve account)" -Url "$ApiBaseUrl/api/accounts" -Headers $headers
-      if (-not $accountsJson.items -or $accountsJson.items.Count -lt 1) {
-        throw "[smoke] -ExerciseTransactions requires at least one owned account."
-      }
-      $resolvedAccountId = [string]$accountsJson.items[0].id
-      Write-Host "[smoke] using first owned account: $resolvedAccountId"
-    }
+    $resolvedAccountId = Resolve-OwnedAccountId -Headers $headers -PreferredAccountId $AccountId
 
     $headers["content-type"] = "application/json"
     $probeId = [Guid]::NewGuid().ToString("N")
@@ -152,6 +273,34 @@ if (-not [string]::IsNullOrWhiteSpace($BearerToken)) {
         $null = Invoke-ApiJson -Name "api transaction cleanup" -Method "DELETE" -Url "$ApiBaseUrl/api/transactions/$createdTransactionId" -Headers $headers
       }
     }
+  } elseif ($ExerciseReport) {
+    $now = Get-Date
+    $year = $now.ToString("yyyy")
+    $month = $now.ToString("%M")
+    $reportJson = Assert-ApiOk -Name "api monthly report" -Url "$ApiBaseUrl/api/report/monthly?year=$year&month=$month" -Headers $headers
+    if (-not $reportJson.summary) {
+      throw "[smoke] monthly report response missing summary payload"
+    }
+  }
+
+  if ($ExerciseImports) {
+    $resolvedAccountId = Resolve-OwnedAccountId -Headers $headers -PreferredAccountId $AccountId
+    Invoke-MultipartValidationCheck -Name "import transactions-csv validation" -Url "$ApiBaseUrl/api/import/transactions-csv" -Headers $headers -Fields @{ account_id = $resolvedAccountId }
+    Invoke-MultipartValidationCheck -Name "import sinopac-tw validation" -Url "$ApiBaseUrl/api/import/sinopac-tw" -Headers $headers -Fields @{ account_id = $resolvedAccountId }
+    Invoke-MultipartValidationCheck -Name "import credit-card-tw validation" -Url "$ApiBaseUrl/api/import/credit-card-tw" -Headers $headers -Fields @{ account_id = $resolvedAccountId }
+    Invoke-MultipartValidationCheck -Name "import excel-monthly validation" -Url "$ApiBaseUrl/api/import/excel-monthly" -Headers $headers -Fields @{ account_id = $resolvedAccountId }
+  }
+
+  if ($ExerciseRecurring) {
+    $null = Assert-ApiOk -Name "api recurring templates list" -Url "$ApiBaseUrl/api/recurring-templates" -Headers $headers
+    $invalidApplyBody = @{
+      year = 2026
+      month = 13
+    } | ConvertTo-Json
+    Invoke-ApiExpectError -Name "api recurring apply validation" -Method "Post" -Url "$ApiBaseUrl/api/recurring-templates/apply" -Headers @{
+      Authorization = "Bearer $BearerToken"
+      "content-type" = "application/json"
+    } -Body $invalidApplyBody -ExpectedStatusCode 400 -ExpectedCode "validation_error"
   }
 } else {
   Write-Host "[smoke] skip authenticated checks (no bearer token provided)"
