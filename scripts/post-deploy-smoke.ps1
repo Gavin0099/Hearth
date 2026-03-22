@@ -4,6 +4,7 @@ param(
   [string]$BearerToken = "",
   [string]$AccountId = "",
   [switch]$ExerciseTransactions,
+  [switch]$ExerciseReport,
   [int]$TimeoutSec = 30
 )
 
@@ -96,8 +97,14 @@ if (-not [string]::IsNullOrWhiteSpace($BearerToken)) {
   $null = Assert-ApiOk -Name "api accounts list" -Url "$ApiBaseUrl/api/accounts" -Headers $headers
 
   if ($ExerciseTransactions) {
-    if ([string]::IsNullOrWhiteSpace($AccountId)) {
-      throw "[smoke] -AccountId is required when -ExerciseTransactions is set."
+    $resolvedAccountId = $AccountId
+    if ([string]::IsNullOrWhiteSpace($resolvedAccountId)) {
+      $accountsJson = Assert-ApiOk -Name "api accounts list (resolve account)" -Url "$ApiBaseUrl/api/accounts" -Headers $headers
+      if (-not $accountsJson.items -or $accountsJson.items.Count -lt 1) {
+        throw "[smoke] -ExerciseTransactions requires at least one owned account."
+      }
+      $resolvedAccountId = [string]$accountsJson.items[0].id
+      Write-Host "[smoke] using first owned account: $resolvedAccountId"
     }
 
     $headers["content-type"] = "application/json"
@@ -108,7 +115,7 @@ if (-not [string]::IsNullOrWhiteSpace($BearerToken)) {
 
     try {
       $createBody = @{
-        account_id = $AccountId
+        account_id = $resolvedAccountId
         date = $probeDate
         amount = -1
         currency = "TWD"
@@ -128,7 +135,17 @@ if (-not [string]::IsNullOrWhiteSpace($BearerToken)) {
       }
 
       $encodedQ = [System.Uri]::EscapeDataString($probeDescription)
-      $null = Assert-ApiOk -Name "api transaction query" -Url "$ApiBaseUrl/api/transactions?account_id=$AccountId&q=$encodedQ" -Headers $headers
+      $null = Assert-ApiOk -Name "api transaction query" -Url "$ApiBaseUrl/api/transactions?account_id=$resolvedAccountId&q=$encodedQ" -Headers $headers
+
+      if ($ExerciseReport) {
+        $now = Get-Date
+        $year = $now.ToString("yyyy")
+        $month = $now.ToString("%M")
+        $reportJson = Assert-ApiOk -Name "api monthly report" -Url "$ApiBaseUrl/api/report/monthly?year=$year&month=$month" -Headers $headers
+        if (-not $reportJson.summary) {
+          throw "[smoke] monthly report response missing summary payload"
+        }
+      }
     }
     finally {
       if (-not [string]::IsNullOrWhiteSpace($createdTransactionId)) {

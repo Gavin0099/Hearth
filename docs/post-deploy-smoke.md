@@ -27,6 +27,14 @@ Exercise real transaction CRUD (create/query/delete cleanup):
 powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -AccountId "<owned-account-id>" -ExerciseTransactions
 ```
 
+You can omit `-AccountId`; the script will use the first owned account automatically.
+
+Also verify monthly report API in the same run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseTransactions -ExerciseReport
+```
+
 ## What it verifies
 
 1. `GET <api>/health` responds `2xx` and payload has `status: "ok"`
@@ -38,10 +46,13 @@ powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerTo
    - `POST /api/transactions` can create a probe transaction
    - `GET /api/transactions` can find the probe by account + keyword query
    - `DELETE /api/transactions/:id` removes the probe transaction
+5. When `-ExerciseReport` is also provided:
+   - `GET /api/report/monthly` returns `status: "ok"` and includes `summary`
 
 ## Scope note
 
 This smoke check validates availability and basic wiring.
 Without `-BearerToken`, authenticated API checks are skipped.
 Without `-ExerciseTransactions`, transaction CRUD checks are skipped.
+Without `-ExerciseReport`, monthly report API check is skipped.
 Imports/report still need checklist-driven functional validation.

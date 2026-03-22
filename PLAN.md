@@ -85,7 +85,7 @@
 
 1. 擴充下一批銀行 / 信用卡匯入入口（目前已含 sinopac + credit-card v1）
 2. 視需要補前端端到端驗證
-3. 擴充 smoke test 進入 transactions 的自動化 API 驗證（已支援可選 probe）
+3. 擴充 smoke test 進入 imports / recurring 的自動化 API 驗證
 4. 補 governance freshness / phase gate automation
 
 ---
@@ -210,3 +210,4 @@
 | 2026-03-22 | 擴充 post-deploy smoke 支援 bearer token 驗證 | 在可用 token 的情況下，讓 smoke 可直接覆蓋 `auth/me` 與 `accounts` 真實認證路徑 |
 | 2026-03-22 | 擴充 post-deploy smoke 支援 transactions create/query/delete probe | 在可選模式下覆蓋交易主路徑，並以自動 cleanup 避免污染正式資料 |
 | 2026-03-22 | 新增 credit-card-tw 匯入入口與前端模式 | 擴充現金流匯入面向，讓信用卡 CSV 可直接套用現有 normalized pipeline |
+| 2026-03-22 | 擴充 post-deploy smoke 支援 account auto-resolve 與 monthly report API 檢查 | 降低驗證門檻並補上報表路徑可用性檢查，提升第一版上線後回歸信心 |
