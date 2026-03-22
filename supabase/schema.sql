@@ -98,3 +98,14 @@ create table if not exists recurring_templates (
   notes text,
   created_at timestamptz not null default now()
 );
+
+create table if not exists user_settings (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users unique,
+  sinopac_pdf_password text,
+  esun_pdf_password text,
+  gmail_connected boolean not null default false,
+  gmail_last_sync_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);

@@ -9,6 +9,7 @@ type AuthPanelProps = {
   error: string | null;
   onSignIn: () => Promise<void>;
   onSignOut: () => Promise<void>;
+  compact?: boolean;
 };
 
 type WorkerUserState =
@@ -23,6 +24,7 @@ export function AuthPanel({
   error,
   onSignIn,
   onSignOut,
+  compact = false,
 }: AuthPanelProps) {
   const user = session?.user ?? null;
   const [workerUser, setWorkerUser] = useState<WorkerUserState>({ status: "idle" });
@@ -71,6 +73,30 @@ export function AuthPanel({
     };
   }, [session]);
 
+  if (compact) {
+    return (
+      <div className="auth-compact">
+        {isLoading ? null : user ? (
+          <>
+            <span className="auth-compact-email">{user.email}</span>
+            <button className="action-button secondary small" onClick={() => void onSignOut()}>
+              登出
+            </button>
+          </>
+        ) : (
+          <button
+            className="action-button small"
+            disabled={!isConfigured}
+            onClick={() => void onSignIn()}
+          >
+            使用 Google 登入
+          </button>
+        )}
+        {error ? <span className="auth-compact-error">{error}</span> : null}
+      </div>
+    );
+  }
+
   return (
     <article className="panel">
       <h2>登入狀態</h2>
@@ -90,7 +116,7 @@ export function AuthPanel({
             <p>Worker 已辨識使用者: {workerUser.email ?? workerUser.id}</p>
           ) : null}
           <button className="action-button secondary" onClick={() => void onSignOut()}>
-            Sign out
+            登出
           </button>
         </>
       ) : (

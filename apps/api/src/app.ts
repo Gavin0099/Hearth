@@ -6,6 +6,7 @@ import { importRoutes } from "./routes/import";
 import { accountsRoutes } from "./routes/accounts";
 import { recurringRoutes } from "./routes/recurring";
 import { transactionsRoutes } from "./routes/transactions";
+import { userSettingsRoutes } from "./routes/user-settings";
 import type { ApiEnv, WorkerBindings } from "./types";
 import {
   getBearerToken,
@@ -133,6 +134,7 @@ export function createApp(dependencies: Partial<AppDependencies> = {}) {
   app.route("/api/accounts", accountsRoutes);
   app.route("/api/recurring-templates", recurringRoutes);
   app.route("/api/transactions", transactionsRoutes);
+  app.route("/api/user-settings", userSettingsRoutes);
 
   return app;
 }

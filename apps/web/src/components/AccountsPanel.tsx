@@ -137,7 +137,7 @@ export function AccountsPanel({ session }: AccountsPanelProps) {
             >
               {accountTypes.map((type) => (
                 <option key={type} value={type}>
-                  {type}
+                  {type === "cash_bank" ? "現金／銀行" : type === "cash_credit" ? "信用卡" : type === "investment_tw" ? "台股投資" : "海外投資"}
                 </option>
               ))}
             </select>

@@ -172,10 +172,10 @@ export function ImportPanel({
                   )
                 }
               >
-                <option value="normalized">Normalized CSV</option>
-                <option value="sinopac-tw">Sinopac TW CSV</option>
-                <option value="credit-card-tw">Credit Card TW CSV</option>
-                <option value="excel-monthly">Excel Monthly</option>
+                <option value="normalized">標準化 CSV</option>
+                <option value="sinopac-tw">永豐銀行 CSV</option>
+                <option value="credit-card-tw">信用卡 CSV</option>
+                <option value="excel-monthly">Excel 月帳本</option>
               </select>
             </label>
             <label>

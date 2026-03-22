@@ -12,6 +12,7 @@ export async function signInWithGoogle() {
     provider: "google",
     options: {
       redirectTo: env.authRedirectUrl,
+      scopes: "https://www.googleapis.com/auth/gmail.readonly",
     },
   });
 
