@@ -1,5 +1,6 @@
 param(
   [string]$PagesProjectName = "hearth-web",
+  [string]$ApiBaseUrl = "https://hearth-api.reiko0099.workers.dev",
   [switch]$SkipReadiness,
   [switch]$SkipWhoAmI,
   [switch]$AutoCreatePagesProject,
@@ -51,9 +52,38 @@ function Ensure-PagesProject {
   }
 }
 
+function Build-WebWithApiBaseUrl {
+  param(
+    [string]$ResolvedApiBaseUrl
+  )
+
+  Write-Host "[deploy] build web (VITE_API_BASE_URL=$ResolvedApiBaseUrl)"
+  if ($DryRun) {
+    Write-Host "[deploy] dry-run: set VITE_API_BASE_URL=$ResolvedApiBaseUrl and run npm --workspace @hearth/web run build"
+    return
+  }
+
+  $previous = $env:VITE_API_BASE_URL
+  try {
+    $env:VITE_API_BASE_URL = $ResolvedApiBaseUrl
+    npm --workspace @hearth/web run build
+    if ($LASTEXITCODE -ne 0) {
+      throw "[deploy] step failed (build web): npm --workspace @hearth/web run build"
+    }
+  }
+  finally {
+    if ($null -eq $previous) {
+      Remove-Item Env:VITE_API_BASE_URL -ErrorAction SilentlyContinue
+    } else {
+      $env:VITE_API_BASE_URL = $previous
+    }
+  }
+}
+
 Write-Host "[deploy] Hearth first deploy flow (Cloudflare)"
 Write-Host "[deploy] repo: D:\Hearth"
 Write-Host "[deploy] pages project: $PagesProjectName"
+Write-Host "[deploy] api base url for web build: $ApiBaseUrl"
 
 if (-not $SkipReadiness) {
   Run-Step -Name "strict readiness" -Command "npm run readiness:first:strict"
@@ -72,7 +102,7 @@ if (-not $SkipWhoAmI) {
 Ensure-PagesProject -Name $PagesProjectName
 
 Run-Step -Name "deploy API worker" -Command "npx wrangler deploy --config apps/api/wrangler.jsonc"
-Run-Step -Name "build web" -Command "npm --workspace @hearth/web run build"
+Build-WebWithApiBaseUrl -ResolvedApiBaseUrl $ApiBaseUrl
 Run-Step -Name "deploy Pages" -Command "npx wrangler pages deploy apps/web/dist --project-name $PagesProjectName"
 
 Write-Host "[deploy] DONE"

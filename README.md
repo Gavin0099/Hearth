@@ -69,6 +69,7 @@ Governance gate checklist: `npm run governance:gate` (docs: `docs/governance-pha
 
 Deployment runbook: `docs/cloudflare-first-deploy.md`.
 Smoke runbook: `docs/post-deploy-smoke.md`.
+`deploy:first` 會在 web build 時注入 production `VITE_API_BASE_URL`，避免把本地 `127.0.0.1` 打包到線上。
 
 ## External setup still required
 

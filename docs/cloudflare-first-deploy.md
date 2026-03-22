@@ -18,7 +18,7 @@ This runbook is for the first real deploy of Hearth API + web.
 3. `wrangler whoami`
 4. auto-create Pages project when missing (default project: `hearth-web`)
 5. deploy Worker API with `apps/api/wrangler.jsonc`
-6. build web app
+6. build web app with `VITE_API_BASE_URL` set to deploy target API URL
 7. deploy `apps/web/dist` to Cloudflare Pages
 
 ## Prerequisites
@@ -37,5 +37,5 @@ This runbook is for the first real deploy of Hearth API + web.
 ## Optional parameters
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/cloudflare-first-deploy.ps1 -PagesProjectName "<your-pages-project>" -AutoCreatePagesProject
+powershell -ExecutionPolicy Bypass -File scripts/cloudflare-first-deploy.ps1 -PagesProjectName "<your-pages-project>" -ApiBaseUrl "https://<your-worker>.workers.dev" -AutoCreatePagesProject
 ```

@@ -217,3 +217,4 @@
 | 2026-03-22 | 新增 governance phase gate 自動檢查腳本 | 以機器檢查治理檔與 plan freshness，降低流程漂移風險 |
 | 2026-03-22 | 將 governance gate 納入 readiness/deploy 預設流程 | 讓第一版交付檢查同時覆蓋工程可執行性與治理新鮮度，降低 release 遺漏風險 |
 | 2026-03-22 | 建立 portfolio holdings 真實讀取切片 | 讓 Phase D 從 stub 前進到 owner-scoped 持倉讀取與前端顯示 |
+| 2026-03-22 | 修正 production web API base 指向本機 localhost 問題 | 確保 Cloudflare 部署打包時使用正式 Worker URL，避免線上功能看起來失效 |
