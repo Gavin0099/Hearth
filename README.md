@@ -52,6 +52,15 @@ This repo currently contains the initial implementation foundation:
 
 Read the full checklist in `docs/first-release-readiness.md`.
 
+## Cloudflare first deploy
+
+- Dry-run:
+  - `npm run deploy:first:dry`
+- Real deploy:
+  - `npm run deploy:first`
+
+Deployment runbook: `docs/cloudflare-first-deploy.md`.
+
 ## External setup still required
 
 - create the Supabase project
@@ -75,3 +84,8 @@ Read the full checklist in `docs/first-release-readiness.md`.
 - first transaction delete flow for quick corrections
 - first transaction filter flow for account/date/category/keyword lookup
 - first transaction edit flow for quick corrections
+
+## Current deployed endpoints
+
+- API Worker: `https://hearth-api.reiko0099.workers.dev`
+- Pages deployment URL (latest): `https://ad4d7cc8.hearth-web.pages.dev`

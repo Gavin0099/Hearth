@@ -75,6 +75,8 @@
 - [x] 補上 transaction filter flow（帳戶/日期/類別/關鍵字）
 - [x] 補上 transaction edit flow 方便修正資料
 - [x] 建立第一版 release readiness 指令與清單
+- [x] 建立第一版 Cloudflare 一鍵部署腳本與 runbook
+- [x] 完成第一版 Cloudflare 真實部署驗證
 - [x] 對 `Hearth` 正式執行 framework `--adopt-existing` baseline adoption
 - [ ] 建立 repo-specific engineering governance baseline
 
@@ -83,7 +85,7 @@
 1. 建立 repo-specific engineering governance baseline
 2. 擴充更完整的銀行 / 信用卡匯入入口
 3. 視需要補前端端到端驗證
-4. 補齊第一版部署紀錄（Supabase / Cloudflare 實際環境）
+4. 建立第一版部署後 Smoke Test 清單
 
 ---
 
@@ -128,6 +130,8 @@
 - [x] transaction filter flow
 - [x] transaction edit flow
 - [x] first-release readiness commands
+- [x] Cloudflare first deploy script/runbook
+- [x] Cloudflare first real deployment validation
 - [ ] 更完整的銀行 / 信用卡匯入入口
 - [ ] 月帳本 Excel parser recurring template / formula-heavy workbook 擴充
 - [x] 月度收支報表 API 與 dashboard 第一版骨架
@@ -198,3 +202,5 @@
 | 2026-03-22 | 補上 transaction filter flow | 讓第一版可用性從「能看資料」前進到「可用條件檢索資料」，降低日常使用摩擦 |
 | 2026-03-22 | 補上 transaction edit flow | 讓第一版交易操作形成完整閉環（新增/篩選/編輯/刪除），提高日常可用性 |
 | 2026-03-22 | 建立第一版 release readiness 指令與清單 | 讓第一版交付前有固定可重跑的檢查流程，減少手動漏檢風險 |
+| 2026-03-22 | 建立第一版 Cloudflare 一鍵部署腳本與 runbook | 讓第一版從「可檢查」進一步邁向「可重複部署」，降低手動部署漏步風險 |
+| 2026-03-22 | 完成第一版 Cloudflare 真實部署驗證 | 將部署流程從 dry-run 提升到真實 worker/pages 發布，確認第一版可被外部訪問 |
