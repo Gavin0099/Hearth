@@ -7,7 +7,11 @@ import { accountsRoutes } from "./routes/accounts";
 import { recurringRoutes } from "./routes/recurring";
 import { transactionsRoutes } from "./routes/transactions";
 import type { ApiEnv, WorkerBindings } from "./types";
-import { resolveAuthenticatedUser as resolveAuthenticatedUserDefault } from "./lib/auth";
+import {
+  getBearerToken,
+  getTokenIssuer,
+  resolveAuthenticatedUser as resolveAuthenticatedUserDefault,
+} from "./lib/auth";
 import { createSupabaseAdminClient as createSupabaseAdminClientDefault } from "./lib/supabase";
 
 export type AuthenticatedUser = {
@@ -93,6 +97,21 @@ export function createApp(dependencies: Partial<AppDependencies> = {}) {
     const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
     const user = await resolveAuthenticatedUser(c.req.raw, c.env);
     if (!user) {
+      const token = getBearerToken(c.req.raw);
+      if (token) {
+        const issuer = getTokenIssuer(token);
+        const expectedIssuer = `${c.env.SUPABASE_URL}/auth/v1`;
+        if (issuer && issuer !== expectedIssuer) {
+          return c.json(
+            {
+              error: `Bearer token issuer mismatch. expected=${expectedIssuer} actual=${issuer}`,
+              status: "error",
+            },
+            401,
+          );
+        }
+      }
+
       return c.json(
         {
           error: "Missing or invalid Supabase bearer token.",
