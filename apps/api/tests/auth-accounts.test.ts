@@ -349,6 +349,78 @@ test("GET /api/report/monthly summarizes income, expense, categories, and daily 
   });
 });
 
+test("GET /api/portfolio/holdings returns 401 when no bearer user resolves", async () => {
+  const app = createTestApp({ user: null });
+  const response = await app.request("/api/portfolio/holdings", {}, env);
+
+  assert.equal(response.status, 401);
+  assert.deepEqual(await response.json(), {
+    code: "unauthorized",
+    error: "Missing or invalid Supabase bearer token.",
+    status: "error",
+  });
+});
+
+test("GET /api/portfolio/holdings returns owned holdings", async () => {
+  const holdings = [
+    {
+      id: "holding-1",
+      account_id: "account-1",
+      ticker: "2330",
+      name: "台積電",
+      total_shares: 12.5,
+      avg_cost: 610.25,
+      currency: "TWD",
+      updated_at: "2026-03-22T00:00:00Z",
+    },
+  ];
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "holdings") {
+          return {
+            select: () => ({
+              in: () => ({
+                order: async () => ({
+                  data: holdings,
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/portfolio/holdings", {}, env);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    items: holdings,
+    count: 1,
+    provider: "supabase",
+    status: "ok",
+  });
+});
+
 test("POST /api/transactions creates a manual transaction for an owned account", async () => {
   const createdTransaction = {
     id: "txn-9",

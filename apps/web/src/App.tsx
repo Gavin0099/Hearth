@@ -6,6 +6,7 @@ import { AccountsPanel } from "./components/AccountsPanel";
 import { AuthPanel } from "./components/AuthPanel";
 import { ImportPanel } from "./components/ImportPanel";
 import { MonthlyReportPanel } from "./components/MonthlyReportPanel";
+import { PortfolioPanel } from "./components/PortfolioPanel";
 import { RecurringTemplatesPanel } from "./components/RecurringTemplatesPanel";
 import { TransactionsPanel } from "./components/TransactionsPanel";
 import { getCurrentSession, signInWithGoogle, signOut } from "./lib/auth";
@@ -178,6 +179,7 @@ export function App() {
           session={session}
         />
         <MonthlyReportPanel refreshKey={reportRefreshKey} session={session} />
+        <PortfolioPanel refreshKey={reportRefreshKey} session={session} />
         <ImportPanel
           onImported={handleImported}
           onRecurringTemplatesCreated={handleRecurringTemplatesCreated}

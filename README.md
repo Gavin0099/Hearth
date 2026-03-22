@@ -94,6 +94,7 @@ Smoke runbook: `docs/post-deploy-smoke.md`.
 - first transaction delete flow for quick corrections
 - first transaction filter flow for account/date/category/keyword lookup
 - first transaction edit flow for quick corrections
+- first real portfolio holdings read path (`/api/portfolio/holdings`)
 
 ## Current deployed endpoints
 

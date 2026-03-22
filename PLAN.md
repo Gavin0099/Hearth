@@ -87,6 +87,7 @@
 2. 視需要補前端端到端驗證
 3. 擴充 smoke test 進入 imports / recurring 的自動化 API 驗證（safe validation path）
 4. 補 governance freshness / phase gate automation（第一版已完成）
+5. 推進 Phase D：net-worth 與 holdings valuation 計算
 
 ---
 
@@ -145,7 +146,8 @@
 - [ ] 永豐台股 CSV parser
 - [ ] holdings 重算
 - [ ] 報價快照與匯率資料流
-- [ ] portfolio API 與淨值 dashboard
+- [x] portfolio holdings API 與 dashboard 第一版讀取切片
+- [ ] portfolio net-worth 計算切片
 
 ### Phase E: 排程、PWA、產品完善
 
@@ -214,3 +216,4 @@
 | 2026-03-22 | 擴充 post-deploy smoke 支援 imports/recurring 路徑檢查 | 以 validation-based safe probes 驗證匯入與週期路由可用性，同時避免寫入正式資料 |
 | 2026-03-22 | 新增 governance phase gate 自動檢查腳本 | 以機器檢查治理檔與 plan freshness，降低流程漂移風險 |
 | 2026-03-22 | 將 governance gate 納入 readiness/deploy 預設流程 | 讓第一版交付檢查同時覆蓋工程可執行性與治理新鮮度，降低 release 遺漏風險 |
+| 2026-03-22 | 建立 portfolio holdings 真實讀取切片 | 讓 Phase D 從 stub 前進到 owner-scoped 持倉讀取與前端顯示 |
