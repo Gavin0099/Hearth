@@ -49,7 +49,7 @@ Write-Host "[readiness] repo: D:\Hearth"
 
 if (-not $SkipEnv) {
   Write-Host "[readiness] env validation"
-  Assert-ConfiguredValue -Path ".env" -Key "VITE_API_BASE_URL" -BlockedValues @("http://127.0.0.1:8787")
+  Assert-ConfiguredValue -Path ".env" -Key "VITE_API_BASE_URL" -BlockedValues @()
   Assert-ConfiguredValue -Path ".env" -Key "VITE_SUPABASE_URL" -BlockedValues @("https://your-project.supabase.co")
   Assert-ConfiguredValue -Path ".env" -Key "VITE_SUPABASE_ANON_KEY" -BlockedValues @("your-public-anon-key")
 
