@@ -13,7 +13,7 @@ This runbook is for the first real deploy of Hearth API + web.
 
 `scripts/cloudflare-first-deploy.ps1` runs:
 
-1. strict readiness (`npm run readiness:first:strict`)
+1. strict readiness (`npm run readiness:first:strict`, includes governance gate)
 2. `wrangler --version`
 3. `wrangler whoami`
 4. auto-create Pages project when missing (default project: `hearth-web`)

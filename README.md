@@ -52,6 +52,7 @@ This repo currently contains the initial implementation foundation:
 
 Read the full checklist in `docs/first-release-readiness.md`.
 Governance gate checklist: `npm run governance:gate` (docs: `docs/governance-phase-gate.md`).
+`readiness:first` and `readiness:first:strict` now include governance gate by default.
 
 ## Cloudflare first deploy
 

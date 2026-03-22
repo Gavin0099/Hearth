@@ -1,6 +1,7 @@
 param(
   [switch]$SkipEnv,
-  [switch]$SkipWebBuild
+  [switch]$SkipWebBuild,
+  [switch]$SkipGovernanceGate
 )
 
 $ErrorActionPreference = "Stop"
@@ -46,6 +47,13 @@ function Assert-ConfiguredValue {
 
 Write-Host "[readiness] Hearth first-release readiness check"
 Write-Host "[readiness] repo: D:\Hearth"
+
+if (-not $SkipGovernanceGate) {
+  Write-Host "[readiness] governance phase gate"
+  npm run governance:gate
+} else {
+  Write-Host "[readiness] governance phase gate skipped"
+}
 
 if (-not $SkipEnv) {
   Write-Host "[readiness] env validation"

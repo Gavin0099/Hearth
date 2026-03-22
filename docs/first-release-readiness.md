@@ -15,11 +15,14 @@ This document defines the minimum check before sharing the first Hearth build.
 
 The readiness script checks:
 
-1. Environment files are configured (unless `-SkipEnv` is used)
-2. API test suite passes
-3. API TypeScript build passes
-4. Web TypeScript check passes
-5. Optional web production build passes
+1. Governance phase gate passes (unless `-SkipGovernanceGate` is used)
+2. Environment files are configured (unless `-SkipEnv` is used)
+3. API test suite passes
+4. API TypeScript build passes
+5. Web TypeScript check passes
+6. Optional web production build passes
+
+`readiness:first:codeonly` currently skips governance gate, env validation, and web build.
 
 ## Required files
 
