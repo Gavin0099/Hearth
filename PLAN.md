@@ -85,7 +85,7 @@
 
 1. 擴充更完整的銀行 / 信用卡匯入入口
 2. 視需要補前端端到端驗證
-3. 擴充 smoke test 進入 transactions 的自動化 API 驗證
+3. 擴充 smoke test 進入 transactions 的自動化 API 驗證（已支援可選 probe）
 4. 補 governance freshness / phase gate automation
 
 ---
@@ -208,3 +208,4 @@
 | 2026-03-22 | 建立第一版部署後 Smoke Test 指令與清單 | 讓部署完成後可一鍵驗證 API/Web 存活，補上第一版交付的最小驗收關卡 |
 | 2026-03-22 | 建立 repo-specific engineering governance baseline | 在 Hearth 落地本地治理分類、架構邊界與測試基線，補齊 framework adoption 的工程治理缺口 |
 | 2026-03-22 | 擴充 post-deploy smoke 支援 bearer token 驗證 | 在可用 token 的情況下，讓 smoke 可直接覆蓋 `auth/me` 與 `accounts` 真實認證路徑 |
+| 2026-03-22 | 擴充 post-deploy smoke 支援 transactions create/query/delete probe | 在可選模式下覆蓋交易主路徑，並以自動 cleanup 避免污染正式資料 |
