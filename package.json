@@ -13,6 +13,7 @@
     "deploy:api": "npm --workspace @hearth/api run deploy",
     "deploy:first:dry": "powershell -ExecutionPolicy Bypass -File scripts/cloudflare-first-deploy.ps1 -AutoCreatePagesProject -DryRun",
     "deploy:first": "powershell -ExecutionPolicy Bypass -File scripts/cloudflare-first-deploy.ps1 -AutoCreatePagesProject",
+    "smoke:postdeploy": "powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1",
     "readiness:first:codeonly": "powershell -ExecutionPolicy Bypass -File scripts/first-release-readiness.ps1 -SkipEnv -SkipWebBuild",
     "readiness:first": "powershell -ExecutionPolicy Bypass -File scripts/first-release-readiness.ps1 -SkipWebBuild",
     "readiness:first:strict": "powershell -ExecutionPolicy Bypass -File scripts/first-release-readiness.ps1",

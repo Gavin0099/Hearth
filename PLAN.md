@@ -77,6 +77,7 @@
 - [x] 建立第一版 release readiness 指令與清單
 - [x] 建立第一版 Cloudflare 一鍵部署腳本與 runbook
 - [x] 完成第一版 Cloudflare 真實部署驗證
+- [x] 建立第一版部署後 Smoke Test 指令與清單
 - [x] 對 `Hearth` 正式執行 framework `--adopt-existing` baseline adoption
 - [ ] 建立 repo-specific engineering governance baseline
 
@@ -85,7 +86,7 @@
 1. 建立 repo-specific engineering governance baseline
 2. 擴充更完整的銀行 / 信用卡匯入入口
 3. 視需要補前端端到端驗證
-4. 建立第一版部署後 Smoke Test 清單
+4. 擴充 smoke test 進入 auth/accounts/transactions 的自動化 API 驗證
 
 ---
 
@@ -204,3 +205,4 @@
 | 2026-03-22 | 建立第一版 release readiness 指令與清單 | 讓第一版交付前有固定可重跑的檢查流程，減少手動漏檢風險 |
 | 2026-03-22 | 建立第一版 Cloudflare 一鍵部署腳本與 runbook | 讓第一版從「可檢查」進一步邁向「可重複部署」，降低手動部署漏步風險 |
 | 2026-03-22 | 完成第一版 Cloudflare 真實部署驗證 | 將部署流程從 dry-run 提升到真實 worker/pages 發布，確認第一版可被外部訪問 |
+| 2026-03-22 | 建立第一版部署後 Smoke Test 指令與清單 | 讓部署完成後可一鍵驗證 API/Web 存活，補上第一版交付的最小驗收關卡 |

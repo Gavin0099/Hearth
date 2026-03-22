@@ -58,8 +58,11 @@ Read the full checklist in `docs/first-release-readiness.md`.
   - `npm run deploy:first:dry`
 - Real deploy:
   - `npm run deploy:first`
+- Post-deploy smoke:
+  - `npm run smoke:postdeploy`
 
 Deployment runbook: `docs/cloudflare-first-deploy.md`.
+Smoke runbook: `docs/post-deploy-smoke.md`.
 
 ## External setup still required
 
