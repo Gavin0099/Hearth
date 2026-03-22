@@ -82,6 +82,7 @@ Smoke runbook: `docs/post-deploy-smoke.md`.
 - first manual transaction entry flow feeding the monthly report
 - first normalized CSV transaction import flow
 - first Sinopac-specific transaction CSV mapping layer
+- first TW credit-card transaction CSV mapping layer
 - first Excel monthly workbook import slice
 - first recurring template data path
 - first bulk adoption flow from Excel recurring candidates into recurring templates

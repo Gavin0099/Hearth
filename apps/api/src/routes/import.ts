@@ -5,6 +5,7 @@ import type {
   TransactionCsvImportResponse,
 } from "@hearth/shared";
 import { parseCsv } from "../lib/csv";
+import { parseCreditCardTransactionsCsv } from "../lib/credit-card";
 import { parseMonthlyExcel } from "../lib/excel-monthly";
 import { parseSinopacTransactionsCsv } from "../lib/sinopac";
 import { buildTransactionSourceHash } from "../lib/transaction-hash";
@@ -42,7 +43,7 @@ async function resolveOwnedAccountIds(
 
 async function importNormalizedRows(
   rows: CreateTransactionInput[],
-  source: "transactions-csv" | "sinopac-tw" | "excel-monthly",
+  source: "transactions-csv" | "sinopac-tw" | "credit-card-tw" | "excel-monthly",
   supabase: any,
   existingErrors: string[] = [],
   existingSkipped = 0,
@@ -340,6 +341,99 @@ importRoutes.post("/sinopac-tw", async (c) => {
   const result = await importNormalizedRows(
     normalized,
     "sinopac-tw",
+    supabase,
+    errors,
+    skipped,
+  );
+  return c.json<TransactionCsvImportResponse>(result.response, result.status as 200 | 500);
+});
+
+importRoutes.post("/credit-card-tw", async (c) => {
+  const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
+  const user = await resolveAuthenticatedUser(c.req.raw, c.env);
+  if (!user) {
+    return c.json<TransactionCsvImportResponse>(
+      {
+        code: "unauthorized",
+        error: "Missing or invalid Supabase bearer token.",
+        status: "error",
+      },
+      401,
+    );
+  }
+
+  const formData = await c.req.formData();
+  const accountId = String(formData.get("account_id") ?? "").trim();
+  const file = formData.get("file");
+
+  if (!accountId) {
+    return c.json<TransactionCsvImportResponse>(
+      {
+        code: "validation_error",
+        error: "account_id is required.",
+        status: "error",
+      },
+      400,
+    );
+  }
+
+  if (!(file instanceof File)) {
+    return c.json<TransactionCsvImportResponse>(
+      {
+        code: "validation_error",
+        error: "CSV file is required.",
+        status: "error",
+      },
+      400,
+    );
+  }
+
+  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
+  const { supabase, ownedAccounts, accountsError } = await resolveOwnedAccountIds(
+    user.id,
+    createSupabaseAdminClient,
+    c.env,
+  );
+
+  if (accountsError) {
+    return c.json<TransactionCsvImportResponse>(
+      {
+        code: "database_error",
+        error: accountsError.message,
+        status: "error",
+      },
+      500,
+    );
+  }
+
+  const accountIds = new Set((ownedAccounts ?? []).map((account: { id: string }) => account.id));
+  if (!accountIds.has(accountId)) {
+    return c.json<TransactionCsvImportResponse>(
+      {
+        code: "validation_error",
+        error: "Selected account does not belong to the current user.",
+        status: "error",
+      },
+      400,
+    );
+  }
+
+  const text = await file.text();
+  const { normalized, errors, skipped } = parseCreditCardTransactionsCsv(text, accountId);
+  if (normalized.length === 0) {
+    return c.json<TransactionCsvImportResponse>(
+      {
+        code: "validation_error",
+        error: errors[0] ?? "Credit card CSV rows are invalid.",
+        status: "error",
+      },
+      400,
+    );
+  }
+
+  const result = await importNormalizedRows(
+    normalized,
+    "credit-card-tw",
     supabase,
     errors,
     skipped,

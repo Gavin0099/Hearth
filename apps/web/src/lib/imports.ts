@@ -9,6 +9,10 @@ export async function importSinopacTransactionsCsv(accountId: string, file: File
   return importCsvToEndpoint("/api/import/sinopac-tw", accountId, file);
 }
 
+export async function importCreditCardTransactionsCsv(accountId: string, file: File) {
+  return importCsvToEndpoint("/api/import/credit-card-tw", accountId, file);
+}
+
 export async function importExcelMonthly(accountId: string, file: File) {
   return importCsvToEndpoint("/api/import/excel-monthly", accountId, file);
 }

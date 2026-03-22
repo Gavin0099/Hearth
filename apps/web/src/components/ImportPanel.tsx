@@ -3,6 +3,7 @@ import type { Session } from "@supabase/supabase-js";
 import type { AccountRecord, RecurringImportCandidate } from "@hearth/shared";
 import { fetchAccounts } from "../lib/accounts";
 import {
+  importCreditCardTransactionsCsv,
   importExcelMonthly,
   importSinopacTransactionsCsv,
   importTransactionsCsv,
@@ -28,7 +29,9 @@ export function ImportPanel({
   const [state, setState] = useState<LoadState>({ status: "idle" });
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [importMode, setImportMode] = useState<"normalized" | "sinopac-tw" | "excel-monthly">("normalized");
+  const [importMode, setImportMode] = useState<
+    "normalized" | "sinopac-tw" | "credit-card-tw" | "excel-monthly"
+  >("normalized");
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [latestRecurringCandidates, setLatestRecurringCandidates] = useState<RecurringImportCandidate[]>([]);
@@ -86,6 +89,8 @@ export function ImportPanel({
     const result =
       importMode === "sinopac-tw"
         ? await importSinopacTransactionsCsv(selectedAccountId, selectedFile)
+        : importMode === "credit-card-tw"
+          ? await importCreditCardTransactionsCsv(selectedAccountId, selectedFile)
         : importMode === "excel-monthly"
           ? await importExcelMonthly(selectedAccountId, selectedFile)
           : await importTransactionsCsv(selectedAccountId, selectedFile);
@@ -148,6 +153,8 @@ export function ImportPanel({
               ? "CSV 欄位格式：`date,amount,currency,category,description`"
               : importMode === "sinopac-tw"
                 ? "永豐最小欄位格式：`日期,金額,摘要`，可選 `幣別` 與 `收支別`。"
+                : importMode === "credit-card-tw"
+                  ? "信用卡最小欄位格式：`交易日期,金額,摘要`，可選 `幣別` 與 `交易類型`。"
                 : "Excel 第一版格式：第一列放日期欄，左側欄位使用 `分類` / `項目`，每日金額填在日期欄下方。"}
           </p>
           <form className="account-form" onSubmit={handleSubmit}>
@@ -156,11 +163,18 @@ export function ImportPanel({
               <select
                 value={importMode}
                 onChange={(event) =>
-                  setImportMode(event.target.value as "normalized" | "sinopac-tw" | "excel-monthly")
+                  setImportMode(
+                    event.target.value as
+                      | "normalized"
+                      | "sinopac-tw"
+                      | "credit-card-tw"
+                      | "excel-monthly",
+                  )
                 }
               >
                 <option value="normalized">Normalized CSV</option>
                 <option value="sinopac-tw">Sinopac TW CSV</option>
+                <option value="credit-card-tw">Credit Card TW CSV</option>
                 <option value="excel-monthly">Excel Monthly</option>
               </select>
             </label>

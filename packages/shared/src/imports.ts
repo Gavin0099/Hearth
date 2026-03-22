@@ -6,7 +6,7 @@ export type RecurringImportCandidate = {
 };
 
 export type TransactionCsvImportResult = {
-  source: "transactions-csv" | "sinopac-tw" | "excel-monthly";
+  source: "transactions-csv" | "sinopac-tw" | "credit-card-tw" | "excel-monthly";
   imported: number;
   skipped: number;
   failed: number;

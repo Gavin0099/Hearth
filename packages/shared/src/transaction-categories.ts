@@ -8,7 +8,21 @@ export const transactionCategories: TransactionCategory[] = [
   {
     id: "food",
     label: "餐飲",
-    keywords: ["早餐", "午餐", "晚餐", "咖啡", "外送", "餐廳"],
+    keywords: [
+      "早餐",
+      "午餐",
+      "晚餐",
+      "咖啡",
+      "外送",
+      "餐廳",
+      "uber eats",
+      "foodpanda",
+      "restaurant",
+      "cafe",
+      "breakfast",
+      "lunch",
+      "dinner",
+    ],
   },
   {
     id: "groceries",

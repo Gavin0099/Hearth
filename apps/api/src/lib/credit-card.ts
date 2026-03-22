@@ -1,16 +1,16 @@
 import { transactionCategories, type CreateTransactionInput } from "@hearth/shared";
 import { parseCsv } from "./csv";
 
-type SinopacRow = Record<string, string>;
+type CreditCardRow = Record<string, string>;
 
-const dateAliases = ["日期", "交易日期", "入帳日期", "date"];
+const dateAliases = ["交易日期", "消費日", "入帳日", "date"];
 const amountAliases = ["金額", "交易金額", "amount"];
-const descriptionAliases = ["摘要", "說明", "備註", "description"];
+const descriptionAliases = ["摘要", "特店名稱", "商店名稱", "說明", "description"];
 const currencyAliases = ["幣別", "currency"];
-const typeAliases = ["收支別", "方向", "type"];
-const ignoredMarkerAliases = ["小計", "合計", "summary"];
+const typeAliases = ["交易類型", "類型", "收支別", "type"];
+const ignoredMarkerAliases = ["小計", "合計", "總計", "本期應繳", "應繳總額"];
 
-function getValue(row: SinopacRow, aliases: string[]) {
+function getValue(row: CreditCardRow, aliases: string[]) {
   for (const alias of aliases) {
     const value = row[alias];
     if (value !== undefined && String(value).trim() !== "") {
@@ -20,7 +20,7 @@ function getValue(row: SinopacRow, aliases: string[]) {
   return "";
 }
 
-function shouldIgnoreRow(row: SinopacRow) {
+function shouldIgnoreRow(row: CreditCardRow) {
   const values = Object.values(row).map((value) => String(value).trim());
   return values.some((value) =>
     ignoredMarkerAliases.some((marker) => value.includes(marker)),
@@ -40,34 +40,38 @@ function inferCategory(description: string) {
   return matched?.label ?? "其他";
 }
 
-function normalizeAmount(rawAmount: string, rawDirection: string) {
+function normalizeAmount(rawAmount: string, rawType: string, description: string) {
   const cleaned = rawAmount.replace(/[,\s]/g, "").trim();
   const numeric = Number(cleaned);
   if (!Number.isFinite(numeric) || numeric === 0) {
     return null;
   }
 
-  const direction = rawDirection.toLowerCase();
-  if (
-    direction.includes("支") ||
-    direction.includes("debit") ||
-    direction.includes("withdraw")
-  ) {
-    return -Math.abs(numeric);
-  }
+  const type = rawType.toLowerCase();
+  const descriptionLower = description.toLowerCase();
 
   if (
-    direction.includes("收") ||
-    direction.includes("credit") ||
-    direction.includes("deposit")
+    type.includes("退款") ||
+    type.includes("退貨") ||
+    type.includes("refund") ||
+    type.includes("credit") ||
+    descriptionLower.includes("退款")
   ) {
     return Math.abs(numeric);
   }
 
-  return numeric;
+  if (
+    type.includes("繳款") ||
+    type.includes("payment") ||
+    descriptionLower.includes("繳款")
+  ) {
+    return null;
+  }
+
+  return -Math.abs(numeric);
 }
 
-export function parseSinopacTransactionsCsv(text: string, accountId: string) {
+export function parseCreditCardTransactionsCsv(text: string, accountId: string) {
   const rows = parseCsv(text);
   const normalized: CreateTransactionInput[] = [];
   const errors: string[] = [];
@@ -84,8 +88,8 @@ export function parseSinopacTransactionsCsv(text: string, accountId: string) {
     const description = getValue(row, descriptionAliases);
     const rawAmount = getValue(row, amountAliases);
     const rawCurrency = getValue(row, currencyAliases) || "TWD";
-    const rawDirection = getValue(row, typeAliases);
-    const amount = normalizeAmount(rawAmount, rawDirection);
+    const rawType = getValue(row, typeAliases);
+    const amount = normalizeAmount(rawAmount, rawType, description);
 
     if (!date) {
       errors.push(`line ${line}: date is required`);
@@ -93,7 +97,7 @@ export function parseSinopacTransactionsCsv(text: string, accountId: string) {
     }
 
     if (amount === null) {
-      errors.push(`line ${line}: amount must be a non-zero number`);
+      skipped += 1;
       return;
     }
 
@@ -104,7 +108,7 @@ export function parseSinopacTransactionsCsv(text: string, accountId: string) {
       currency: rawCurrency.toUpperCase(),
       category: inferCategory(description),
       description: description || null,
-      source: "sinopac_bank",
+      source: "credit_card_tw",
     });
   });
 

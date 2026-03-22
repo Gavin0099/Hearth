@@ -83,7 +83,7 @@
 
 ### 接下來
 
-1. 擴充更完整的銀行 / 信用卡匯入入口
+1. 擴充下一批銀行 / 信用卡匯入入口（目前已含 sinopac + credit-card v1）
 2. 視需要補前端端到端驗證
 3. 擴充 smoke test 進入 transactions 的自動化 API 驗證（已支援可選 probe）
 4. 補 governance freshness / phase gate automation
@@ -133,7 +133,7 @@
 - [x] first-release readiness commands
 - [x] Cloudflare first deploy script/runbook
 - [x] Cloudflare first real deployment validation
-- [ ] 更完整的銀行 / 信用卡匯入入口
+- [x] 更完整的銀行 / 信用卡匯入入口（sinopac + credit-card v1）
 - [ ] 月帳本 Excel parser recurring template / formula-heavy workbook 擴充
 - [x] 月度收支報表 API 與 dashboard 第一版骨架
 
@@ -209,3 +209,4 @@
 | 2026-03-22 | 建立 repo-specific engineering governance baseline | 在 Hearth 落地本地治理分類、架構邊界與測試基線，補齊 framework adoption 的工程治理缺口 |
 | 2026-03-22 | 擴充 post-deploy smoke 支援 bearer token 驗證 | 在可用 token 的情況下，讓 smoke 可直接覆蓋 `auth/me` 與 `accounts` 真實認證路徑 |
 | 2026-03-22 | 擴充 post-deploy smoke 支援 transactions create/query/delete probe | 在可選模式下覆蓋交易主路徑，並以自動 cleanup 避免污染正式資料 |
+| 2026-03-22 | 新增 credit-card-tw 匯入入口與前端模式 | 擴充現金流匯入面向，讓信用卡 CSV 可直接套用現有 normalized pipeline |
