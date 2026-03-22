@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { reportRoutes } from "./routes/report";
 import { portfolioRoutes } from "./routes/portfolio";
 import { importRoutes } from "./routes/import";
@@ -59,6 +60,17 @@ export function createApp(dependencies: Partial<AppDependencies> = {}) {
   };
 
   const app = new Hono<ApiEnv>();
+
+  app.use(
+    "/api/*",
+    cors({
+      origin: "*",
+      allowHeaders: ["authorization", "content-type"],
+      allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      exposeHeaders: ["content-length", "content-type"],
+      maxAge: 86400,
+    }),
+  );
 
   app.use("*", async (c, next) => {
     c.set("resolveAuthenticatedUser", resolvedDependencies.resolveAuthenticatedUser);

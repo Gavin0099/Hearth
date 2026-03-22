@@ -37,21 +37,31 @@ export function AuthPanel({
 
     async function loadWorkerUser() {
       setWorkerUser({ status: "loading" });
-      const result = await fetchAuthMe();
-      if (cancelled) {
-        return;
-      }
+      try {
+        const result = await fetchAuthMe();
+        if (cancelled) {
+          return;
+        }
 
-      if (result.status === "error") {
-        setWorkerUser({ status: "error", message: result.error });
-        return;
-      }
+        if (result.status === "error") {
+          setWorkerUser({ status: "error", message: result.error });
+          return;
+        }
 
-      setWorkerUser({
-        status: "success",
-        email: result.user.email,
-        id: result.user.id,
-      });
+        setWorkerUser({
+          status: "success",
+          email: result.user.email,
+          id: result.user.id,
+        });
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        setWorkerUser({
+          status: "error",
+          message: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
     }
 
     void loadWorkerUser();

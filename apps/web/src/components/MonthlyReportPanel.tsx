@@ -30,17 +30,27 @@ export function MonthlyReportPanel({ session, refreshKey }: MonthlyReportPanelPr
 
     async function load() {
       setState({ status: "loading" });
-      const result = await fetchMonthlyReport(now.getUTCFullYear(), now.getUTCMonth() + 1);
-      if (cancelled) {
-        return;
-      }
+      try {
+        const result = await fetchMonthlyReport(now.getUTCFullYear(), now.getUTCMonth() + 1);
+        if (cancelled) {
+          return;
+        }
 
-      if (result.status === "error") {
-        setState({ status: "error", message: result.error });
-        return;
-      }
+        if (result.status === "error") {
+          setState({ status: "error", message: result.error });
+          return;
+        }
 
-      setState({ status: "success", report: result });
+        setState({ status: "success", report: result });
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        setState({
+          status: "error",
+          message: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
     }
 
     void load();
