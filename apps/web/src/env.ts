@@ -8,5 +8,8 @@ export const env = {
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL ?? defaultApiBaseUrl,
   supabaseUrl: import.meta.env.VITE_SUPABASE_URL ?? "",
   supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY ?? "",
+  authRedirectUrl:
+    import.meta.env.VITE_AUTH_REDIRECT_URL ??
+    "https://hearth-web.pages.dev",
   webRuntime: "Cloudflare Pages",
 };

@@ -1,4 +1,5 @@
 import type { Session } from "@supabase/supabase-js";
+import { env } from "../env";
 import { getSupabaseBrowserClient } from "./supabase";
 
 export async function signInWithGoogle() {
@@ -10,7 +11,7 @@ export async function signInWithGoogle() {
   const { error } = await client.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: window.location.origin,
+      redirectTo: env.authRedirectUrl,
     },
   });
 
