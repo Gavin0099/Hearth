@@ -37,7 +37,13 @@ Use `ai-governance-framework/` for framework-level guidance:
 
 If a local `Hearth` plan or memory file conflicts with framework examples, `Hearth` local product context wins for product scope and delivery order.
 
-If a future `Hearth` repo-local engineering governance file is added, it should define risk classification and testing expectations for this product and explicitly reference the framework where appropriate.
+`Hearth` now has repo-local engineering governance at:
+
+- `governance/AGENT.md`
+- `governance/ARCHITECTURE.md`
+- `governance/TESTING.md`
+
+Use those files as the canonical source for repo-level risk classification, execution rigor, architecture guardrails, and testing expectations.
 
 ## Required Habits
 
@@ -56,6 +62,5 @@ As of 2026-03-21, `Hearth` has adopted:
 
 Still pending:
 
-- repo-specific engineering governance rules
 - automation around freshness or phase gates
 - reusable runtime hooks from the framework, if they become needed for this product
