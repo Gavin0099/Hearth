@@ -60,6 +60,7 @@ Read the full checklist in `docs/first-release-readiness.md`.
   - `npm run deploy:first`
 - Post-deploy smoke:
   - `npm run smoke:postdeploy`
+  - with auth checks: `powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>"`
 
 Deployment runbook: `docs/cloudflare-first-deploy.md`.
 Smoke runbook: `docs/post-deploy-smoke.md`.

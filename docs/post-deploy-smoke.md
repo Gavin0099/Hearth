@@ -15,12 +15,22 @@ Use custom URLs when needed:
 powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -ApiBaseUrl "https://<your-worker>.workers.dev" -WebUrl "https://<your-pages>.pages.dev"
 ```
 
+Enable authenticated checks (recommended when you have a valid Supabase access token):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>"
+```
+
 ## What it verifies
 
 1. `GET <api>/health` responds `2xx` and payload has `status: "ok"`
 2. `GET <web>/` responds `2xx` and HTML contains `<title>Hearth</title>`
+3. When `-BearerToken` is provided:
+   - `GET <api>/api/auth/me` returns `status: "ok"`
+   - `GET <api>/api/accounts` returns `status: "ok"`
 
 ## Scope note
 
-This smoke check validates availability and basic wiring only.
-Functional paths (auth/accounts/transactions/import/report) should still be validated with the first-release checklist and manual acceptance flow.
+This smoke check validates availability and basic wiring.
+Without `-BearerToken`, authenticated API checks are skipped.
+Transactions/import/report still need checklist-driven functional validation.
