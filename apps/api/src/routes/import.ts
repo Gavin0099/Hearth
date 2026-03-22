@@ -78,7 +78,7 @@ async function importNormalizedRows(
   const freshRows = withHashes.filter((row) => !existingHashes.has(row.source_hash));
 
   if (freshRows.length > 0) {
-    const { error } = await supabase.from("transactions").insert(
+    const { error } = await supabase.from("transactions").upsert(
       freshRows.map((row) => ({
         account_id: row.account_id,
         date: row.date,
@@ -89,6 +89,7 @@ async function importNormalizedRows(
         source: row.source ?? source,
         source_hash: row.source_hash,
       })),
+      { onConflict: "source_hash", ignoreDuplicates: true },
     );
 
     if (error) {

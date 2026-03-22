@@ -7,6 +7,9 @@ export function createSupabaseAdminClient(env: WorkerBindings) {
       persistSession: false,
       autoRefreshToken: false,
     },
+    db: {
+      schema: "public",
+    },
   });
 }
 
