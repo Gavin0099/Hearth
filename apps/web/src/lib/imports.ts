@@ -1,7 +1,14 @@
 import type { TransactionCsvImportResponse } from "@hearth/shared";
 import { apiFetch } from "./api";
 
-type TransactionsCsvSource = "csv_import" | "gmail_pdf_sinopac" | "gmail_pdf_esun";
+type TransactionsCsvSource =
+  | "csv_import"
+  | "gmail_pdf_sinopac"
+  | "gmail_pdf_esun"
+  | "gmail_pdf_cathay"
+  | "gmail_pdf_taishin"
+  | "gmail_pdf_ctbc"
+  | "gmail_pdf_mega";
 
 export async function importTransactionsCsv(
   accountId: string,

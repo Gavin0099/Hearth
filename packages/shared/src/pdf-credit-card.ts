@@ -45,6 +45,35 @@ const esunIgnoredMarkers = [
   "\u672c\u671f\u61c9\u7e73\u7e3d\u91d1\u984d",
 ];
 
+// 國泰 (Cathay) — section-gated, rows inside 本期消費明細/本期費用明細
+const cathayIgnoredMarkers = [
+  "\u5361\u865f\uff1a",
+  "\u5361\u865f:",
+  "\u4e0a\u671f\u61c9\u7e73",
+  "\u672c\u671f\u5e33\u55ae\u7d50\u7b97",
+  "\u7e73\u6b3e\u622a\u6b62",
+  "\u5408\u8a08\u6b3e\u9805",
+  "\u4fe1\u7528\u984d\u5ea6",
+  "\u524d\u671f\u9918\u984d",
+];
+
+// 台新 (Taishin) — dual-date rows, no card-last-4
+const taishinIgnoredMarkers = [
+  "\u4e0a\u671f\u9918\u984d",
+  "\u4e0a\u671f\u5e33\u55ae\u9918\u984d",
+  "\u7e73\u6b3e\u91d1\u984d",
+  "\u81ea\u52d5\u6263\u6b3e",
+  "\u5206\u671f\u672a\u5230\u671f\u603b\u91d1",
+  "\u5206\u671f\u672a\u5230\u671f\u7e3d\u91d1",
+];
+
+// 中信 (CTBC) — sinopac-like with optional last-4
+const ctbcIgnoredMarkers = [
+  "\u81ea\u52d5\u6263\u6b3e\u5df2\u5165\u5e33",
+  "\u7e73\u6b3e\u91d1\u984d",
+  "\u4e0a\u671f\u9918\u984d",
+];
+
 function normalizeWhitespace(text: string) {
   return text
     .normalize("NFKC")
@@ -377,10 +406,284 @@ function parseEsunPdfText(text: string) {
   return transactions;
 }
 
+
+// ─────────────────────────────────────────────────────────────
+// 國泰 (Cathay) — section-gated like E.Sun
+// Row shape: MM/DD MM/DD 說明 [幣別] 金額
+// ─────────────────────────────────────────────────────────────
+
+function extractCathayDetail(line: string) {
+  // Two amounts: consume date, posted date, description, currency, amount (TWD), currency2, amount2
+  const twoAmountMatch = line.match(
+    /^(?<consume>\d{2}\/\d{2})\s+(?<posted>\d{2}\/\d{2})\s+(?<description>.+?)\s+(?<currency1>TWD|NTD|USD|JPY)\s+(?<amount1>-?\d[\d,]*)\s+(?<currency2>TWD|NTD|USD|JPY)\s+(?<amount2>-?\d[\d,]*)$/u,
+  );
+  if (twoAmountMatch?.groups) {
+    return {
+      dateToken: twoAmountMatch.groups.consume,
+      description: twoAmountMatch.groups.description,
+      currencyToken: twoAmountMatch.groups.currency2,
+      amountToken: twoAmountMatch.groups.amount2,
+    };
+  }
+
+  const oneAmountMatch = line.match(
+    /^(?<consume>\d{2}\/\d{2})\s+(?<posted>\d{2}\/\d{2})\s+(?<description>.+?)\s+(?:(?<currency>TWD|NTD|USD|JPY)\s+)?(?<amount>-?\d[\d,]*)$/u,
+  );
+  if (oneAmountMatch?.groups) {
+    return {
+      dateToken: oneAmountMatch.groups.consume,
+      description: oneAmountMatch.groups.description,
+      currencyToken: oneAmountMatch.groups.currency,
+      amountToken: oneAmountMatch.groups.amount,
+    };
+  }
+
+  return null;
+}
+
+function parseCathayPdfText(text: string) {
+  const normalizedText = normalizeWhitespace(text);
+  const statementYear = inferStatementYear(normalizedText);
+  const transactions: ParsedPdfTransaction[] = [];
+  // Use same section markers as E.Sun
+  let activeSection: "none" | "fees" | "spend" = "none";
+
+  normalizedText.split("\n").forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+
+    // Section openers — 本期費用明細 or 本期消費明細 (and ROC-calendar variants)
+    if (trimmed.includes("\u672c\u671f\u8cbb\u7528\u660e\u7d30")) {
+      activeSection = "fees";
+      return;
+    }
+    if (trimmed.includes("\u672c\u671f\u6d88\u8cbb\u660e\u7d30")) {
+      activeSection = "spend";
+      return;
+    }
+
+    // Section closers
+    if (
+      trimmed.includes("\u672c\u671f\u5408\u8a08") ||
+      trimmed.includes("\u672c\u671f\u61c9\u7e73\u7e3d\u91d1\u984d")
+    ) {
+      activeSection = "none";
+      return;
+    }
+
+    if (activeSection === "none") return;
+
+    const detail = extractCathayDetail(trimmed);
+    if (!detail) return;
+
+    const description = detail.description.trim();
+    if (isIgnoredDescription(description, cathayIgnoredMarkers)) return;
+
+    const transaction = buildTransaction(
+      statementYear,
+      detail.dateToken,
+      description,
+      detail.amountToken,
+      detail.currencyToken,
+    );
+    if (transaction) transactions.push(transaction);
+  });
+
+  return transactions;
+}
+
+// ─────────────────────────────────────────────────────────────
+// 台新 (Taishin) — dual-date, description, amount
+// Row shape: MM/DD MM/DD 說明 [幣別] 金額
+// Same as Cathay line shape but without mandatory section gating;
+// we still use section markers to improve precision.
+// ─────────────────────────────────────────────────────────────
+
+function extractTaishinDetail(line: string) {
+  const twoAmountMatch = line.match(
+    /^(?<consume>\d{2}\/\d{2})\s+(?<posted>\d{2}\/\d{2})\s+(?<description>.+?)\s+(?<currency1>TWD|NTD|USD|JPY)\s+(?<amount1>-?\d[\d,]*)\s+(?<currency2>TWD|NTD|USD|JPY)\s+(?<amount2>-?\d[\d,]*)$/u,
+  );
+  if (twoAmountMatch?.groups) {
+    return {
+      dateToken: twoAmountMatch.groups.consume,
+      description: twoAmountMatch.groups.description,
+      currencyToken: twoAmountMatch.groups.currency2,
+      amountToken: twoAmountMatch.groups.amount2,
+    };
+  }
+
+  const oneAmountMatch = line.match(
+    /^(?<consume>\d{2}\/\d{2})\s+(?<posted>\d{2}\/\d{2})\s+(?<description>.+?)\s+(?:(?<currency>TWD|NTD|USD|JPY)\s+)?(?<amount>-?\d[\d,]*)$/u,
+  );
+  if (oneAmountMatch?.groups) {
+    return {
+      dateToken: oneAmountMatch.groups.consume,
+      description: oneAmountMatch.groups.description,
+      currencyToken: oneAmountMatch.groups.currency,
+      amountToken: oneAmountMatch.groups.amount,
+    };
+  }
+
+  return null;
+}
+
+function parseTaishinPdfText(text: string) {
+  const normalizedText = normalizeWhitespace(text);
+  const statementYear = inferStatementYear(normalizedText);
+  const transactions: ParsedPdfTransaction[] = [];
+  let activeSection: "none" | "spend" = "none";
+
+  normalizedText.split("\n").forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+
+    // 消費明細 section opener
+    if (trimmed.includes("\u6d88\u8cbb\u660e\u7d30") || trimmed.includes("\u672c\u671f\u660e\u7d30")) {
+      activeSection = "spend";
+      return;
+    }
+    // Generic closers
+    if (
+      trimmed.includes("\u672c\u671f\u5408\u8a08") ||
+      trimmed.includes("\u672c\u671f\u61c9\u7e73") ||
+      trimmed.includes("\u7e73\u6b3e\u8cc7\u8a0a")
+    ) {
+      activeSection = "none";
+      return;
+    }
+
+    // Parse even outside section if line looks like a transaction row
+    // (台新帳單有時沒有明確 section header)
+    const detail = extractTaishinDetail(trimmed);
+    if (!detail) return;
+
+    const description = detail.description.trim();
+    if (isIgnoredDescription(description, taishinIgnoredMarkers)) return;
+
+    if (activeSection === "none") {
+      // Only accept lines that look like real transactions (not summaries)
+      if (trimmed.length < 10) return;
+    }
+
+    const transaction = buildTransaction(
+      statementYear,
+      detail.dateToken,
+      description,
+      detail.amountToken,
+      detail.currencyToken,
+    );
+    if (transaction) transactions.push(transaction);
+  });
+
+  return transactions;
+}
+
+// ─────────────────────────────────────────────────────────────
+// 中信 (CTBC) — Sinopac-like with optional card last-4
+// Row shape: MM/DD MM/DD [卡末四] 說明 金額 [尾欄]
+// ─────────────────────────────────────────────────────────────
+
+function parseCtbcLine(line: string, statementYear?: number) {
+  // Same dual-date pattern as Sinopac, optional 4-digit card suffix
+  const match = line.match(
+    /^(?<consume>\d{2}\/\d{2})\s+(?<posted>\d{2}\/\d{2})\s+(?:(?<card>\d{4})\s+)?(?<rest>.+)$/u,
+  );
+  if (!match?.groups) return null;
+
+  const detail = extractSinopacDetail(match.groups.rest);
+  if (!detail) return null;
+
+  const description = detail.description.trim();
+  if (isIgnoredDescription(description, ctbcIgnoredMarkers)) return null;
+
+  // Filter PDF artifacts (same rules as Sinopac)
+  if (/^\d{2}\/\d{2}/.test(description)) return null;
+  if (/^[A-Z]{3}\d/.test(description)) return null;
+  if (/\d{2}\/\d{2}\s+\d{2}\/\d{2}/.test(description)) return null;
+
+  return buildTransaction(statementYear, match.groups.consume, description, detail.amountToken);
+}
+
+function parseCtbcPdfText(text: string) {
+  const normalizedText = normalizeWhitespace(text);
+  const statementYear = inferStatementYear(normalizedText);
+  const transactions: ParsedPdfTransaction[] = [];
+
+  normalizedText.split("\n").forEach((line) => {
+    const parsed = parseCtbcLine(line.trim(), statementYear);
+    if (parsed) transactions.push(parsed);
+  });
+
+  return transactions;
+}
+
+// ─────────────────────────────────────────────────────────────
+// 兆豐 (Mega) — same Sinopac-like dual-date format
+// Row shape: MM/DD MM/DD [卡末四] 說明 金額 [尾欄]
+// ─────────────────────────────────────────────────────────────
+
+const megaIgnoredMarkers = [
+  "\u7e73\u6b3e\u91d1\u984d",
+  "\u4e0a\u671f\u9918\u984d",
+  "\u81ea\u52d5\u626e\u6b3e",
+];
+
+function parseMegaLine(line: string, statementYear?: number) {
+  const match = line.match(
+    /^(?<consume>\d{2}\/\d{2})\s+(?<posted>\d{2}\/\d{2})\s+(?:(?<card>\d{4})\s+)?(?<rest>.+)$/u,
+  );
+  if (!match?.groups) return null;
+
+  const detail = extractSinopacDetail(match.groups.rest);
+  if (!detail) return null;
+
+  const description = detail.description.trim();
+  if (isIgnoredDescription(description, megaIgnoredMarkers)) return null;
+
+  if (/^\d{2}\/\d{2}/.test(description)) return null;
+  if (/^[A-Z]{3}\d/.test(description)) return null;
+  if (/\d{2}\/\d{2}\s+\d{2}\/\d{2}/.test(description)) return null;
+
+  return buildTransaction(statementYear, match.groups.consume, description, detail.amountToken);
+}
+
+function parseMegaPdfText(text: string) {
+  const normalizedText = normalizeWhitespace(text);
+  const statementYear = inferStatementYear(normalizedText);
+  const transactions: ParsedPdfTransaction[] = [];
+
+  normalizedText.split("\n").forEach((line) => {
+    const parsed = parseMegaLine(line.trim(), statementYear);
+    if (parsed) transactions.push(parsed);
+  });
+
+  return transactions;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Exports
+// ─────────────────────────────────────────────────────────────
+
 export function parseSinopacPdfTransactions(text: string) {
   return parseSinopacPdfText(text);
 }
 
 export function parseEsunPdfTransactions(text: string) {
   return parseEsunPdfText(text);
+}
+
+export function parseCathayPdfTransactions(text: string) {
+  return parseCathayPdfText(text);
+}
+
+export function parseTaishinPdfTransactions(text: string) {
+  return parseTaishinPdfText(text);
+}
+
+export function parseCtbcPdfTransactions(text: string) {
+  return parseCtbcPdfText(text);
+}
+
+export function parseMegaPdfTransactions(text: string) {
+  return parseMegaPdfText(text);
 }

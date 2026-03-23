@@ -1,7 +1,11 @@
 import * as pdfjsLib from "pdfjs-dist";
 import {
+  parseCathayPdfTransactions,
+  parseCtbcPdfTransactions,
   parseEsunPdfTransactions,
+  parseMegaPdfTransactions,
   parseSinopacPdfTransactions,
+  parseTaishinPdfTransactions,
   type ParsedPdfTransaction,
 } from "@hearth/shared";
 
@@ -58,4 +62,20 @@ export function parseSinopacPdfText(text: string): ParsedTransaction[] {
 
 export function parseEsunPdfText(text: string): ParsedTransaction[] {
   return parseEsunPdfTransactions(text);
+}
+
+export function parseCathayPdfText(text: string): ParsedTransaction[] {
+  return parseCathayPdfTransactions(text);
+}
+
+export function parseTaishinPdfText(text: string): ParsedTransaction[] {
+  return parseTaishinPdfTransactions(text);
+}
+
+export function parseCtbcPdfText(text: string): ParsedTransaction[] {
+  return parseCtbcPdfTransactions(text);
+}
+
+export function parseMegaPdfText(text: string): ParsedTransaction[] {
+  return parseMegaPdfTransactions(text);
 }

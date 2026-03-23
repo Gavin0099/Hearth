@@ -3,7 +3,13 @@ const GMAIL_API_BASE = "https://gmail.googleapis.com/gmail/v1/users/me";
 const BANK_SENDERS = {
   sinopac: "ebillservice@newebill.banksinopac.com.tw",
   esun: "estatement@esunbank.com",
+  cathay: "service@pxbillrc01.cathaybk.com.tw",
+  taishin: "webmaster@bhurecv.taishinbank.com.tw",
+  ctbc: "ebill@estats.ctbcbank.com",
+  mega: "billhunter@billhunter.megabank.com.tw",
 };
+
+export type BankKey = keyof typeof BANK_SENDERS;
 
 async function gmailFetch(path: string, accessToken: string) {
   const response = await fetch(`${GMAIL_API_BASE}${path}`, {
@@ -37,13 +43,13 @@ export type GmailBillEmail = {
   id: string;
   subject: string;
   date: string;
-  bank: "sinopac" | "esun";
+  bank: BankKey;
   attachments: { id: string; filename: string; mimeType: string }[];
 };
 
 export async function fetchBillEmails(
   accessToken: string,
-  bank: "sinopac" | "esun",
+  bank: BankKey,
   maxResults = 6,
 ): Promise<GmailBillEmail[]> {
   const sender = BANK_SENDERS[bank];

@@ -4,12 +4,22 @@ import type { AccountRecord } from "@hearth/shared";
 import {
   downloadAttachment,
   fetchBillEmails,
+  type BankKey,
   type GmailBillEmail,
 } from "../lib/gmail";
 import { fetchAccounts } from "../lib/accounts";
 import { importTransactionsCsv } from "../lib/imports";
-import { extractPdfText, parseEsunPdfText, parseSinopacPdfText } from "../lib/pdf-parser";
-import { fetchUserSettings, saveUserSettings } from "../lib/user-settings";
+import {
+  extractPdfText,
+  parseCathayPdfText,
+  parseCtbcPdfText,
+  parseEsunPdfText,
+  parseMegaPdfText,
+  parseSinopacPdfText,
+  parseTaishinPdfText,
+  type ParsedTransaction,
+} from "../lib/pdf-parser";
+import { fetchUserSettings } from "../lib/user-settings";
 
 type GmailSyncPanelProps = {
   session: Session | null;
@@ -22,13 +32,35 @@ type SyncState =
   | { status: "error"; message: string }
   | { status: "done"; message: string };
 
-const BANK_NAME_KEYWORDS: Record<"sinopac" | "esun", string[]> = {
+const BANK_DISPLAY_NAMES: Record<BankKey, string> = {
+  sinopac: "永豐",
+  esun: "玉山",
+  cathay: "國泰",
+  taishin: "台新",
+  ctbc: "中信",
+  mega: "兆豐",
+};
+
+const BANK_NAME_KEYWORDS: Record<BankKey, string[]> = {
   sinopac: ["永豐", "sinopac"],
   esun: ["玉山", "esun"],
+  cathay: ["國泰", "cathay"],
+  taishin: ["台新", "taishin"],
+  ctbc: ["中信", "ctbc"],
+  mega: ["兆豐", "mega", "megabank"],
+};
+
+const BANK_PARSERS: Record<BankKey, (text: string) => ParsedTransaction[]> = {
+  sinopac: parseSinopacPdfText,
+  esun: parseEsunPdfText,
+  cathay: parseCathayPdfText,
+  taishin: parseTaishinPdfText,
+  ctbc: parseCtbcPdfText,
+  mega: parseMegaPdfText,
 };
 
 function resolveImportAccountId(
-  bank: "sinopac" | "esun",
+  bank: BankKey,
   accounts: AccountRecord[],
 ) {
   const creditAccounts = accounts.filter((account) => account.type === "cash_credit");
@@ -78,12 +110,13 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
     }
 
     try {
-      const [sinopacEmails, esunEmails] = await Promise.all([
-        fetchBillEmails(accessToken, "sinopac"),
-        fetchBillEmails(accessToken, "esun"),
-      ]);
+      const allEmails = await Promise.all(
+        (Object.keys(BANK_DISPLAY_NAMES) as BankKey[]).map((bank) =>
+          fetchBillEmails(accessToken, bank),
+        ),
+      );
 
-      setEmails([...sinopacEmails, ...esunEmails]);
+      setEmails(allEmails.flat());
       setState({ status: "idle" });
     } catch (error) {
       setState({
@@ -116,7 +149,9 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       const password =
         email.bank === "sinopac"
           ? settings.sinopac_pdf_password ?? ""
-          : settings.esun_pdf_password ?? "";
+          : email.bank === "esun"
+            ? settings.esun_pdf_password ?? ""
+            : "";
 
       const pdfAttachment = email.attachments.find(
         (attachment) =>
@@ -132,8 +167,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       const bytes = await downloadAttachment(email.id, pdfAttachment.id, accessToken);
       const text = await extractPdfText(bytes, password || undefined);
 
-      const parsed =
-        email.bank === "sinopac" ? parseSinopacPdfText(text) : parseEsunPdfText(text);
+      const parsed = BANK_PARSERS[email.bank](text);
 
       if (parsed.length === 0) {
         setState({
@@ -157,10 +191,8 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       const result = await importTransactionsCsv(
         accountId,
         csvFile,
-        email.bank === "sinopac" ? "gmail_pdf_sinopac" : "gmail_pdf_esun",
+        `gmail_pdf_${email.bank}`,
       );
-
-      await saveUserSettings({ gmail_last_sync_at: new Date().toISOString() });
 
       if (result.status === "error") {
         setState({ status: "error", message: result.error });
@@ -185,7 +217,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
   return (
     <article className="panel">
       <h2>Gmail 帳單同步</h2>
-      <p>自動抓取永豐與玉山信用卡帳單，匯入後以銀行標籤區分，不需要逐封指定帳戶。</p>
+      <p>自動抓取永豐、玉山、國泰、台新、中信、兆豐信用卡帳單，匯入後以銀行標籤區分，不需要逐封指定帳戶。</p>
 
       <button
         className="action-button"
@@ -207,7 +239,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
             {emails.map((email) => (
               <li key={email.id} className="gmail-email-item">
                 <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
-                  <span>{email.bank === "sinopac" ? "永豐" : "玉山"} - {email.subject}</span>
+                  <span>{BANK_DISPLAY_NAMES[email.bank]} - {email.subject}</span>
                 </div>
                 <button
                   className="action-button secondary"
