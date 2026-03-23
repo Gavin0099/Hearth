@@ -28,7 +28,7 @@ function matchAccountForBank(bank: string, accounts: { id: string; name: string 
   const matched = accounts.find((a) =>
     keywords.some((k) => a.name.toLowerCase().includes(k.toLowerCase())),
   );
-  return matched?.id ?? accounts[0]?.id ?? "";
+  return matched?.id ?? "";
 }
 
 export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
@@ -170,17 +170,16 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
               <li key={email.id} className="gmail-email-item">
                 <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
                   <span>{email.bank === "sinopac" ? "永豐" : "玉山"} — {email.subject}</span>
-                  {accounts.length > 1 && (
-                    <select
-                      style={{ fontSize: "0.82rem", padding: "2px 6px", borderRadius: "8px", border: "1px solid rgba(91,66,44,0.18)", background: "#fffdf9" }}
-                      value={getAccountForEmail(email)}
-                      onChange={(e) => setEmailAccountMap((m) => ({ ...m, [email.id]: e.target.value }))}
-                    >
-                      {accounts.map((a) => (
-                        <option key={a.id} value={a.id}>{a.name}</option>
-                      ))}
-                    </select>
-                  )}
+                  <select
+                    style={{ fontSize: "0.82rem", padding: "2px 6px", borderRadius: "8px", border: "1px solid rgba(91,66,44,0.18)", background: "#fffdf9" }}
+                    value={getAccountForEmail(email)}
+                    onChange={(e) => setEmailAccountMap((m) => ({ ...m, [email.id]: e.target.value }))}
+                  >
+                    <option value="">— 選擇帳戶 —</option>
+                    {accounts.map((a) => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <button
                   className="action-button secondary"
