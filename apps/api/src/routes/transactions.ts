@@ -249,6 +249,41 @@ transactionsRoutes.post("/", async (c) => {
   });
 });
 
+// DELETE /api/transactions?account_id=xxx  — clear all transactions for an account
+transactionsRoutes.delete("/", async (c) => {
+  const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
+  const user = await resolveAuthenticatedUser(c.req.raw, c.env);
+  if (!user) {
+    return c.json<TransactionsResponse>({ code: "unauthorized", error: "Missing or invalid Supabase bearer token.", status: "error" }, 401);
+  }
+
+  const accountId = c.req.query("account_id")?.trim();
+  if (!accountId) {
+    return c.json<TransactionsResponse>({ code: "validation_error", error: "account_id is required.", status: "error" }, 400);
+  }
+
+  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
+  const supabase = createSupabaseAdminClient(c.env);
+
+  const { data: ownedAccounts, error: accountsError } = await supabase
+    .from("accounts").select("id").eq("user_id", user.id);
+  if (accountsError) {
+    return c.json<TransactionsResponse>({ code: "database_error", error: accountsError.message, status: "error" }, 500);
+  }
+
+  const accountIds = (ownedAccounts ?? []).map((a: { id: string }) => a.id);
+  if (!accountIds.includes(accountId)) {
+    return c.json<TransactionsResponse>({ code: "validation_error", error: "Account does not belong to the current user.", status: "error" }, 400);
+  }
+
+  const { error } = await supabase.from("transactions").delete().eq("account_id", accountId);
+  if (error) {
+    return c.json<TransactionsResponse>({ code: "database_error", error: error.message, status: "error" }, 500);
+  }
+
+  return c.json<TransactionsResponse>({ items: [], count: 0, status: "ok" });
+});
+
 transactionsRoutes.delete("/:transactionId", async (c) => {
   const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
   const user = await resolveAuthenticatedUser(c.req.raw, c.env);

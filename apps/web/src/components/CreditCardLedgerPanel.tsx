@@ -3,7 +3,7 @@ import type { Session } from "@supabase/supabase-js";
 import type { AccountRecord, TransactionRecord } from "@hearth/shared";
 import { transactionCategories } from "@hearth/shared";
 import { fetchAccounts } from "../lib/accounts";
-import { deleteTransaction, fetchTransactions, updateTransaction } from "../lib/transactions";
+import { clearTransactions, deleteTransaction, fetchTransactions, updateTransaction } from "../lib/transactions";
 
 const CATEGORY_LABELS = transactionCategories.map((c) => c.label);
 const PAGE_SIZE = 50;
@@ -22,6 +22,7 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
   const [editingCategory, setEditingCategory] = useState("");
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     if (!session) return;
@@ -89,6 +90,15 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
     }
   }
 
+  async function handleClearAll() {
+    if (!selectedAccountId) return;
+    if (!window.confirm(`確定要刪除此帳戶的全部 ${transactions.length} 筆交易紀錄嗎？此操作無法復原。`)) return;
+    setClearing(true);
+    await clearTransactions(selectedAccountId);
+    setTransactions([]);
+    setClearing(false);
+  }
+
   async function handleDelete(id: string) {
     setDeletingIds((s) => new Set([...s, id]));
     await deleteTransaction(id);
@@ -126,6 +136,18 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
           />
         </label>
       </div>
+
+      {transactions.length > 0 && (
+        <button
+          className="action-button secondary"
+          style={{ fontSize: "0.85rem", padding: "6px 14px", color: "#b83232" }}
+          onClick={() => void handleClearAll()}
+          disabled={clearing}
+          type="button"
+        >
+          {clearing ? "刪除中..." : "清空全部交易"}
+        </button>
+      )}
 
       {loading && <p>載入中...</p>}
       {loadError && <p>載入失敗：{loadError}</p>}
