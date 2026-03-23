@@ -7,11 +7,12 @@ import { clearTransactions, deleteTransaction, fetchTransactions, updateTransact
 
 const CATEGORY_LABELS = transactionCategories.map((c) => c.label);
 const PAGE_SIZE = 50;
+const ALL_ACCOUNTS = "";
 
 export function CreditCardLedgerPanel({ session }: { session: Session | null }) {
   const [accounts, setAccounts] = useState<AccountRecord[]>([]);
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
-  const [selectedAccountId, setSelectedAccountId] = useState("");
+  const [selectedAccountId, setSelectedAccountId] = useState<string>(ALL_ACCOUNTS);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -24,21 +25,24 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [clearing, setClearing] = useState(false);
 
+  const accountNameMap = new Map(accounts.map((a) => [a.id, a.name]));
+  const showAccountCol = selectedAccountId === ALL_ACCOUNTS && accounts.length > 1;
+
   useEffect(() => {
     if (!session) return;
     void fetchAccounts().then((result) => {
       if (result.status === "error") return;
       setAccounts(result.items);
-      setSelectedAccountId(result.items[0]?.id ?? "");
     });
   }, [session]);
 
   useEffect(() => {
-    if (!selectedAccountId) return;
+    if (!session) return;
     setLoading(true);
     setLoadError(null);
     setVisibleCount(PAGE_SIZE);
-    void fetchTransactions({ account_id: selectedAccountId }).then((result) => {
+    const query = selectedAccountId ? { account_id: selectedAccountId } : undefined;
+    void fetchTransactions(query).then((result) => {
       setLoading(false);
       if (result.status === "error") {
         setLoadError(result.error);
@@ -46,14 +50,15 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
       }
       setTransactions(result.items);
     });
-  }, [selectedAccountId]);
+  }, [session, selectedAccountId]);
 
   const filtered = transactions.filter((t) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
       (t.description ?? "").toLowerCase().includes(q) ||
-      (t.category ?? "").toLowerCase().includes(q)
+      (t.category ?? "").toLowerCase().includes(q) ||
+      (accountNameMap.get(t.account_id) ?? "").toLowerCase().includes(q)
     );
   });
 
@@ -119,6 +124,7 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
             value={selectedAccountId}
             onChange={(e) => setSelectedAccountId(e.target.value)}
           >
+            <option value={ALL_ACCOUNTS}>全部帳戶</option>
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>{a.name}</option>
             ))}
@@ -135,19 +141,21 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
             }}
           />
         </label>
+        {selectedAccountId && transactions.length > 0 && (
+          <div className="ledger-toolbar-field" style={{ justifyContent: "flex-end" }}>
+            <span style={{ visibility: "hidden" }}>　</span>
+            <button
+              className="action-button secondary"
+              style={{ fontSize: "0.85rem", padding: "8px 14px", color: "#b83232" }}
+              onClick={() => void handleClearAll()}
+              disabled={clearing}
+              type="button"
+            >
+              {clearing ? "刪除中..." : "清空此帳戶交易"}
+            </button>
+          </div>
+        )}
       </div>
-
-      {transactions.length > 0 && (
-        <button
-          className="action-button secondary"
-          style={{ fontSize: "0.85rem", padding: "6px 14px", color: "#b83232" }}
-          onClick={() => void handleClearAll()}
-          disabled={clearing}
-          type="button"
-        >
-          {clearing ? "刪除中..." : "清空全部交易"}
-        </button>
-      )}
 
       {loading && <p>載入中...</p>}
       {loadError && <p>載入失敗：{loadError}</p>}
@@ -171,6 +179,7 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
               <thead>
                 <tr>
                   <th>日期</th>
+                  {showAccountCol && <th>帳戶</th>}
                   <th>說明</th>
                   <th className="ledger-th-amount">金額</th>
                   <th>分類</th>
@@ -181,6 +190,13 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
                 {visible.map((t) => (
                   <tr key={t.id}>
                     <td className="ledger-date">{t.date}</td>
+                    {showAccountCol && (
+                      <td>
+                        <span className="ledger-account-badge">
+                          {accountNameMap.get(t.account_id) ?? "—"}
+                        </span>
+                      </td>
+                    )}
                     <td className="ledger-desc">{t.description ?? "—"}</td>
                     <td className={`ledger-amount ${t.amount < 0 ? "negative" : "positive"}`}>
                       {t.amount < 0 ? "−" : "+"}NT${" "}
@@ -246,8 +262,8 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
         </>
       )}
 
-      {!loading && transactions.length === 0 && selectedAccountId && (
-        <p>此帳戶尚無交易記錄。請先透過 Gmail 帳單同步匯入信用卡帳單。</p>
+      {!loading && transactions.length === 0 && (
+        <p>尚無交易記錄。請先透過 Gmail 帳單同步匯入信用卡帳單。</p>
       )}
     </article>
   );

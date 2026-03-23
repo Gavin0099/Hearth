@@ -359,6 +359,16 @@ body {
 .ledger-amount.negative { color: #b83232; }
 .ledger-amount.positive { color: #27855a; }
 
+.ledger-account-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e3d5c5;
+  color: #5c3b22;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
 .ledger-category-cell {
   min-width: 90px;
 }
