@@ -14,12 +14,15 @@ import { TransactionsPanel } from "./components/TransactionsPanel";
 import { getCurrentSession, signInWithGoogle, signOut } from "./lib/auth";
 import { getSupabaseBrowserClient } from "./lib/supabase";
 
+type AppView = "home" | "ledger" | "settings";
+
 export function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [reportRefreshKey, setReportRefreshKey] = useState(0);
   const [recurringRefreshKey, setRecurringRefreshKey] = useState(0);
+  const [currentView, setCurrentView] = useState<AppView>("home");
   const isSupabaseConfigured = Boolean(env.supabaseUrl && env.supabaseAnonKey);
 
   useEffect(() => {
@@ -89,6 +92,29 @@ export function App() {
           <h1>Hearth</h1>
           <p>家庭資產與現金流總覽</p>
         </div>
+        <nav className="app-nav">
+          <button
+            className={`app-nav-tab${currentView === "home" ? " active" : ""}`}
+            onClick={() => setCurrentView("home")}
+            type="button"
+          >
+            總覽
+          </button>
+          <button
+            className={`app-nav-tab${currentView === "ledger" ? " active" : ""}`}
+            onClick={() => setCurrentView("ledger")}
+            type="button"
+          >
+            信用卡明細
+          </button>
+          <button
+            className={`app-nav-tab${currentView === "settings" ? " active" : ""}`}
+            onClick={() => setCurrentView("settings")}
+            type="button"
+          >
+            帳單設定
+          </button>
+        </nav>
         <AuthPanel
           error={authError}
           isConfigured={isSupabaseConfigured}
@@ -100,29 +126,41 @@ export function App() {
         />
       </header>
 
-      <section className="two-column">
-        <MonthlyReportPanel refreshKey={reportRefreshKey} session={session} />
-        <PortfolioPanel refreshKey={reportRefreshKey} session={session} />
-        <GmailSyncPanel session={session} onImported={handleImported} />
-        <SettingsPanel session={session} />
-        <CreditCardLedgerPanel session={session} />
-        <ImportPanel
-          onImported={handleImported}
-          onRecurringTemplatesCreated={handleRecurringTemplatesCreated}
-          session={session}
-        />
-        <RecurringTemplatesPanel
-          onTemplatesApplied={handleRecurringTemplatesApplied}
-          refreshKey={recurringRefreshKey}
-          session={session}
-        />
-        <TransactionsPanel
-          onTransactionCreated={handleTransactionCreated}
-          refreshKey={reportRefreshKey}
-          session={session}
-        />
-        <AccountsPanel session={session} />
-      </section>
+      {currentView === "home" && (
+        <section className="two-column">
+          <MonthlyReportPanel refreshKey={reportRefreshKey} session={session} />
+          <PortfolioPanel refreshKey={reportRefreshKey} session={session} />
+          <GmailSyncPanel session={session} onImported={handleImported} />
+          <ImportPanel
+            onImported={handleImported}
+            onRecurringTemplatesCreated={handleRecurringTemplatesCreated}
+            session={session}
+          />
+          <RecurringTemplatesPanel
+            onTemplatesApplied={handleRecurringTemplatesApplied}
+            refreshKey={recurringRefreshKey}
+            session={session}
+          />
+          <TransactionsPanel
+            onTransactionCreated={handleTransactionCreated}
+            refreshKey={reportRefreshKey}
+            session={session}
+          />
+          <AccountsPanel session={session} />
+        </section>
+      )}
+
+      {currentView === "ledger" && (
+        <section className="two-column">
+          <CreditCardLedgerPanel session={session} />
+        </section>
+      )}
+
+      {currentView === "settings" && (
+        <section>
+          <SettingsPanel session={session} />
+        </section>
+      )}
     </main>
   );
 }

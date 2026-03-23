@@ -238,6 +238,14 @@ function parseSinopacLine(line: string, statementYear?: number) {
     return null;
   }
 
+  // Filter parse artifacts from PDF y-coordinate grouping:
+  // 1. Description that itself starts with a date = concatenated/shifted row
+  if (/^\d{2}\/\d{2}/.test(description)) return null;
+  // 2. FX-rate lines (e.g. "USD21.000 ...")
+  if (/^[A-Z]{3}\d/.test(description)) return null;
+  // 3. Description containing two adjacent date tokens = merged multi-row blob
+  if (/\d{2}\/\d{2}\s+\d{2}\/\d{2}/.test(description)) return null;
+
   return buildTransaction(
     statementYear,
     match.groups.consume,

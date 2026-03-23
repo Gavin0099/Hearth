@@ -43,6 +43,33 @@ body {
   color: #6b5c4e;
 }
 
+.app-nav {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.app-nav-tab {
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #6b5c4e;
+  padding: 7px 16px;
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.app-nav-tab:hover {
+  background: rgba(91, 66, 44, 0.08);
+}
+
+.app-nav-tab.active {
+  background: #8c4d22;
+  color: #fffaf5;
+}
+
 .auth-compact {
   display: flex;
   align-items: center;
