@@ -3,30 +3,42 @@ import type { Session } from "@supabase/supabase-js";
 import type { AccountRecord, TransactionRecord } from "@hearth/shared";
 import { transactionCategories } from "@hearth/shared";
 import { fetchAccounts } from "../lib/accounts";
-import { clearTransactions, deleteTransaction, fetchTransactions, updateTransaction } from "../lib/transactions";
+import {
+  deleteTransaction,
+  fetchTransactions,
+  updateTransaction,
+} from "../lib/transactions";
 
 const CATEGORY_LABELS = transactionCategories.map((c) => c.label);
 const PAGE_SIZE = 50;
-const ALL_ACCOUNTS = "";
+
+function resolveTransactionLabel(
+  transaction: TransactionRecord,
+  accountName: string | undefined,
+) {
+  if (transaction.source === "gmail_pdf_sinopac") {
+    return "永豐";
+  }
+  if (transaction.source === "gmail_pdf_esun") {
+    return "玉山";
+  }
+  return accountName ?? "未知";
+}
 
 export function CreditCardLedgerPanel({ session }: { session: Session | null }) {
   const [accounts, setAccounts] = useState<AccountRecord[]>([]);
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
-  const [selectedAccountId, setSelectedAccountId] = useState<string>(ALL_ACCOUNTS);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-
-  // Inline category editing
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState("");
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
-  const [clearing, setClearing] = useState(false);
 
-  const accountNameMap = new Map(accounts.map((a) => [a.id, a.name]));
-  const showAccountCol = selectedAccountId === ALL_ACCOUNTS;
+  const creditAccounts = accounts.filter((account) => account.type === "cash_credit");
+  const accountNameMap = new Map(creditAccounts.map((account) => [account.id, account.name]));
 
   useEffect(() => {
     if (!session) return;
@@ -41,8 +53,7 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
     setLoading(true);
     setLoadError(null);
     setVisibleCount(PAGE_SIZE);
-    const query = selectedAccountId ? { account_id: selectedAccountId } : undefined;
-    void fetchTransactions(query).then((result) => {
+    void fetchTransactions().then((result) => {
       setLoading(false);
       if (result.status === "error") {
         setLoadError(result.error);
@@ -50,26 +61,28 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
       }
       setTransactions(result.items);
     });
-  }, [session, selectedAccountId]);
+  }, [session]);
 
-  const filtered = transactions.filter((t) => {
+  const filtered = transactions.filter((transaction) => {
     if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
+    const query = searchQuery.toLowerCase();
+    const accountName = accountNameMap.get(transaction.account_id);
     return (
-      (t.description ?? "").toLowerCase().includes(q) ||
-      (t.category ?? "").toLowerCase().includes(q) ||
-      (accountNameMap.get(t.account_id) ?? "").toLowerCase().includes(q)
+      (transaction.description ?? "").toLowerCase().includes(query) ||
+      (transaction.category ?? "").toLowerCase().includes(query) ||
+      (accountName ?? "").toLowerCase().includes(query) ||
+      resolveTransactionLabel(transaction, accountName).toLowerCase().includes(query)
     );
   });
 
   const visible = filtered.slice(0, visibleCount);
   const totalExpense = filtered
-    .filter((t) => t.amount < 0)
-    .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
+    .filter((transaction) => transaction.amount < 0)
+    .reduce((sum, transaction) => sum + Math.abs(Number(transaction.amount)), 0);
 
-  function startEdit(t: TransactionRecord) {
-    setEditingId(t.id);
-    setEditingCategory(t.category ?? "");
+  function startEdit(transaction: TransactionRecord) {
+    setEditingId(transaction.id);
+    setEditingCategory(transaction.category ?? "");
   }
 
   function cancelEdit() {
@@ -78,37 +91,35 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
 
   async function saveCategory(id: string) {
     setEditingId(null);
-    setSavingIds((s) => new Set([...s, id]));
+    setSavingIds((current) => new Set([...current, id]));
     const result = await updateTransaction(id, {
       category: editingCategory.trim() || null,
     });
-    setSavingIds((s) => {
-      const next = new Set(s);
+    setSavingIds((current) => {
+      const next = new Set(current);
       next.delete(id);
       return next;
     });
+
     if (result.status !== "error" && result.items[0]) {
       const updated = result.items[0];
-      setTransactions((ts) =>
-        ts.map((t) => (t.id === id ? { ...t, category: updated.category } : t)),
+      setTransactions((current) =>
+        current.map((transaction) =>
+          transaction.id === id ? { ...transaction, category: updated.category } : transaction,
+        ),
       );
     }
   }
 
-  async function handleClearAll() {
-    if (!selectedAccountId) return;
-    if (!window.confirm(`確定要刪除此帳戶的全部 ${transactions.length} 筆交易紀錄嗎？此操作無法復原。`)) return;
-    setClearing(true);
-    await clearTransactions(selectedAccountId);
-    setTransactions([]);
-    setClearing(false);
-  }
-
   async function handleDelete(id: string) {
-    setDeletingIds((s) => new Set([...s, id]));
+    setDeletingIds((current) => new Set([...current, id]));
     await deleteTransaction(id);
-    setDeletingIds((s) => { const next = new Set(s); next.delete(id); return next; });
-    setTransactions((ts) => ts.filter((t) => t.id !== id));
+    setDeletingIds((current) => {
+      const next = new Set(current);
+      next.delete(id);
+      return next;
+    });
+    setTransactions((current) => current.filter((transaction) => transaction.id !== id));
   }
 
   if (!session) return null;
@@ -119,42 +130,16 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
 
       <div className="ledger-toolbar">
         <label className="ledger-toolbar-field">
-          <span>帳戶</span>
-          <select
-            value={selectedAccountId}
-            onChange={(e) => setSelectedAccountId(e.target.value)}
-          >
-            <option value={ALL_ACCOUNTS}>全部帳戶</option>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </select>
-        </label>
-        <label className="ledger-toolbar-field">
           <span>搜尋</span>
           <input
-            placeholder="商店名稱或分類..."
+            placeholder="輸入說明、分類或銀行..."
             value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
+            onChange={(event) => {
+              setSearchQuery(event.target.value);
               setVisibleCount(PAGE_SIZE);
             }}
           />
         </label>
-        {selectedAccountId && transactions.length > 0 && (
-          <div className="ledger-toolbar-field" style={{ justifyContent: "flex-end" }}>
-            <span style={{ visibility: "hidden" }}>　</span>
-            <button
-              className="action-button secondary"
-              style={{ fontSize: "0.85rem", padding: "8px 14px", color: "#b83232" }}
-              onClick={() => void handleClearAll()}
-              disabled={clearing}
-              type="button"
-            >
-              {clearing ? "刪除中..." : "清空此帳戶交易"}
-            </button>
-          </div>
-        )}
       </div>
 
       {loading && <p>載入中...</p>}
@@ -162,11 +147,11 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
 
       {!loading && transactions.length > 0 && (
         <p className="ledger-summary">
-          共 <strong>{filtered.length}</strong> 筆，消費合計{" "}
+          共 <strong>{filtered.length}</strong> 筆消費，總支出{" "}
           <strong>NT$ {totalExpense.toLocaleString()}</strong>
-          {filtered.some((t) => !t.category) && (
+          {filtered.some((transaction) => !transaction.category) && (
             <span className="ledger-uncategorized-hint">
-              　（{filtered.filter((t) => !t.category).length} 筆未分類，點擊分類欄可編輯）
+              尚有 {filtered.filter((transaction) => !transaction.category).length} 筆未分類，可直接點分類欄位編輯。
             </span>
           )}
         </p>
@@ -179,7 +164,7 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
               <thead>
                 <tr>
                   <th>日期</th>
-                  {showAccountCol && <th>帳戶</th>}
+                  <th>標籤</th>
                   <th>說明</th>
                   <th className="ledger-th-amount">金額</th>
                   <th>分類</th>
@@ -187,65 +172,72 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
                 </tr>
               </thead>
               <tbody>
-                {visible.map((t) => (
-                  <tr key={t.id}>
-                    <td className="ledger-date">{t.date}</td>
-                    {showAccountCol && (
+                {visible.map((transaction) => {
+                  const accountName = accountNameMap.get(transaction.account_id);
+                  return (
+                    <tr key={transaction.id}>
+                      <td className="ledger-date">{transaction.date}</td>
                       <td>
                         <span className="ledger-account-badge">
-                          {accountNameMap.get(t.account_id) ?? "—"}
+                          {resolveTransactionLabel(transaction, accountName)}
                         </span>
                       </td>
-                    )}
-                    <td className="ledger-desc">{t.description ?? "—"}</td>
-                    <td className={`ledger-amount ${t.amount < 0 ? "negative" : "positive"}`}>
-                      {t.amount < 0 ? "−" : "+"}NT${" "}
-                      {Math.abs(Number(t.amount)).toLocaleString()}
-                    </td>
-                    <td className="ledger-category-cell">
-                      {editingId === t.id ? (
-                        <input
-                          autoFocus
-                          className="ledger-category-input"
-                          list="ledger-category-options"
-                          value={editingCategory}
-                          onChange={(e) => setEditingCategory(e.target.value)}
-                          onBlur={() => void saveCategory(t.id)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") void saveCategory(t.id);
-                            if (e.key === "Escape") cancelEdit();
-                          }}
-                        />
-                      ) : (
-                        <button
-                          className={`ledger-category-badge${t.category ? "" : " uncategorized"}`}
-                          onClick={() => startEdit(t)}
-                          type="button"
-                        >
-                          {savingIds.has(t.id) ? "儲存中…" : (t.category ?? "未分類")}
-                        </button>
-                      )}
-                    </td>
-                    <td>
-                      <button
-                        className="ledger-delete-btn"
-                        disabled={deletingIds.has(t.id)}
-                        onClick={() => void handleDelete(t.id)}
-                        type="button"
-                        aria-label="刪除"
+                      <td className="ledger-desc">{transaction.description ?? "—"}</td>
+                      <td
+                        className={`ledger-amount ${transaction.amount < 0 ? "negative" : "positive"}`}
                       >
-                        ×
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                        {transaction.amount < 0 ? "-" : "+"}NT${" "}
+                        {Math.abs(Number(transaction.amount)).toLocaleString()}
+                      </td>
+                      <td className="ledger-category-cell">
+                        {editingId === transaction.id ? (
+                          <input
+                            autoFocus
+                            className="ledger-category-input"
+                            list="ledger-category-options"
+                            value={editingCategory}
+                            onChange={(event) => setEditingCategory(event.target.value)}
+                            onBlur={() => void saveCategory(transaction.id)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") void saveCategory(transaction.id);
+                              if (event.key === "Escape") cancelEdit();
+                            }}
+                          />
+                        ) : (
+                          <button
+                            className={`ledger-category-badge${
+                              transaction.category ? "" : " uncategorized"
+                            }`}
+                            onClick={() => startEdit(transaction)}
+                            type="button"
+                          >
+                            {savingIds.has(transaction.id)
+                              ? "儲存中..."
+                              : (transaction.category ?? "未分類")}
+                          </button>
+                        )}
+                      </td>
+                      <td>
+                        <button
+                          className="ledger-delete-btn"
+                          disabled={deletingIds.has(transaction.id)}
+                          onClick={() => void handleDelete(transaction.id)}
+                          type="button"
+                          aria-label="刪除"
+                        >
+                          ×
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
           <datalist id="ledger-category-options">
-            {CATEGORY_LABELS.map((c) => (
-              <option key={c} value={c} />
+            {CATEGORY_LABELS.map((category) => (
+              <option key={category} value={category} />
             ))}
           </datalist>
 
@@ -253,17 +245,17 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
             <button
               className="action-button secondary"
               style={{ marginTop: "12px" }}
-              onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
+              onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
               type="button"
             >
-              顯示更多（還有 {filtered.length - visibleCount} 筆）
+              載入更多，剩餘 {filtered.length - visibleCount} 筆
             </button>
           )}
         </>
       )}
 
       {!loading && transactions.length === 0 && (
-        <p>尚無交易記錄。請先透過 Gmail 帳單同步匯入信用卡帳單。</p>
+        <p>目前沒有信用卡交易。先從 Gmail 帳單同步或信用卡匯入開始。</p>
       )}
     </article>
   );

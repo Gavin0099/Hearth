@@ -121,6 +121,17 @@ async function importNormalizedRows(
   };
 }
 
+function resolveTransactionsCsvSource(rawValue: FormDataEntryValue | null) {
+  const value = String(rawValue ?? "").trim();
+  if (!value) {
+    return "csv_import";
+  }
+
+  return ["csv_import", "gmail_pdf_sinopac", "gmail_pdf_esun"].includes(value)
+    ? value
+    : "csv_import";
+}
+
 importRoutes.post("/transactions-csv", async (c) => {
   const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
   const user = await resolveAuthenticatedUser(c.req.raw, c.env);
@@ -138,6 +149,7 @@ importRoutes.post("/transactions-csv", async (c) => {
   const formData = await c.req.formData();
   const accountId = String(formData.get("account_id") ?? "").trim();
   const file = formData.get("file");
+  const importSource = resolveTransactionsCsvSource(formData.get("source"));
 
   if (!accountId) {
     return c.json<TransactionCsvImportResponse>(
@@ -232,7 +244,7 @@ importRoutes.post("/transactions-csv", async (c) => {
       currency,
       category,
       description,
-      source: "csv_import",
+      source: importSource,
     });
   });
 
