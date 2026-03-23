@@ -18,11 +18,29 @@ type SyncState =
   | { status: "error"; message: string }
   | { status: "done"; message: string };
 
+const BANK_NAME_KEYWORDS: Record<string, string[]> = {
+  sinopac: ["永豐", "sinopac"],
+  esun: ["玉山", "esun"],
+};
+
+function matchAccountForBank(bank: string, accounts: { id: string; name: string }[]) {
+  const keywords = BANK_NAME_KEYWORDS[bank] ?? [];
+  const matched = accounts.find((a) =>
+    keywords.some((k) => a.name.toLowerCase().includes(k.toLowerCase())),
+  );
+  return matched?.id ?? accounts[0]?.id ?? "";
+}
+
 export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
   const [state, setState] = useState<SyncState>({ status: "idle" });
   const [emails, setEmails] = useState<GmailBillEmail[]>([]);
-  const [selectedAccountId, setSelectedAccountId] = useState("");
   const [accounts, setAccounts] = useState<{ id: string; name: string }[]>([]);
+  // per-email account override: emailId → accountId
+  const [emailAccountMap, setEmailAccountMap] = useState<Record<string, string>>({});
+
+  function getAccountForEmail(email: GmailBillEmail) {
+    return emailAccountMap[email.id] ?? matchAccountForBank(email.bank, accounts);
+  }
 
   async function handleConnect() {
     setState({ status: "loading", message: "載入帳戶資料..." });
@@ -32,7 +50,6 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       return;
     }
     setAccounts(result.items);
-    setSelectedAccountId(result.items[0]?.id ?? "");
     setState({ status: "loading", message: "搜尋 Gmail 帳單信件..." });
 
     const accessToken = session?.provider_token;
@@ -61,8 +78,9 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       return;
     }
 
-    if (!selectedAccountId) {
-      setState({ status: "error", message: "請先選擇目標帳戶。" });
+    const accountId = getAccountForEmail(email);
+    if (!accountId) {
+      setState({ status: "error", message: "找不到對應帳戶，請先在「帳戶」區塊建立帳戶。" });
       return;
     }
 
@@ -106,7 +124,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       ].join("\n");
 
       const csvFile = new File([csvLines], "gmail-import.csv", { type: "text/csv" });
-      const result = await importTransactionsCsv(selectedAccountId, csvFile);
+      const result = await importTransactionsCsv(accountId, csvFile);
 
       await saveUserSettings({ gmail_last_sync_at: new Date().toISOString() });
 
@@ -132,17 +150,6 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       <h2>Gmail 帳單同步</h2>
       <p>自動從 Gmail 抓取永豐、玉山信用卡帳單並匯入交易。</p>
 
-      {accounts.length > 0 && (
-        <label>
-          匯入目標帳戶
-          <select value={selectedAccountId} onChange={(e) => setSelectedAccountId(e.target.value)}>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </select>
-        </label>
-      )}
-
       <button
         className="action-button"
         onClick={() => void handleConnect()}
@@ -161,7 +168,20 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
           <ul className="gmail-email-list">
             {emails.map((email) => (
               <li key={email.id} className="gmail-email-item">
-                <span>{email.bank === "sinopac" ? "永豐" : "玉山"} — {email.subject}</span>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
+                  <span>{email.bank === "sinopac" ? "永豐" : "玉山"} — {email.subject}</span>
+                  {accounts.length > 1 && (
+                    <select
+                      style={{ fontSize: "0.82rem", padding: "2px 6px", borderRadius: "8px", border: "1px solid rgba(91,66,44,0.18)", background: "#fffdf9" }}
+                      value={getAccountForEmail(email)}
+                      onChange={(e) => setEmailAccountMap((m) => ({ ...m, [email.id]: e.target.value }))}
+                    >
+                      {accounts.map((a) => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
                 <button
                   className="action-button secondary"
                   onClick={() => void handleSync(email)}
