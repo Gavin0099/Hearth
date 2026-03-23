@@ -3,6 +3,7 @@ import type { Session } from "@supabase/supabase-js";
 import { env } from "./env";
 import { AccountsPanel } from "./components/AccountsPanel";
 import { AuthPanel } from "./components/AuthPanel";
+import { CreditCardLedgerPanel } from "./components/CreditCardLedgerPanel";
 import { GmailSyncPanel } from "./components/GmailSyncPanel";
 import { ImportPanel } from "./components/ImportPanel";
 import { MonthlyReportPanel } from "./components/MonthlyReportPanel";
@@ -104,6 +105,7 @@ export function App() {
         <PortfolioPanel refreshKey={reportRefreshKey} session={session} />
         <GmailSyncPanel session={session} onImported={handleImported} />
         <SettingsPanel session={session} />
+        <CreditCardLedgerPanel session={session} />
         <ImportPanel
           onImported={handleImported}
           onRecurringTemplatesCreated={handleRecurringTemplatesCreated}
