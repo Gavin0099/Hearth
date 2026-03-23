@@ -26,7 +26,7 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
   const [clearing, setClearing] = useState(false);
 
   const accountNameMap = new Map(accounts.map((a) => [a.id, a.name]));
-  const showAccountCol = selectedAccountId === ALL_ACCOUNTS && accounts.length > 1;
+  const showAccountCol = selectedAccountId === ALL_ACCOUNTS;
 
   useEffect(() => {
     if (!session) return;
