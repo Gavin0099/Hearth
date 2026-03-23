@@ -32,7 +32,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: 46cc1da0d640ad1a2a9ae433f7d4515f
-          command: pages deploy dist --project-name hearth-web --commit-dirty=true
+          command: pages deploy dist --project-name hearth-web --branch=main --commit-dirty=true
           workingDirectory: apps/web
 
   deploy-api:
