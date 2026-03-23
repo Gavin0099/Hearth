@@ -25,10 +25,26 @@ export async function extractPdfText(
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    const pageText = content.items
-      .map((item) => ("str" in item ? item.str : ""))
-      .join(" ");
-    pages.push(pageText);
+
+    // Group items by y-coordinate to reconstruct line breaks.
+    // Without this, all items on a page are joined into one long string
+    // and the parser can only match the first transaction.
+    const lineMap = new Map<number, string[]>();
+    for (const item of content.items) {
+      if (!("str" in item) || !item.str) continue;
+      // Round to nearest 3 pt to tolerate slight vertical misalignment
+      const y = Math.round((item as { transform: number[] }).transform[5] / 3) * 3;
+      if (!lineMap.has(y)) lineMap.set(y, []);
+      lineMap.get(y)!.push(item.str);
+    }
+
+    // PDF y-axis: 0 at bottom, increasing upward → sort descending for top-to-bottom reading order
+    const lines = [...lineMap.entries()]
+      .sort((a, b) => b[0] - a[0])
+      .map(([, parts]) => parts.join(" ").trim())
+      .filter(Boolean);
+
+    pages.push(lines.join("\n"));
   }
 
   return pages.join("\n");
