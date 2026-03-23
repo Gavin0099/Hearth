@@ -3,7 +3,7 @@ import type { Session } from "@supabase/supabase-js";
 import type { AccountRecord, TransactionRecord } from "@hearth/shared";
 import { transactionCategories } from "@hearth/shared";
 import { fetchAccounts } from "../lib/accounts";
-import { fetchTransactions, updateTransaction } from "../lib/transactions";
+import { deleteTransaction, fetchTransactions, updateTransaction } from "../lib/transactions";
 
 const CATEGORY_LABELS = transactionCategories.map((c) => c.label);
 const PAGE_SIZE = 50;
@@ -21,6 +21,7 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState("");
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!session) return;
@@ -88,6 +89,13 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
     }
   }
 
+  async function handleDelete(id: string) {
+    setDeletingIds((s) => new Set([...s, id]));
+    await deleteTransaction(id);
+    setDeletingIds((s) => { const next = new Set(s); next.delete(id); return next; });
+    setTransactions((ts) => ts.filter((t) => t.id !== id));
+  }
+
   if (!session) return null;
 
   return (
@@ -144,6 +152,7 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
                   <th>說明</th>
                   <th className="ledger-th-amount">金額</th>
                   <th>分類</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -178,6 +187,17 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
                           {savingIds.has(t.id) ? "儲存中…" : (t.category ?? "未分類")}
                         </button>
                       )}
+                    </td>
+                    <td>
+                      <button
+                        className="ledger-delete-btn"
+                        disabled={deletingIds.has(t.id)}
+                        onClick={() => void handleDelete(t.id)}
+                        type="button"
+                        aria-label="刪除"
+                      >
+                        ×
+                      </button>
                     </td>
                   </tr>
                 ))}

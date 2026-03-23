@@ -385,6 +385,32 @@ body {
   opacity: 0.8;
 }
 
+.ledger-delete-btn {
+  border: none;
+  background: transparent;
+  color: #c0a090;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 2px 6px;
+  cursor: pointer;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.1s, color 0.1s;
+}
+
+tr:hover .ledger-delete-btn {
+  opacity: 1;
+}
+
+.ledger-delete-btn:hover {
+  color: #b83232;
+}
+
+.ledger-delete-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .ledger-category-input {
   width: 130px;
   border: 1.5px solid #8c4d22;
