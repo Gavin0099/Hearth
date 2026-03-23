@@ -86,6 +86,22 @@ test("parseSinopacPdfTransactions handles purchases, cashback, installments, and
   ]);
 });
 
+test("parseSinopacPdfTransactions keeps current installment amount when statement uses spaced colon and full-width digits", () => {
+  const text = `
+2026/03/28 本期消費明細
+12/26 03/02 2604 6- 2 期 : 遠雄續期保費９７０５ 5 635 22,540
+`;
+
+  assert.deepEqual(parseSinopacPdfTransactions(text), [
+    {
+      date: "2026-12-26",
+      description: "6- 2 期 : 遠雄續期保費9705",
+      amount: -5635,
+      currency: "TWD",
+    },
+  ]);
+});
+
 test("parseEsunPdfTransactions limits parsing to detail sections and handles cashback plus installment rows", () => {
   const text = `
 2026/03/31 \u7389\u5c71\u9280\u884c\u4fe1\u7528\u5361\u5c0d\u5e33\u55ae

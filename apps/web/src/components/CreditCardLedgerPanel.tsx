@@ -4,6 +4,7 @@ import type { AccountRecord, TransactionRecord } from "@hearth/shared";
 import { transactionCategories } from "@hearth/shared";
 import { fetchAccounts } from "../lib/accounts";
 import {
+  clearTransactions,
   deleteTransaction,
   fetchTransactions,
   updateTransaction,
@@ -36,6 +37,7 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
   const [editingCategory, setEditingCategory] = useState("");
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const [clearing, setClearing] = useState(false);
 
   const creditAccounts = accounts.filter((account) => account.type === "cash_credit");
   const accountNameMap = new Map(creditAccounts.map((account) => [account.id, account.name]));
@@ -122,6 +124,23 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
     setTransactions((current) => current.filter((transaction) => transaction.id !== id));
   }
 
+  async function handleClearAll() {
+    if (creditAccounts.length === 0 || transactions.length === 0) {
+      return;
+    }
+
+    if (!window.confirm(`確定要清空全部信用卡交易嗎？目前共有 ${transactions.length} 筆，這個動作無法復原。`)) {
+      return;
+    }
+
+    setClearing(true);
+    for (const account of creditAccounts) {
+      await clearTransactions(account.id);
+    }
+    setTransactions([]);
+    setClearing(false);
+  }
+
   if (!session) return null;
 
   return (
@@ -140,6 +159,20 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
             }}
           />
         </label>
+        {transactions.length > 0 && (
+          <div className="ledger-toolbar-field" style={{ justifyContent: "flex-end" }}>
+            <span style={{ visibility: "hidden" }}>操作</span>
+            <button
+              className="action-button secondary"
+              style={{ fontSize: "0.85rem", padding: "8px 14px", color: "#b83232" }}
+              onClick={() => void handleClearAll()}
+              disabled={clearing}
+              type="button"
+            >
+              {clearing ? "清除中..." : "清空全部信用卡交易"}
+            </button>
+          </div>
+        )}
       </div>
 
       {loading && <p>載入中...</p>}

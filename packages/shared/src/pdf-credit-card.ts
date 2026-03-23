@@ -47,6 +47,7 @@ const esunIgnoredMarkers = [
 
 function normalizeWhitespace(text: string) {
   return text
+    .normalize("NFKC")
     .replace(/\u3000/g, " ")
     .replace(/[ \t]+/g, " ")
     .replace(/\s*\n\s*/g, "\n")
@@ -163,6 +164,14 @@ function isPercentToken(token: string) {
   return /^\d+(?:\.\d+)?%$/.test(token);
 }
 
+function isSinopacInstallmentLine(text: string) {
+  return /\u671f\s*[:\uff1a]/u.test(text);
+}
+
+function normalizeGroupedNumericToken(token: string) {
+  return token.replace(/[,\s]/g, "");
+}
+
 function extractSinopacDetail(rest: string) {
   const withoutFxTail = rest
     .trim()
@@ -189,13 +198,25 @@ function extractSinopacDetail(rest: string) {
     };
   }
 
+  if (isSinopacInstallmentLine(rest)) {
+    const installmentAmountMatch = rest.match(
+      /^(?<description>.+?)\s+(?<amount1>\d{1,3}(?:[,\s]\d{3})+|\d+)\s+(?<amount2>\d{1,3}(?:[,\s]\d{3})+|\d+)$/u,
+    );
+    if (installmentAmountMatch?.groups) {
+      return {
+        description: installmentAmountMatch.groups.description.trim(),
+        amountToken: normalizeGroupedNumericToken(installmentAmountMatch.groups.amount1),
+      };
+    }
+  }
+
   if (numericIndices.length === 0) {
     return null;
   }
 
   let amountIndex = numericIndices[numericIndices.length - 1];
 
-  if (rest.includes("\u671f\uff1a") && numericIndices.length >= 2) {
+  if (isSinopacInstallmentLine(rest) && numericIndices.length >= 2) {
     const lastIndex = numericIndices[numericIndices.length - 1];
     const secondLastIndex = numericIndices[numericIndices.length - 2];
     if (lastIndex === tokens.length - 1 && secondLastIndex === tokens.length - 2) {
