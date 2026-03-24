@@ -1,6 +1,7 @@
 import { apiFetch } from "./api";
 
 export type UserSettings = {
+  default_pdf_password: string | null;
   sinopac_pdf_password: string | null;
   esun_pdf_password: string | null;
   gmail_connected: boolean;

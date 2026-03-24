@@ -146,12 +146,13 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
 
     try {
       const settings = await fetchUserSettings();
+      const defaultPw = settings.default_pdf_password ?? "";
       const password =
         email.bank === "sinopac"
-          ? settings.sinopac_pdf_password ?? ""
+          ? (settings.sinopac_pdf_password ?? defaultPw)
           : email.bank === "esun"
-            ? settings.esun_pdf_password ?? ""
-            : "";
+            ? (settings.esun_pdf_password ?? defaultPw)
+            : defaultPw;
 
       const pdfAttachment = email.attachments.find(
         (attachment) =>

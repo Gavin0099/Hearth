@@ -14,7 +14,7 @@ userSettingsRoutes.get("/", async (c) => {
   const supabase = createSupabaseAdminClient(c.env);
   const { data, error } = await supabase
     .from("user_settings")
-    .select("sinopac_pdf_password, esun_pdf_password, gmail_connected, gmail_last_sync_at")
+    .select("default_pdf_password, sinopac_pdf_password, esun_pdf_password, gmail_connected, gmail_last_sync_at")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -24,6 +24,7 @@ userSettingsRoutes.get("/", async (c) => {
 
   return c.json({
     settings: data ?? {
+      default_pdf_password: null,
       sinopac_pdf_password: null,
       esun_pdf_password: null,
       gmail_connected: false,
@@ -42,6 +43,7 @@ userSettingsRoutes.put("/", async (c) => {
   }
 
   const body = await c.req.json<{
+    default_pdf_password?: string | null;
     sinopac_pdf_password?: string | null;
     esun_pdf_password?: string | null;
     gmail_connected?: boolean;

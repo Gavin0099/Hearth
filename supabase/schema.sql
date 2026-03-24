@@ -102,6 +102,7 @@ create table if not exists recurring_templates (
 create table if not exists user_settings (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users unique,
+  default_pdf_password text,
   sinopac_pdf_password text,
   esun_pdf_password text,
   gmail_connected boolean not null default false,
