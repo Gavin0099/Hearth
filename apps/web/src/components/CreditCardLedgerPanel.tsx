@@ -13,15 +13,21 @@ import {
 const CATEGORY_LABELS = transactionCategories.map((c) => c.label);
 const PAGE_SIZE = 50;
 
+const GMAIL_SOURCE_LABELS: Record<string, string> = {
+  gmail_pdf_sinopac: "永豐",
+  gmail_pdf_esun: "玉山",
+  gmail_pdf_cathay: "國泰",
+  gmail_pdf_taishin: "台新",
+  gmail_pdf_ctbc: "中信",
+  gmail_pdf_mega: "兆豐",
+};
+
 function resolveTransactionLabel(
   transaction: TransactionRecord,
   accountName: string | undefined,
 ) {
-  if (transaction.source === "gmail_pdf_sinopac") {
-    return "永豐";
-  }
-  if (transaction.source === "gmail_pdf_esun") {
-    return "玉山";
+  if (transaction.source && transaction.source in GMAIL_SOURCE_LABELS) {
+    return GMAIL_SOURCE_LABELS[transaction.source];
   }
   return accountName ?? "未知";
 }

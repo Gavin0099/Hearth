@@ -8,10 +8,22 @@ export type UserSettings = {
   gmail_last_sync_at: string | null;
 };
 
+const DEFAULT_USER_SETTINGS: UserSettings = {
+  default_pdf_password: null,
+  sinopac_pdf_password: null,
+  esun_pdf_password: null,
+  gmail_connected: false,
+  gmail_last_sync_at: null,
+};
+
 export async function fetchUserSettings(): Promise<UserSettings> {
-  const response = await apiFetch("/api/user-settings");
-  const data = await response.json() as { settings: UserSettings; status: string };
-  return data.settings;
+  try {
+    const response = await apiFetch("/api/user-settings");
+    const data = await response.json() as { settings?: UserSettings; status: string };
+    return data.settings ?? DEFAULT_USER_SETTINGS;
+  } catch {
+    return DEFAULT_USER_SETTINGS;
+  }
 }
 
 export async function saveUserSettings(settings: Partial<UserSettings>): Promise<void> {
