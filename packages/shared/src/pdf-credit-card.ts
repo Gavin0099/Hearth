@@ -45,16 +45,18 @@ const esunIgnoredMarkers = [
   "\u672c\u671f\u61c9\u7e73\u7e3d\u91d1\u984d",
 ];
 
-// 國泰 (Cathay) — section-gated, rows inside 本期消費明細/本期費用明細
+// 國泰 (Cathay)
 const cathayIgnoredMarkers = [
-  "\u5361\u865f\uff1a",
-  "\u5361\u865f:",
-  "\u4e0a\u671f\u61c9\u7e73",
-  "\u672c\u671f\u5e33\u55ae\u7d50\u7b97",
-  "\u7e73\u6b3e\u622a\u6b62",
-  "\u5408\u8a08\u6b3e\u9805",
-  "\u4fe1\u7528\u984d\u5ea6",
-  "\u524d\u671f\u9918\u984d",
+  "\u5361\u865f\uff1a",              // 卡號：
+  "\u5361\u865f:",                   // 卡號:
+  "\u4e0a\u671f\u61c9\u7e73",        // 上期應繳
+  "\u672c\u671f\u5e33\u55ae\u7d50\u7b97", // 本期帳單結算
+  "\u7e73\u6b3e\u622a\u6b62",        // 繳款截止
+  "\u5408\u8a08\u6b3e\u9805",        // 合計款項
+  "\u4fe1\u7528\u984d\u5ea6",        // 信用額度
+  "\u524d\u671f\u9918\u984d",        // 前期餘額
+  "\u7e73\u6b3e\u5c0f\u8a08",        // 繳款小計
+  "\u6b63\u5361\u672c\u671f\u6d88\u8cbb", // 正卡本期消費
 ];
 
 // 台新 (Taishin) — dual-date rows, no card-last-4
@@ -85,10 +87,19 @@ function normalizeWhitespace(text: string) {
 
 function normalizeDate(dateToken: string, statementYear?: number) {
   const normalized = dateToken.replace(/\./g, "/").replace(/-/g, "/");
+
+  // YYYY/MM/DD (Gregorian with full year)
   if (/^\d{4}\/\d{2}\/\d{2}$/.test(normalized)) {
     return normalized.replace(/\//g, "-");
   }
 
+  // YYY/MM/DD (ROC calendar, e.g. 113/01/15 → 2024-01-15)
+  const rocMatch = normalized.match(/^(1\d{2})\/(\d{2})\/(\d{2})$/);
+  if (rocMatch) {
+    return `${Number(rocMatch[1]) + 1911}-${rocMatch[2]}-${rocMatch[3]}`;
+  }
+
+  // MM/DD (no year)
   const match = normalized.match(/^(\d{2})\/(\d{2})$/);
   if (!match) {
     return null;
@@ -408,76 +419,77 @@ function parseEsunPdfText(text: string) {
 
 
 // ─────────────────────────────────────────────────────────────
-// 國泰 (Cathay) — section-gated like E.Sun
-// Row shape: MM/DD MM/DD 說明 [幣別] 金額
+// 國泰 (Cathay) — actual row format confirmed from statement:
+// 消費日  入帳起息日  交易說明  新臺幣金額  卡號後四碼  [行動卡號]  [國家]  [幣別]  [外幣金額]  [折算日]
+// Key: TWD amount comes BEFORE the 4-digit card number.
+// Rows without a card number (e.g. payments) are excluded by the regex.
 // ─────────────────────────────────────────────────────────────
 
 function extractCathayDetail(line: string) {
-  // Two amounts: consume date, posted date, description, currency, amount (TWD), currency2, amount2
-  const twoAmountMatch = line.match(
-    /^(?<consume>\d{2}\/\d{2})\s+(?<posted>\d{2}\/\d{2})\s+(?<description>.+?)\s+(?<currency1>TWD|NTD|USD|JPY)\s+(?<amount1>-?\d[\d,]*)\s+(?<currency2>TWD|NTD|USD|JPY)\s+(?<amount2>-?\d[\d,]*)$/u,
+  // Format: MM/DD MM/DD description TWD_amount card4 [optional rest]
+  // The trailing \d{4} (card last-4) distinguishes real transactions from summaries/payments.
+  const match = line.match(
+    /^(?<consume>(?:\d{3,4}\/)?(?:\d{2}\/\d{2}))\s+(?<posted>(?:\d{3,4}\/)?(?:\d{2}\/\d{2}))\s+(?<description>.+?)\s+(?<amount>-?\d[\d,]*)\s+\d{4}(?:\s+.*)?$/u,
   );
-  if (twoAmountMatch?.groups) {
-    return {
-      dateToken: twoAmountMatch.groups.consume,
-      description: twoAmountMatch.groups.description,
-      currencyToken: twoAmountMatch.groups.currency2,
-      amountToken: twoAmountMatch.groups.amount2,
-    };
-  }
-
-  const oneAmountMatch = line.match(
-    /^(?<consume>\d{2}\/\d{2})\s+(?<posted>\d{2}\/\d{2})\s+(?<description>.+?)\s+(?:(?<currency>TWD|NTD|USD|JPY)\s+)?(?<amount>-?\d[\d,]*)$/u,
-  );
-  if (oneAmountMatch?.groups) {
-    return {
-      dateToken: oneAmountMatch.groups.consume,
-      description: oneAmountMatch.groups.description,
-      currencyToken: oneAmountMatch.groups.currency,
-      amountToken: oneAmountMatch.groups.amount,
-    };
-  }
-
-  return null;
+  if (!match?.groups) return null;
+  return {
+    dateToken: match.groups.consume,
+    description: match.groups.description,
+    currencyToken: undefined as string | undefined,
+    amountToken: match.groups.amount,
+  };
 }
 
-function parseCathayPdfText(text: string) {
-  const normalizedText = normalizeWhitespace(text);
-  const statementYear = inferStatementYear(normalizedText);
+// Section openers for 國泰 (many variants seen in the wild)
+const cathaySectionOpeners = [
+  "\u60a8\u672c\u6708\u6d88\u8cbb\u660e\u7d30\u5982\u4e0b", // 您本月消費明細如下 ← actual header
+  "\u672c\u671f\u6d88\u8cbb\u660e\u7d30",                   // 本期消費明細
+  "\u672c\u671f\u8cbb\u7528\u660e\u7d30",                   // 本期費用明細
+  "\u6d88\u8cbb\u660e\u7d30",                                // 消費明細
+  "\u5237\u5361\u660e\u7d30",                                // 刷卡明細
+  "\u4ea4\u6613\u660e\u7d30",                                // 交易明細
+];
+
+// Section closers (anything with 合計 or 應繳 ends the section)
+function isCathaySectionClose(line: string) {
+  return (
+    line.includes("\u672c\u671f\u5408\u8a08") ||   // 本期合計
+    line.includes("\u672c\u671f\u61c9\u7e73") ||   // 本期應繳
+    line.includes("\u5408\u8a08\u91d1\u984d") ||   // 合計金額
+    line.includes("\u5e33\u55ae\u91d1\u984d")       // 帳單金額
+  );
+}
+
+function parseCathayLines(
+  lines: string[],
+  statementYear: number | undefined,
+  sectionGated: boolean,
+): ParsedPdfTransaction[] {
   const transactions: ParsedPdfTransaction[] = [];
-  // Use same section markers as E.Sun
-  let activeSection: "none" | "fees" | "spend" = "none";
+  let activeSection = !sectionGated;
 
-  normalizedText.split("\n").forEach((line) => {
+  for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed) return;
+    if (!trimmed) continue;
 
-    // Section openers — 本期費用明細 or 本期消費明細 (and ROC-calendar variants)
-    if (trimmed.includes("\u672c\u671f\u8cbb\u7528\u660e\u7d30")) {
-      activeSection = "fees";
-      return;
-    }
-    if (trimmed.includes("\u672c\u671f\u6d88\u8cbb\u660e\u7d30")) {
-      activeSection = "spend";
-      return;
-    }
-
-    // Section closers
-    if (
-      trimmed.includes("\u672c\u671f\u5408\u8a08") ||
-      trimmed.includes("\u672c\u671f\u61c9\u7e73\u7e3d\u91d1\u984d")
-    ) {
-      activeSection = "none";
-      return;
+    if (sectionGated) {
+      if (cathaySectionOpeners.some((h) => trimmed.includes(h))) {
+        activeSection = true;
+        continue;
+      }
+      if (activeSection && isCathaySectionClose(trimmed)) {
+        activeSection = false;
+        continue;
+      }
     }
 
-    if (activeSection === "none") return;
+    if (!activeSection) continue;
 
     const detail = extractCathayDetail(trimmed);
-    if (!detail) return;
+    if (!detail) continue;
 
     const description = detail.description.trim();
-    if (isIgnoredDescription(description, cathayIgnoredMarkers)) return;
+    if (isIgnoredDescription(description, cathayIgnoredMarkers)) continue;
 
     const transaction = buildTransaction(
       statementYear,
@@ -487,9 +499,22 @@ function parseCathayPdfText(text: string) {
       detail.currencyToken,
     );
     if (transaction) transactions.push(transaction);
-  });
+  }
 
   return transactions;
+}
+
+function parseCathayPdfText(text: string) {
+  const normalizedText = normalizeWhitespace(text);
+  const statementYear = inferStatementYear(normalizedText);
+  const lines = normalizedText.split("\n");
+
+  // Try section-gated first (more precise)
+  const gated = parseCathayLines(lines, statementYear, true);
+  if (gated.length > 0) return gated;
+
+  // Fallback: scan all lines without section gating
+  return parseCathayLines(lines, statementYear, false);
 }
 
 // ─────────────────────────────────────────────────────────────
