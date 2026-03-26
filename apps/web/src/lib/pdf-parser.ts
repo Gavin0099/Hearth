@@ -18,7 +18,15 @@ type PositionedText = {
   text: string;
   x: number;
   width: number;
+  y: number;
 };
+
+type LineBucket = {
+  y: number;
+  parts: PositionedText[];
+};
+
+const ROW_Y_TOLERANCE = 4.5;
 
 function shouldJoinWithoutSpace(previous: PositionedText, current: PositionedText) {
   const previousEnd = previous.x + previous.width;
@@ -45,6 +53,31 @@ function rebuildLine(parts: PositionedText[]) {
   return line.trim();
 }
 
+function assignToLineBucket(buckets: LineBucket[], part: PositionedText) {
+  let bestBucket: LineBucket | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  for (const bucket of buckets) {
+    const distance = Math.abs(bucket.y - part.y);
+    if (distance <= ROW_Y_TOLERANCE && distance < bestDistance) {
+      bestBucket = bucket;
+      bestDistance = distance;
+    }
+  }
+
+  if (!bestBucket) {
+    buckets.push({
+      y: part.y,
+      parts: [part],
+    });
+    return;
+  }
+
+  bestBucket.parts.push(part);
+  bestBucket.y =
+    bestBucket.parts.reduce((sum, current) => sum + current.y, 0) / bestBucket.parts.length;
+}
+
 export async function extractPdfText(
   data: Uint8Array,
   password?: string,
@@ -61,22 +94,21 @@ export async function extractPdfText(
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
 
-    const lineMap = new Map<number, PositionedText[]>();
+    const lineBuckets: LineBucket[] = [];
     for (const item of content.items) {
       if (!("str" in item) || !item.str) continue;
       const positioned = item as { str: string; transform: number[]; width?: number };
-      const y = Math.round(positioned.transform[5] / 3) * 3;
-      if (!lineMap.has(y)) lineMap.set(y, []);
-      lineMap.get(y)!.push({
+      assignToLineBucket(lineBuckets, {
         text: positioned.str,
         x: positioned.transform[4],
         width: positioned.width ?? 0,
+        y: positioned.transform[5],
       });
     }
 
-    const lines = [...lineMap.entries()]
-      .sort((a, b) => b[0] - a[0])
-      .map(([, parts]) => rebuildLine(parts))
+    const lines = lineBuckets
+      .sort((a, b) => b.y - a.y)
+      .map((bucket) => rebuildLine(bucket.parts))
       .filter(Boolean);
 
     pages.push(lines.join("\n"));
