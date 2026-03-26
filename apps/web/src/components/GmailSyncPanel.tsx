@@ -77,6 +77,18 @@ function resolveImportAccountId(
   return matched?.id ?? creditAccounts[0]?.id ?? "";
 }
 
+function buildParseFailureMessage(bank: BankKey, text: string) {
+  const preview = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 6)
+    .join(" | ")
+    .slice(0, 280);
+
+  return `${BANK_DISPLAY_NAMES[bank]} PDF 已讀取，但目前 parser 沒抓到交易。前幾行內容：${preview || "（空白）"}`;
+}
+
 export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
   const [state, setState] = useState<SyncState>({ status: "idle" });
   const [emails, setEmails] = useState<GmailBillEmail[]>([]);
@@ -101,11 +113,11 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
     }
 
     setAccounts(accountsResult.items);
-    setState({ status: "loading", message: "連線 Gmail 並搜尋帳單中..." });
+    setState({ status: "loading", message: "搜尋 Gmail 帳單中..." });
 
     const accessToken = session?.provider_token;
     if (!accessToken) {
-      setState({ status: "error", message: "目前沒有 Gmail 存取權杖，請重新登入後再試。" });
+      setState({ status: "error", message: "目前沒有 Gmail 授權，請重新登入後再試。" });
       return;
     }
 
@@ -121,7 +133,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
     } catch (error) {
       setState({
         status: "error",
-        message: error instanceof Error ? error.message : "Gmail 同步失敗。",
+        message: error instanceof Error ? error.message : "Gmail 帳單讀取失敗。",
       });
     }
   }
@@ -129,7 +141,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
   async function handleSync(email: GmailBillEmail) {
     const accessToken = session?.provider_token;
     if (!accessToken) {
-      setState({ status: "error", message: "目前沒有 Gmail 存取權杖，請重新登入後再試。" });
+      setState({ status: "error", message: "目前沒有 Gmail 授權，請重新登入後再試。" });
       return;
     }
 
@@ -142,7 +154,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       return;
     }
 
-    setState({ status: "loading", message: `解析 ${email.subject} 中...` });
+    setState({ status: "loading", message: `下載 ${email.subject} 中...` });
 
     try {
       const settings = await fetchUserSettings();
@@ -154,7 +166,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
             ? (settings.esun_pdf_password ?? defaultPw)
             : email.bank === "taishin"
               ? (settings.taishin_pdf_password ?? defaultPw)
-            : defaultPw;
+              : defaultPw;
 
       if (!password.trim()) {
         setState({
@@ -177,7 +189,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         return;
       }
 
-      setState({ status: "loading", message: "下載並解析 PDF 中..." });
+      setState({ status: "loading", message: "讀取 PDF 中..." });
       const bytes = await downloadAttachment(email.id, pdfAttachment.id, accessToken);
       const text = await extractPdfText(bytes, password);
 
@@ -186,12 +198,12 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       if (parsed.length === 0) {
         setState({
           status: "error",
-          message: "PDF 已讀取，但沒有解析出交易。可能是版面差異或密碼錯誤。",
+          message: buildParseFailureMessage(email.bank, text),
         });
         return;
       }
 
-      setState({ status: "loading", message: `匯入 ${parsed.length} 筆交易中...` });
+      setState({ status: "loading", message: `準備匯入 ${parsed.length} 筆交易...` });
 
       const csvLines = [
         "date,amount,currency,category,description",
@@ -215,7 +227,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
 
       setState({
         status: "done",
-        message: `匯入完成：新增 ${result.imported} 筆，略過 ${result.skipped} 筆。`,
+        message: `匯入完成，新增 ${result.imported} 筆，略過 ${result.skipped} 筆。`,
       });
       onImported();
     } catch (error) {
@@ -239,7 +251,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         disabled={state.status === "loading"}
         type="button"
       >
-        {state.status === "loading" ? "處理中..." : "連線並抓取帳單"}
+        {state.status === "loading" ? "載入中..." : "搜尋 Gmail 帳單"}
       </button>
 
       {state.status === "loading" && <p>{state.message}</p>}
@@ -248,7 +260,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
 
       {emails.length > 0 && (
         <>
-          <p>找到 {emails.length} 封帳單信件：</p>
+          <p>找到 {emails.length} 封帳單。</p>
           <ul className="gmail-email-list">
             {emails.map((email) => (
               <li key={email.id} className="gmail-email-item">
