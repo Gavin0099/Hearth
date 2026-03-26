@@ -43,6 +43,20 @@ body {
   color: #6b5c4e;
 }
 
+.build-badge {
+  margin-top: 10px;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(140, 77, 34, 0.09);
+  color: #6b5c4e;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .app-nav {
   display: flex;
   gap: 4px;

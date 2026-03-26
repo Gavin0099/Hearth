@@ -16,6 +16,20 @@ import { getSupabaseBrowserClient } from "./lib/supabase";
 
 type AppView = "home" | "ledger" | "settings";
 
+const buildCommit = __APP_COMMIT__;
+const buildTime = __APP_BUILD_TIME__;
+const buildTimeLabel = Number.isNaN(Date.parse(buildTime))
+  ? buildTime
+  : new Date(buildTime).toLocaleString("zh-TW", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+
 export function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -90,6 +104,10 @@ export function App() {
       <header className="app-header">
         <div className="app-header-title">
           <h1>Hearth</h1>
+          <div className="build-badge" title={`Build ${buildCommit} @ ${buildTime}`}>
+            <span>Build {buildCommit}</span>
+            <span>{buildTimeLabel}</span>
+          </div>
           <p>家庭資產與現金流總覽</p>
         </div>
         <nav className="app-nav">
