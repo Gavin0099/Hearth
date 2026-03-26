@@ -1,4 +1,5 @@
 const GMAIL_API_BASE = "https://gmail.googleapis.com/gmail/v1/users/me";
+const GMAIL_FETCH_TIMEOUT_MS = 12000;
 
 const BANK_SENDERS = {
   sinopac: "ebillservice@newebill.banksinopac.com.tw",
@@ -12,13 +13,28 @@ const BANK_SENDERS = {
 export type BankKey = keyof typeof BANK_SENDERS;
 
 async function gmailFetch(path: string, accessToken: string) {
-  const response = await fetch(`${GMAIL_API_BASE}${path}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!response.ok) {
-    throw new Error(`Gmail API error: ${response.status} ${response.statusText}`);
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), GMAIL_FETCH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${GMAIL_API_BASE}${path}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gmail API error: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error(`Gmail API timeout after ${GMAIL_FETCH_TIMEOUT_MS / 1000}s`);
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
   }
-  return response.json();
 }
 
 type MsgPart = {
@@ -50,7 +66,7 @@ export type GmailBillEmail = {
 export async function fetchBillEmails(
   accessToken: string,
   bank: BankKey,
-  maxResults = 6,
+  maxResults = 4,
 ): Promise<GmailBillEmail[]> {
   const sender = BANK_SENDERS[bank];
   const query = encodeURIComponent(`from:${sender} has:attachment`);
@@ -61,30 +77,41 @@ export async function fetchBillEmails(
 
   if (!list.messages?.length) return [];
 
-  const emails: GmailBillEmail[] = [];
-
-  for (const { id } of list.messages) {
-    const msg = await gmailFetch(`/messages/${id}?format=full`, accessToken) as {
-      payload: {
-        headers: { name: string; value: string }[];
-        parts?: MsgPart[];
-        body?: { attachmentId?: string; size?: number };
-        filename?: string;
-        mimeType?: string;
+  const settled = await Promise.allSettled(
+    list.messages.map(async ({ id }) => {
+      const msg = await gmailFetch(`/messages/${id}?format=full`, accessToken) as {
+        payload: {
+          headers: { name: string; value: string }[];
+          parts?: MsgPart[];
+          body?: { attachmentId?: string; size?: number };
+          filename?: string;
+          mimeType?: string;
+        };
       };
-    };
 
-    const headers = msg.payload.headers;
-    const subject = headers.find((h) => h.name === "Subject")?.value ?? "";
-    const date = headers.find((h) => h.name === "Date")?.value ?? "";
+      const headers = msg.payload.headers;
+      const subject = headers.find((h) => h.name === "Subject")?.value ?? "";
+      const date = headers.find((h) => h.name === "Date")?.value ?? "";
+      const attachments = extractAttachments(msg.payload as MsgPart);
 
-    const attachments = extractAttachments(msg.payload as MsgPart);
-    console.log(`[gmail] ${subject} — ${attachments.length} attachments found`);
+      return { id, subject, date, bank, attachments } satisfies GmailBillEmail;
+    }),
+  );
 
-    emails.push({ id, subject, date, bank, attachments });
+  const emails = settled
+    .filter((result): result is PromiseFulfilledResult<GmailBillEmail> => result.status === "fulfilled")
+    .map((result) => result.value);
+
+  if (emails.length > 0) {
+    return emails;
   }
 
-  return emails;
+  const firstFailure = settled.find((result): result is PromiseRejectedResult => result.status === "rejected");
+  if (firstFailure) {
+    throw firstFailure.reason instanceof Error ? firstFailure.reason : new Error(String(firstFailure.reason));
+  }
+
+  return [];
 }
 
 export async function downloadAttachment(

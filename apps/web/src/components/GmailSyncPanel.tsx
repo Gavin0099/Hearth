@@ -59,10 +59,7 @@ const BANK_PARSERS: Record<BankKey, (text: string) => ParsedTransaction[]> = {
   mega: parseMegaPdfText,
 };
 
-function resolveImportAccountId(
-  bank: BankKey,
-  accounts: AccountRecord[],
-) {
+function resolveImportAccountId(bank: BankKey, accounts: AccountRecord[]) {
   const creditAccounts = accounts.filter((account) => account.type === "cash_credit");
   if (creditAccounts.length === 0) {
     return "";
@@ -127,21 +124,48 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       return;
     }
 
-    try {
-      const allEmails = await Promise.all(
-        (Object.keys(BANK_DISPLAY_NAMES) as BankKey[]).map((bank) =>
-          fetchBillEmails(accessToken, bank),
-        ),
-      );
+    const results = await Promise.all(
+      (Object.keys(BANK_DISPLAY_NAMES) as BankKey[]).map(async (bank) => {
+        try {
+          return {
+            bank,
+            emails: await fetchBillEmails(accessToken, bank),
+            error: null,
+          };
+        } catch (error) {
+          return {
+            bank,
+            emails: [] as GmailBillEmail[],
+            error: error instanceof Error ? error : new Error(String(error)),
+          };
+        }
+      }),
+    );
 
-      setEmails(allEmails.flat());
-      setState({ status: "idle" });
-    } catch (error) {
+    const loadedEmails = results.flatMap((result) => result.emails);
+    const failedBanks = results
+      .filter((result) => result.error)
+      .map((result) => result.bank);
+
+    setEmails(loadedEmails);
+
+    if (loadedEmails.length === 0 && failedBanks.length > 0) {
       setState({
         status: "error",
-        message: error instanceof Error ? error.message : "Gmail 帳單讀取失敗。",
+        message: `Gmail 帳單載入逾時或失敗：${failedBanks.map((bank) => BANK_DISPLAY_NAMES[bank]).join("、")}`,
       });
+      return;
     }
+
+    if (failedBanks.length > 0) {
+      setState({
+        status: "done",
+        message: `已載入 ${loadedEmails.length} 封帳單，但部分銀行逾時：${failedBanks.map((bank) => BANK_DISPLAY_NAMES[bank]).join("、")}`,
+      });
+      return;
+    }
+
+    setState({ status: "idle" });
   }
 
   async function handleSync(email: GmailBillEmail) {
