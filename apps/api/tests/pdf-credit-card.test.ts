@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   parseEsunPdfTransactions,
   parseSinopacPdfTransactions,
+  parseTaishinPdfTransactions,
 } from "@hearth/shared";
 
 test("parseSinopacPdfTransactions handles purchases, cashback, installments, and ignores autopay", () => {
@@ -155,6 +156,44 @@ test("parseEsunPdfTransactions limits parsing to detail sections and handles cas
       date: "2026-02-24",
       description: "\u85cd\u65b0\u2014\u65b9\u683c\u5b50 v o c u s",
       amount: -50,
+      currency: "TWD",
+    },
+  ]);
+});
+
+test("parseTaishinPdfTransactions handles ROC full-date rows with trailing country code", () => {
+  const text = `
+115/03/09 115/03/09 台新銀行信用卡電子帳單
+消費日 入帳起息日消費明細
+115/02/14 115/02/24 迪加-全家便利TAIPEI 119 TW
+115/02/14 115/02/24 連加*連加*統一-超商TAIPEI 87 TW
+115/02/27 115/03/03 連加*連加*統一-超商TAIPEI 198 TW
+115/03/14 115/03/16 連加-全家便利TAIPEI 84 TW
+`;
+
+  assert.deepEqual(parseTaishinPdfTransactions(text), [
+    {
+      date: "2026-02-14",
+      description: "迪加-全家便利TAIPEI",
+      amount: -119,
+      currency: "TWD",
+    },
+    {
+      date: "2026-02-14",
+      description: "連加*連加*統一-超商TAIPEI",
+      amount: -87,
+      currency: "TWD",
+    },
+    {
+      date: "2026-02-27",
+      description: "連加*連加*統一-超商TAIPEI",
+      amount: -198,
+      currency: "TWD",
+    },
+    {
+      date: "2026-03-14",
+      description: "連加-全家便利TAIPEI",
+      amount: -84,
       currency: "TWD",
     },
   ]);

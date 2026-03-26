@@ -525,8 +525,13 @@ function parseCathayPdfText(text: string) {
 // ─────────────────────────────────────────────────────────────
 
 function extractTaishinDetail(line: string) {
+  const datePattern = String.raw`(?:\d{2}\/\d{2}|\d{3,4}\/\d{2}\/\d{2})`;
+
   const twoAmountMatch = line.match(
-    /^(?<consume>\d{2}\/\d{2})\s+(?<posted>\d{2}\/\d{2})\s+(?<description>.+?)\s+(?<currency1>TWD|NTD|USD|JPY)\s+(?<amount1>-?\d[\d,]*)\s+(?<currency2>TWD|NTD|USD|JPY)\s+(?<amount2>-?\d[\d,]*)$/u,
+    new RegExp(
+      String.raw`^(?<consume>${datePattern})\s+(?<posted>${datePattern})\s+(?<description>.+?)\s+(?<currency1>TWD|NTD|USD|JPY)\s+(?<amount1>-?\d[\d,]*)\s+(?<currency2>TWD|NTD|USD|JPY)\s+(?<amount2>-?\d[\d,]*)$`,
+      "u",
+    ),
   );
   if (twoAmountMatch?.groups) {
     return {
@@ -538,7 +543,10 @@ function extractTaishinDetail(line: string) {
   }
 
   const oneAmountMatch = line.match(
-    /^(?<consume>\d{2}\/\d{2})\s+(?<posted>\d{2}\/\d{2})\s+(?<description>.+?)\s+(?:(?<currency>TWD|NTD|USD|JPY)\s+)?(?<amount>-?\d[\d,]*)$/u,
+    new RegExp(
+      String.raw`^(?<consume>${datePattern})\s+(?<posted>${datePattern})\s+(?<description>.+?)\s+(?:(?<currency>TWD|NTD|USD|JPY)\s+)?(?<amount>-?\d[\d,]*)(?:\s+(?<country>[A-Z]{2}))?(?:\s+(?<foreignCurrency>TWD|NTD|USD|JPY)\s+(?<foreignAmount>-?\d[\d,]*))?$`,
+      "u",
+    ),
   );
   if (oneAmountMatch?.groups) {
     return {
