@@ -4,6 +4,7 @@ export type UserSettings = {
   default_pdf_password: string | null;
   sinopac_pdf_password: string | null;
   esun_pdf_password: string | null;
+  taishin_pdf_password: string | null;
   gmail_connected: boolean;
   gmail_last_sync_at: string | null;
 };
@@ -12,6 +13,7 @@ const DEFAULT_USER_SETTINGS: UserSettings = {
   default_pdf_password: null,
   sinopac_pdf_password: null,
   esun_pdf_password: null,
+  taishin_pdf_password: null,
   gmail_connected: false,
   gmail_last_sync_at: null,
 };

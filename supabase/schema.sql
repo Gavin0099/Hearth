@@ -105,8 +105,12 @@ create table if not exists user_settings (
   default_pdf_password text,
   sinopac_pdf_password text,
   esun_pdf_password text,
+  taishin_pdf_password text,
   gmail_connected boolean not null default false,
   gmail_last_sync_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table user_settings
+  add column if not exists taishin_pdf_password text;

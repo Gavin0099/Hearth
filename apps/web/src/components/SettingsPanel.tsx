@@ -11,6 +11,7 @@ export function SettingsPanel({ session }: SettingsPanelProps) {
   const [defaultPw, setDefaultPw] = useState("");
   const [sinopacPw, setSinopacPw] = useState("");
   const [esunPw, setEsunPw] = useState("");
+  const [taishinPw, setTaishinPw] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -19,23 +20,29 @@ export function SettingsPanel({ session }: SettingsPanelProps) {
       setSettings(null);
       return;
     }
-    fetchUserSettings().then((s) => {
-      setSettings(s);
-      setDefaultPw(s.default_pdf_password ?? "");
-      setSinopacPw(s.sinopac_pdf_password ?? "");
-      setEsunPw(s.esun_pdf_password ?? "");
-    }).catch(() => {});
+
+    fetchUserSettings()
+      .then((s) => {
+        setSettings(s);
+        setDefaultPw(s.default_pdf_password ?? "");
+        setSinopacPw(s.sinopac_pdf_password ?? "");
+        setEsunPw(s.esun_pdf_password ?? "");
+        setTaishinPw(s.taishin_pdf_password ?? "");
+      })
+      .catch(() => {});
   }, [session]);
 
   async function handleSave(event: React.FormEvent) {
     event.preventDefault();
     setSaving(true);
     setMessage(null);
+
     try {
       await saveUserSettings({
         default_pdf_password: defaultPw.trim() || null,
         sinopac_pdf_password: sinopacPw.trim() || null,
         esun_pdf_password: esunPw.trim() || null,
+        taishin_pdf_password: taishinPw.trim() || null,
       });
       setMessage("設定已儲存。");
     } catch {
@@ -49,8 +56,8 @@ export function SettingsPanel({ session }: SettingsPanelProps) {
 
   return (
     <article className="panel">
-      <h2>帳單設定</h2>
-      <p>儲存各銀行 PDF 帳單密碼（通常為身分證字號），供自動解密使用。</p>
+      <h2>密碼設定</h2>
+      <p>儲存各銀行 PDF 帳單密碼，供 Gmail 信用卡帳單同步時自動解密使用。</p>
       <form className="account-form" onSubmit={handleSave}>
         <label>
           預設 PDF 密碼（適用所有銀行）
@@ -58,7 +65,7 @@ export function SettingsPanel({ session }: SettingsPanelProps) {
             type="password"
             value={defaultPw}
             onChange={(e) => setDefaultPw(e.target.value)}
-            placeholder="身分證字號（大寫）"
+            placeholder="通常為身分證字號相關規則"
             autoComplete="off"
           />
         </label>
@@ -68,7 +75,7 @@ export function SettingsPanel({ session }: SettingsPanelProps) {
             type="password"
             value={sinopacPw}
             onChange={(e) => setSinopacPw(e.target.value)}
-            placeholder="身分證字號（大寫）"
+            placeholder="通常為身分證字號相關規則"
             autoComplete="off"
           />
         </label>
@@ -78,7 +85,17 @@ export function SettingsPanel({ session }: SettingsPanelProps) {
             type="password"
             value={esunPw}
             onChange={(e) => setEsunPw(e.target.value)}
-            placeholder="身分證字號（大寫）"
+            placeholder="通常為身分證字號相關規則"
+            autoComplete="off"
+          />
+        </label>
+        <label>
+          台新信用卡 PDF 密碼（覆蓋預設）
+          <input
+            type="password"
+            value={taishinPw}
+            onChange={(e) => setTaishinPw(e.target.value)}
+            placeholder="本國人為身分證後 2 碼 + 生日月日 4 碼"
             autoComplete="off"
           />
         </label>
