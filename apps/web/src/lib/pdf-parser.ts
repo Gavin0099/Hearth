@@ -14,6 +14,37 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url,
 ).toString();
 
+type PositionedText = {
+  text: string;
+  x: number;
+  width: number;
+};
+
+function shouldJoinWithoutSpace(previous: PositionedText, current: PositionedText) {
+  const previousEnd = previous.x + previous.width;
+  const gap = current.x - previousEnd;
+
+  if (gap <= 1.5) return true;
+  if (/[/(:.-]$/.test(previous.text)) return true;
+  if (/^[/):.,-]/.test(current.text)) return true;
+  if (/\d$/.test(previous.text) && /^\/\d/.test(current.text)) return true;
+  if (/\/$/.test(previous.text) && /^\d/.test(current.text)) return true;
+
+  return false;
+}
+
+function rebuildLine(parts: PositionedText[]) {
+  const ordered = [...parts].sort((a, b) => a.x - b.x);
+  if (ordered.length === 0) return "";
+
+  let line = ordered[0].text;
+  for (let i = 1; i < ordered.length; i++) {
+    line += shouldJoinWithoutSpace(ordered[i - 1], ordered[i]) ? ordered[i].text : ` ${ordered[i].text}`;
+  }
+
+  return line.trim();
+}
+
 export async function extractPdfText(
   data: Uint8Array,
   password?: string,
@@ -30,27 +61,22 @@ export async function extractPdfText(
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
 
-    const lineMap = new Map<number, { x: number; text: string }[]>();
+    const lineMap = new Map<number, PositionedText[]>();
     for (const item of content.items) {
       if (!("str" in item) || !item.str) continue;
-      const positioned = item as { str: string; transform: number[] };
+      const positioned = item as { str: string; transform: number[]; width?: number };
       const y = Math.round(positioned.transform[5] / 3) * 3;
       if (!lineMap.has(y)) lineMap.set(y, []);
       lineMap.get(y)!.push({
-        x: positioned.transform[4],
         text: positioned.str,
+        x: positioned.transform[4],
+        width: positioned.width ?? 0,
       });
     }
 
     const lines = [...lineMap.entries()]
       .sort((a, b) => b[0] - a[0])
-      .map(([, parts]) =>
-        parts
-          .sort((a, b) => a.x - b.x)
-          .map((part) => part.text)
-          .join(" ")
-          .trim(),
-      )
+      .map(([, parts]) => rebuildLine(parts))
       .filter(Boolean);
 
     pages.push(lines.join("\n"));

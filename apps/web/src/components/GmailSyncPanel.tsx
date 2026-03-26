@@ -78,10 +78,16 @@ function resolveImportAccountId(
 }
 
 function buildParseFailureMessage(bank: BankKey, text: string) {
-  const preview = text
+  const lines = text
     .split("\n")
     .map((line) => line.trim())
-    .filter(Boolean)
+    .filter(Boolean);
+
+  const candidateLines = lines.filter((line) =>
+    /\d{2,4}\/\d{1,2}/.test(line) || /\b\d{4}\b/.test(line),
+  );
+
+  const preview = (candidateLines.length > 0 ? candidateLines : lines)
     .slice(0, 6)
     .join(" | ")
     .slice(0, 280);
