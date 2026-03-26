@@ -74,7 +74,7 @@ function resolveImportAccountId(bank: BankKey, accounts: AccountRecord[]) {
   return matched?.id ?? creditAccounts[0]?.id ?? "";
 }
 
-function buildParseFailureMessage(bank: BankKey, text: string) {
+function extractPreviewLines(text: string) {
   const lines = text
     .split("\n")
     .map((line) => line.trim())
@@ -84,10 +84,33 @@ function buildParseFailureMessage(bank: BankKey, text: string) {
     /\d{2,4}\/\d{1,2}/.test(line) || /\b\d{4}\b/.test(line),
   );
 
-  const preview = (candidateLines.length > 0 ? candidateLines : lines)
-    .slice(0, 6)
-    .join(" | ")
-    .slice(0, 280);
+  return (candidateLines.length > 0 ? candidateLines : lines).slice(0, 6);
+}
+
+function looksLikeMissingTransactionText(bank: BankKey, lines: string[]) {
+  if (bank !== "ctbc") {
+    return false;
+  }
+
+  const joined = lines.join(" ");
+  const hasTransactionHeader =
+    joined.includes("消費日") ||
+    joined.includes("入帳起息日") ||
+    joined.includes("卡號末四碼") ||
+    joined.includes("消費暨收費摘要表");
+  const hasMerchantLikeToken =
+    /STEAM|7-ELEVEN|全家|統一|手續費|便利|超商|PURCHASE|ATM/i.test(joined);
+
+  return !hasTransactionHeader && !hasMerchantLikeToken;
+}
+
+function buildParseFailureMessage(bank: BankKey, text: string) {
+  const previewLines = extractPreviewLines(text);
+  const preview = previewLines.join(" | ").slice(0, 280);
+
+  if (looksLikeMissingTransactionText(bank, previewLines)) {
+    return `${BANK_DISPLAY_NAMES[bank]} PDF 已讀取，但目前只抽到首頁摘要或客服資訊，沒有抓到可用的交易文字層。這不是單純密碼錯誤，現有文字 parser 無法直接匯入這份 PDF。前幾行內容：${preview || "（空白）"}`;
+  }
 
   return `${BANK_DISPLAY_NAMES[bank]} PDF 已讀取，但目前 parser 沒抓到交易。前幾行內容：${preview || "（空白）"}`;
 }
