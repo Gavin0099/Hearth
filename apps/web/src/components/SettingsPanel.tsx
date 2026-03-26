@@ -29,7 +29,9 @@ export function SettingsPanel({ session }: SettingsPanelProps) {
         setEsunPw(s.esun_pdf_password ?? "");
         setTaishinPw(s.taishin_pdf_password ?? "");
       })
-      .catch(() => {});
+      .catch((error) => {
+        setMessage(error instanceof Error ? error.message : "讀取設定失敗");
+      });
   }, [session]);
 
   async function handleSave(event: React.FormEvent) {
@@ -45,8 +47,8 @@ export function SettingsPanel({ session }: SettingsPanelProps) {
         taishin_pdf_password: taishinPw.trim() || null,
       });
       setMessage("設定已儲存。");
-    } catch {
-      setMessage("儲存失敗，請稍後再試。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "儲存失敗，請稍後再試。");
     } finally {
       setSaving(false);
     }

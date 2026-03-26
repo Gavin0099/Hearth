@@ -18,20 +18,37 @@ const DEFAULT_USER_SETTINGS: UserSettings = {
   gmail_last_sync_at: null,
 };
 
-export async function fetchUserSettings(): Promise<UserSettings> {
+async function readSettingsError(response: Response): Promise<string> {
   try {
-    const response = await apiFetch("/api/user-settings");
-    const data = await response.json() as { settings?: UserSettings; status: string };
-    return data.settings ?? DEFAULT_USER_SETTINGS;
+    const data = await response.json() as { error?: string };
+    if (data.error) {
+      return data.error;
+    }
   } catch {
-    return DEFAULT_USER_SETTINGS;
+    // Fall through to the generic HTTP error.
   }
+
+  return `user-settings request failed: ${response.status} ${response.statusText}`;
+}
+
+export async function fetchUserSettings(): Promise<UserSettings> {
+  const response = await apiFetch("/api/user-settings");
+  if (!response.ok) {
+    throw new Error(await readSettingsError(response));
+  }
+
+  const data = await response.json() as { settings?: UserSettings; status: string };
+  return data.settings ?? DEFAULT_USER_SETTINGS;
 }
 
 export async function saveUserSettings(settings: Partial<UserSettings>): Promise<void> {
-  await apiFetch("/api/user-settings", {
+  const response = await apiFetch("/api/user-settings", {
     method: "PUT",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(settings),
   });
+
+  if (!response.ok) {
+    throw new Error(await readSettingsError(response));
+  }
 }

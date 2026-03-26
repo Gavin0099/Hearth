@@ -156,6 +156,17 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
               ? (settings.taishin_pdf_password ?? defaultPw)
             : defaultPw;
 
+      if (!password.trim()) {
+        setState({
+          status: "error",
+          message:
+            email.bank === "taishin"
+              ? "尚未讀到台新 PDF 密碼。請先在設定頁儲存台新密碼；如果剛新增欄位卻存不進去，代表資料庫 schema 還沒套用。"
+              : "尚未讀到 PDF 密碼。請先在設定頁儲存對應銀行密碼。",
+        });
+        return;
+      }
+
       const pdfAttachment = email.attachments.find(
         (attachment) =>
           attachment.mimeType === "application/pdf" || attachment.filename.endsWith(".pdf"),
@@ -168,7 +179,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
 
       setState({ status: "loading", message: "下載並解析 PDF 中..." });
       const bytes = await downloadAttachment(email.id, pdfAttachment.id, accessToken);
-      const text = await extractPdfText(bytes, password || undefined);
+      const text = await extractPdfText(bytes, password);
 
       const parsed = BANK_PARSERS[email.bank](text);
 
