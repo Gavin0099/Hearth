@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  parseCtbcPdfTransactions,
   parseEsunPdfTransactions,
   parseSinopacPdfTransactions,
   parseTaishinPdfTransactions,
@@ -194,6 +195,93 @@ test("parseTaishinPdfTransactions handles ROC full-date rows with trailing count
       date: "2026-03-14",
       description: "連加-全家便利TAIPEI",
       amount: -84,
+      currency: "TWD",
+    },
+  ]);
+});
+
+test("parseCtbcPdfTransactions handles ROC full-date rows with amount before card suffix", () => {
+  const text = `
+115/01/12 台幣消費明細
+消費日 入帳起息日 消費暨收費摘要表 台幣金額 卡號末四碼 消費地 幣別 消費地金額
+114/12/20 114/12/23 STEAM PURCHASE 326 6155 DE TWD 326.00
+114/12/20 114/12/23 國外交易手續費 5 6155
+114/12/29 115/01/02 STEAM PURCHASE 141 6155 DE TWD 141.00
+114/12/29 115/01/02 國外交易手續費 2 6155
+115/01/03 115/01/06 STEAM PURCHASE -113 6155 DE TWD -113.00
+115/01/03 115/01/06 STEAM PURCHASE -132 6155 DE TWD -132.00
+115/01/03 115/01/05 STEAMGAMES.COM 4259522 209 6155 US TWD 209.00
+115/01/04 115/01/05 國外交易手續費 3 6155
+115/01/04 115/01/06 STEAMGAMES.COM 4259522 119 6155 US TWD 119.00
+115/01/04 115/01/06 國外交易手續費 2 6155
+115/01/09 115/01/12 統一-超商-央和 297 6155 TW
+`;
+
+  assert.deepEqual(parseCtbcPdfTransactions(text), [
+    {
+      date: "2025-12-20",
+      description: "STEAM PURCHASE",
+      amount: -326,
+      currency: "TWD",
+    },
+    {
+      date: "2025-12-20",
+      description: "國外交易手續費",
+      amount: -5,
+      currency: "TWD",
+    },
+    {
+      date: "2025-12-29",
+      description: "STEAM PURCHASE",
+      amount: -141,
+      currency: "TWD",
+    },
+    {
+      date: "2025-12-29",
+      description: "國外交易手續費",
+      amount: -2,
+      currency: "TWD",
+    },
+    {
+      date: "2026-01-03",
+      description: "STEAM PURCHASE",
+      amount: 113,
+      currency: "TWD",
+    },
+    {
+      date: "2026-01-03",
+      description: "STEAM PURCHASE",
+      amount: 132,
+      currency: "TWD",
+    },
+    {
+      date: "2026-01-03",
+      description: "STEAMGAMES.COM 4259522",
+      amount: -209,
+      currency: "TWD",
+    },
+    {
+      date: "2026-01-04",
+      description: "國外交易手續費",
+      amount: -3,
+      currency: "TWD",
+    },
+    {
+      date: "2026-01-04",
+      description: "STEAMGAMES.COM 4259522",
+      amount: -119,
+      currency: "TWD",
+    },
+    {
+      date: "2026-01-04",
+      description: "國外交易手續費",
+      amount: -2,
+      currency: "TWD",
+    },
+    {
+      date: "2026-01-09",
+      description: "統一-超商-央和",
+      amount: -297,
       currency: "TWD",
     },
   ]);

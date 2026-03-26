@@ -617,24 +617,31 @@ function parseTaishinPdfText(text: string) {
 // ─────────────────────────────────────────────────────────────
 
 function parseCtbcLine(line: string, statementYear?: number) {
-  // Same dual-date pattern as Sinopac, optional 4-digit card suffix
+  const datePattern = String.raw`(?:\d{2}\/\d{2}|\d{3,4}\/\d{2}\/\d{2})`;
   const match = line.match(
-    /^(?<consume>\d{2}\/\d{2})\s+(?<posted>\d{2}\/\d{2})\s+(?:(?<card>\d{4})\s+)?(?<rest>.+)$/u,
+    new RegExp(
+      String.raw`^(?<consume>${datePattern})\s+(?<posted>${datePattern})\s+(?<description>.+?)\s+(?<amount>-?\d[\d,]*(?:\.\d+)?)\s+(?<card>\d{4})(?:\s+(?<country>[A-Z]{2}))?(?:\s+(?<currency>TWD|NTD|USD|JPY)\s+(?<foreignAmount>-?\d[\d,]*(?:\.\d+)?))?$`,
+      "u",
+    ),
   );
   if (!match?.groups) return null;
 
-  const detail = extractSinopacDetail(match.groups.rest);
+  const detail = {
+    dateToken: match.groups.consume,
+    description: match.groups.description,
+    amountToken: match.groups.amount,
+  };
   if (!detail) return null;
 
   const description = detail.description.trim();
   if (isIgnoredDescription(description, ctbcIgnoredMarkers)) return null;
 
-  // Filter PDF artifacts (same rules as Sinopac)
+  // Filter PDF artifacts from line grouping / header bleed.
   if (/^\d{2}\/\d{2}/.test(description)) return null;
-  if (/^[A-Z]{3}\d/.test(description)) return null;
+  if (/^(TWD|NTD|USD|JPY)\b/.test(description)) return null;
   if (/\d{2}\/\d{2}\s+\d{2}\/\d{2}/.test(description)) return null;
 
-  return buildTransaction(statementYear, match.groups.consume, description, detail.amountToken);
+  return buildTransaction(statementYear, detail.dateToken, description, detail.amountToken);
 }
 
 function parseCtbcPdfText(text: string) {
