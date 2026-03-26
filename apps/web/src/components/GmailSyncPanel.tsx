@@ -98,10 +98,17 @@ function looksLikeMissingTransactionText(bank: BankKey, lines: string[]) {
     joined.includes("入帳起息日") ||
     joined.includes("卡號末四碼") ||
     joined.includes("消費暨收費摘要表");
-  const hasMerchantLikeToken =
-    /STEAM|7-ELEVEN|全家|統一|手續費|便利|超商|PURCHASE|ATM/i.test(joined);
+  const hasCoverSummaryToken =
+    /0800-024365|0800-899-399|\bi APP\b|\b7\.7\b|300,000/.test(joined);
+  const transactionLikeLineCount = lines.filter((line) => {
+    const hasDate = /\d{2,4}\/\d{1,2}(?:\/\d{1,2})?/.test(line);
+    const hasAmount = /-?\d[\d,]*(?:\.\d+)?/.test(line);
+    const hasDescription = /[A-Za-z]{3,}|[\u4e00-\u9fff]{2,}/.test(line);
 
-  return !hasTransactionHeader && !hasMerchantLikeToken;
+    return hasDate && hasAmount && hasDescription;
+  }).length;
+
+  return hasCoverSummaryToken || (!hasTransactionHeader && transactionLikeLineCount === 0);
 }
 
 function buildParseFailureMessage(bank: BankKey, text: string) {
