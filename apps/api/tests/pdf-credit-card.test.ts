@@ -286,3 +286,31 @@ test("parseCtbcPdfTransactions handles ROC full-date rows with amount before car
     },
   ]);
 });
+
+test("parseCtbcPdfTransactions falls back to full-text scan when rows are not separated by newlines", () => {
+  const text = `
+115 01 12 台幣消費明細
+114 12 20 114 12 23 STEAM PURCHASE 326 6155 DE TWD 326.00 114 12 20 114 12 23 國外交易手續費 5 6155 115 01 09 115 01 12 統一-超商-央和 297 6155 TW
+`;
+
+  assert.deepEqual(parseCtbcPdfTransactions(text), [
+    {
+      date: "2025-12-20",
+      description: "STEAM PURCHASE",
+      amount: -326,
+      currency: "TWD",
+    },
+    {
+      date: "2025-12-20",
+      description: "國外交易手續費",
+      amount: -5,
+      currency: "TWD",
+    },
+    {
+      date: "2026-01-09",
+      description: "統一-超商-央和",
+      amount: -297,
+      currency: "TWD",
+    },
+  ]);
+});

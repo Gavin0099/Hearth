@@ -79,6 +79,8 @@ const ctbcIgnoredMarkers = [
 function normalizeWhitespace(text: string) {
   return text
     .normalize("NFKC")
+    .replace(/((?:20\d{2}|1\d{2}|\d{2}))\s*[\/ ]\s*(\d{1,2})\s*[\/ ]\s*(\d{1,2})/g, "$1/$2/$3")
+    .replace(/(\d{1,2})\s*[\/ ]\s*(\d{1,2})(?!\s*[\/ ]\s*\d)/g, "$1/$2")
     .replace(/\u3000/g, " ")
     .replace(/[ \t]+/g, " ")
     .replace(/\s*\n\s*/g, "\n")
@@ -653,6 +655,24 @@ function parseCtbcPdfText(text: string) {
     const parsed = parseCtbcLine(line.trim(), statementYear);
     if (parsed) transactions.push(parsed);
   });
+
+  if (transactions.length > 0) {
+    return transactions;
+  }
+
+  const stream = normalizedText.replace(/\n/g, " ");
+  const streamPattern = /(?<consume>(?:\d{2}\/\d{2}|\d{3,4}\/\d{2}\/\d{2}))\s+(?<posted>(?:\d{2}\/\d{2}|\d{3,4}\/\d{2}\/\d{2}))\s+(?<description>.+?)\s+(?<amount>-?\d[\d,]*(?:\.\d+)?)\s+(?<card>\d{4})(?:\s+(?<country>[A-Z]{2}))?(?:\s+(?<currency>TWD|NTD|USD|JPY)\s+(?<foreignAmount>-?\d[\d,]*(?:\.\d+)?))?(?=\s+(?:\d{2}\/\d{2}|\d{3,4}\/\d{2}\/\d{2})\s+(?:\d{2}\/\d{2}|\d{3,4}\/\d{2}\/\d{2})|\s*$)/gu;
+
+  for (const match of stream.matchAll(streamPattern)) {
+    if (!match.groups) continue;
+    const parsed = parseCtbcLine(
+      `${match.groups.consume} ${match.groups.posted} ${match.groups.description} ${match.groups.amount} ${match.groups.card}${match.groups.country ? ` ${match.groups.country}` : ""}${match.groups.currency && match.groups.foreignAmount ? ` ${match.groups.currency} ${match.groups.foreignAmount}` : ""}`,
+      statementYear,
+    );
+    if (parsed) {
+      transactions.push(parsed);
+    }
+  }
 
   return transactions;
 }
