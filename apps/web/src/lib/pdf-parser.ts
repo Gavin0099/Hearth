@@ -361,7 +361,17 @@ export async function extractPdfText(
       const page = await pdf.getPage(i);
       const layerText = await extractPageTextLayer(page);
 
-      // Use text layer if it has content (no page skipping — parsers handle noise)
+      // Skip cover/marketing pages: has cover markers, no transaction-table header,
+      // and zero rows that look like actual transactions (date + content + card-last-4).
+      if (layerText && CTBC_COVER_MARKERS.some((m) => layerText.includes(m))) {
+        const hasTransactionHeader = /消費日|入帳起息日|消費暨收費摘要表|卡號末四碼/.test(layerText);
+        const txRowCount = (layerText.match(/\b(?:\d{2}\/\d{2}|\d{3}\/\d{2}\/\d{2})\b[^\n]+\s\d{4}\b/gm) ?? []).length;
+        if (!hasTransactionHeader && txRowCount === 0) {
+          continue;
+        }
+      }
+
+      // Use text layer if it has content
       if (layerText) {
         pageTexts.push(layerText);
         continue;
