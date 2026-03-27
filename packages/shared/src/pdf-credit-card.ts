@@ -819,8 +819,9 @@ function parseCtbcPdfText(text: string) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 兆豐 (Mega) — same Sinopac-like dual-date format
-// Row shape: MM/DD MM/DD [卡末四] 說明 金額 [尾欄]
+// 兆豐 (Mega) — dual-date format, supports full ROC year dates
+// Row shape: [YYY/]MM/DD [YYY/]MM/DD [卡末四] 說明 [幣別] 金額 [台幣金額]
+// The last numeric token is always the TWD amount.
 // ─────────────────────────────────────────────────────────────
 
 const megaIgnoredMarkers = [
@@ -829,13 +830,45 @@ const megaIgnoredMarkers = [
   "\u81ea\u52d5\u626e\u6b3e",
 ];
 
+function extractMegaDetail(rest: string) {
+  // Strip trailing currency+amount pairs (e.g. "TWD 91.00 91.00" → keep last amount)
+  const tokens = rest.trim().split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return null;
+
+  // Find the last numeric token as the TWD amount
+  let amountIndex = -1;
+  for (let i = tokens.length - 1; i >= 0; i--) {
+    if (/^-?\d[\d,]*(?:\.\d+)?$/.test(tokens[i])) {
+      amountIndex = i;
+      break;
+    }
+  }
+  if (amountIndex <= 0) return null;
+
+  // Strip trailing currency codes and foreign amounts between description and TWD amount
+  let descEnd = amountIndex - 1;
+  while (descEnd >= 0 && (/^(?:TWD|NTD|USD|JPY|EUR|GBP|AUD|CAD|HKD|SGD|CNY)$/.test(tokens[descEnd]) || /^-?\d[\d,]*(?:\.\d+)?$/.test(tokens[descEnd]))) {
+    descEnd--;
+  }
+  if (descEnd < 0) return null;
+
+  return {
+    description: tokens.slice(0, descEnd + 1).join(" "),
+    amountToken: tokens[amountIndex],
+  };
+}
+
 function parseMegaLine(line: string, statementYear?: number) {
+  const datePattern = String.raw`(?:\d{3}\/\d{2}\/\d{2}|\d{2}\/\d{2})`;
   const match = line.match(
-    /^(?<consume>\d{2}\/\d{2})\s+(?<posted>\d{2}\/\d{2})\s+(?:(?<card>\d{4})\s+)?(?<rest>.+)$/u,
+    new RegExp(
+      String.raw`^(?<consume>${datePattern})\s+(?<posted>${datePattern})\s+(?:(?<card>\d{4})\s+)?(?<rest>.+)$`,
+      "u",
+    ),
   );
   if (!match?.groups) return null;
 
-  const detail = extractSinopacDetail(match.groups.rest);
+  const detail = extractMegaDetail(match.groups.rest);
   if (!detail) return null;
 
   const description = detail.description.trim();
