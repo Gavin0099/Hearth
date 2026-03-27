@@ -367,8 +367,9 @@ export async function extractPdfText(
       // customer-service numbers that also appear on the transaction page).
       if (layerText && CTBC_COVER_MARKERS.some((m) => layerText.includes(m))) {
         const hasTransactionHeader = /消費日|入帳起息日|消費暨收費摘要表|卡號末四碼/.test(layerText);
-        // Count lines that look like transaction rows: a date token followed by text and a number
-        const txRowCount = (layerText.match(/\b(?:\d{2}\/\d{2}|\d{3}\/\d{2}\/\d{2})\b[^\n]{5,}\b\d[\d,]+\b/g) ?? []).length;
+        // Count lines that look like real transaction rows: date + description + amount + card-last-4
+        // (standalone 4-digit token preceded by whitespace, which payment-summary and phone numbers lack)
+        const txRowCount = (layerText.match(/\b(?:\d{2}\/\d{2}|\d{3}\/\d{2}\/\d{2})\b[^\n]+\s\d{4}\b/gm) ?? []).length;
         if (!hasTransactionHeader && txRowCount < 2) {
           continue; // Looks like a cover/marketing page — skip
         }
