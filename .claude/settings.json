@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(grep -r \"WorkerBindings\\\\|SUPABASE_SERVICE\" d:/Hearth/apps/api/src/types*)",
+      "Bash(find d:/Hearth/apps/api/src -name types*)",
+      "Skill(update-config)",
+      "Skill(update-config:*)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\daish\\.claude"
+    ]
+  }
+}

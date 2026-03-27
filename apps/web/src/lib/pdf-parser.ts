@@ -347,11 +347,21 @@ export async function extractPdfText(
   const pdf = await loadingTask.promise;
   const textLayerText = await extractTextLayerFromPdf(pdf);
   if (textLayerText) {
-    return {
-      attemptedOcr: false,
-      text: textLayerText,
-      source: "text_layer",
-    };
+    // For CTBC, the cover page has a real text layer but transaction pages are image-based.
+    // Directly attempt parsing: if the text layer yields no transactions but contains cover
+    // markers, fall through to OCR so the transaction pages get scanned.
+    const isCtbcCoverOnly =
+      bank === "ctbc" &&
+      CTBC_COVER_MARKERS.some((m) => textLayerText.includes(m)) &&
+      parseCtbcPdfTransactions(textLayerText).length === 0;
+
+    if (!isCtbcCoverOnly) {
+      return {
+        attemptedOcr: false,
+        text: textLayerText,
+        source: "text_layer",
+      };
+    }
   }
 
   const ocrResult = await extractTextFromPdfByOcr(pdf, bank);
