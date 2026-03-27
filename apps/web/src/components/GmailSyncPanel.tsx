@@ -13,6 +13,7 @@ import {
   extractPdfText,
   parseCathayPdfText,
   parseCtbcPdfText,
+  type PdfTextExtractionSource,
   parseEsunPdfText,
   parseMegaPdfText,
   parseSinopacPdfText,
@@ -120,6 +121,18 @@ function buildParseFailureMessage(bank: BankKey, text: string) {
   }
 
   return `${BANK_DISPLAY_NAMES[bank]} PDF 已讀取，但目前 parser 沒抓到交易。前幾行內容：${preview || "（空白）"}`;
+}
+
+function buildEmptyExtractionMessage(
+  bank: BankKey,
+  source: PdfTextExtractionSource,
+  attemptedOcr: boolean,
+) {
+  if (attemptedOcr || source === "ocr_fallback") {
+    return `${BANK_DISPLAY_NAMES[bank]} PDF 已改用 OCR 辨識，但仍沒有讀到可用文字。這份帳單很可能是影像品質不足、掃描對比太低，或 OCR 尚無法穩定辨識這個版型。`;
+  }
+
+  return `${BANK_DISPLAY_NAMES[bank]} PDF 沒有可用文字層，系統也還沒有成功辨識出 OCR 文字。`;
 }
 
 export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
@@ -251,7 +264,20 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
 
       setState({ status: "loading", message: "讀取 PDF 中..." });
       const bytes = await downloadAttachment(email.id, pdfAttachment.id, accessToken);
-      const text = await extractPdfText(bytes, password);
+      const extraction = await extractPdfText(bytes, password);
+      const text = extraction.text;
+
+      if (extraction.source === "ocr_fallback") {
+        setState({ status: "loading", message: "PDF 無文字層，改用 OCR 辨識中..." });
+      }
+
+      if (!text.trim()) {
+        setState({
+          status: "error",
+          message: buildEmptyExtractionMessage(email.bank, extraction.source, extraction.attemptedOcr),
+        });
+        return;
+      }
 
       const parsed = BANK_PARSERS[email.bank](text);
 

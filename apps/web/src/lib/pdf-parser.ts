@@ -1,4 +1,7 @@
 import * as pdfjsLib from "pdfjs-dist";
+import Tesseract from "tesseract.js";
+import ocrCorePath from "tesseract.js-core/tesseract-core-simd-lstm.wasm.js?url";
+import ocrWorkerPath from "tesseract.js/dist/worker.min.js?url";
 import {
   parseCathayPdfTransactions,
   parseCtbcPdfTransactions,
@@ -14,6 +17,10 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url,
 ).toString();
 
+const OCR_LANG_PATH = "https://tessdata.projectnaptha.com/4.0.0";
+const OCR_LANGS = ["eng", "chi_tra"];
+const OCR_RENDER_SCALE = 2;
+
 type PositionedText = {
   text: string;
   x: number;
@@ -26,7 +33,16 @@ type LineBucket = {
   parts: PositionedText[];
 };
 
+export type PdfTextExtractionSource = "text_layer" | "ocr_fallback" | "empty";
+
+export type PdfTextExtractionResult = {
+  attemptedOcr: boolean;
+  text: string;
+  source: PdfTextExtractionSource;
+};
+
 const ROW_Y_TOLERANCE = 4.5;
+let ocrWorkerPromise: Promise<Awaited<ReturnType<typeof Tesseract.createWorker>>> | null = null;
 
 function shouldJoinWithoutSpace(previous: PositionedText, current: PositionedText) {
   const previousEnd = previous.x + previous.width;
@@ -78,16 +94,46 @@ function assignToLineBucket(buckets: LineBucket[], part: PositionedText) {
     bestBucket.parts.reduce((sum, current) => sum + current.y, 0) / bestBucket.parts.length;
 }
 
-export async function extractPdfText(
-  data: Uint8Array,
-  password?: string,
-): Promise<string> {
-  const loadingTask = pdfjsLib.getDocument({
-    data,
-    password: password ?? "",
-  });
+async function getOcrWorker() {
+  if (!ocrWorkerPromise) {
+    ocrWorkerPromise = Tesseract.createWorker(OCR_LANGS, 1, {
+      workerPath: ocrWorkerPath,
+      corePath: ocrCorePath,
+      langPath: OCR_LANG_PATH,
+      logger: () => {},
+    }).then(async (worker) => {
+      await worker.setParameters({
+        preserve_interword_spaces: "1",
+        tessedit_pageseg_mode: Tesseract.PSM.SPARSE_TEXT,
+      });
+      return worker;
+    });
+  }
 
-  const pdf = await loadingTask.promise;
+  return ocrWorkerPromise;
+}
+
+async function renderPageToCanvas(page: pdfjsLib.PDFPageProxy) {
+  const viewport = page.getViewport({ scale: OCR_RENDER_SCALE });
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(viewport.width);
+  canvas.height = Math.ceil(viewport.height);
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("OCR fallback failed: unable to create canvas context.");
+  }
+
+  await page.render({
+    canvas,
+    canvasContext: context,
+    viewport,
+  }).promise;
+
+  return canvas;
+}
+
+async function extractTextLayerFromPdf(pdf: pdfjsLib.PDFDocumentProxy) {
   const pages: string[] = [];
 
   for (let i = 1; i <= pdf.numPages; i++) {
@@ -114,7 +160,56 @@ export async function extractPdfText(
     pages.push(lines.join("\n"));
   }
 
-  return pages.join("\n");
+  return pages.join("\n").trim();
+}
+
+async function extractTextFromPdfByOcr(pdf: pdfjsLib.PDFDocumentProxy) {
+  const worker = await getOcrWorker();
+  const pageTexts: string[] = [];
+
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const canvas = await renderPageToCanvas(page);
+    const result = await worker.recognize(canvas);
+    pageTexts.push(result.data.text.trim());
+  }
+
+  return pageTexts.filter(Boolean).join("\n").trim();
+}
+
+export async function extractPdfText(
+  data: Uint8Array,
+  password?: string,
+): Promise<PdfTextExtractionResult> {
+  const loadingTask = pdfjsLib.getDocument({
+    data,
+    password: password ?? "",
+  });
+
+  const pdf = await loadingTask.promise;
+  const textLayerText = await extractTextLayerFromPdf(pdf);
+  if (textLayerText) {
+    return {
+      attemptedOcr: false,
+      text: textLayerText,
+      source: "text_layer",
+    };
+  }
+
+  const ocrText = await extractTextFromPdfByOcr(pdf);
+  if (ocrText) {
+    return {
+      attemptedOcr: true,
+      text: ocrText,
+      source: "ocr_fallback",
+    };
+  }
+
+  return {
+    attemptedOcr: true,
+    text: "",
+    source: "empty",
+  };
 }
 
 export type ParsedTransaction = ParsedPdfTransaction;
