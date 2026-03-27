@@ -361,23 +361,21 @@ export async function extractPdfText(
       const page = await pdf.getPage(i);
       const layerText = await extractPageTextLayer(page);
 
-      // Skip cover pages (marketing / header info, no transaction table structure).
-      // Use structural signals, NOT parser success, to avoid skipping transaction pages
-      // whose format the parser can't yet handle (e.g. single-date rows, page footers with
-      // customer-service numbers that also appear on the transaction page).
-      if (layerText && CTBC_COVER_MARKERS.some((m) => layerText.includes(m))) {
-        const hasTransactionHeader = /消費日|入帳起息日|消費暨收費摘要表|卡號末四碼/.test(layerText);
-        // Count lines that look like real transaction rows: date + description + amount + card-last-4
-        // (standalone 4-digit token preceded by whitespace, which payment-summary and phone numbers lack)
-        const txRowCount = (layerText.match(/\b(?:\d{2}\/\d{2}|\d{3}\/\d{2}\/\d{2})\b[^\n]+\s\d{4}\b/gm) ?? []).length;
-        if (!hasTransactionHeader && txRowCount < 2) {
-          continue; // Looks like a cover/marketing page — skip
-        }
+      // DEBUG: emit a diagnostic header so we can see per-page decisions in the error preview
+      const hasCoverMarker = CTBC_COVER_MARKERS.some((m) => layerText.includes(m));
+      const hasTransactionHeader = /消費日|入帳起息日|消費暨收費摘要表|卡號末四碼/.test(layerText);
+      const txRowCount = (layerText.match(/\b(?:\d{2}\/\d{2}|\d{3}\/\d{2}\/\d{2})\b[^\n]+\s\d{4}\b/gm) ?? []).length;
+      const isCover = layerText.length > 0 && hasCoverMarker && !hasTransactionHeader && txRowCount < 2;
+      const debugHeader = `[CTBC-DEBUG p${i}/${pdf.numPages} len=${layerText.length} cover=${isCover} marker=${hasCoverMarker} txHeader=${hasTransactionHeader} txRows=${txRowCount}]`;
+
+      if (isCover) {
+        pageTexts.push(debugHeader); // keep as diagnostic, skip actual cover text
+        continue;
       }
 
       // Use text layer if it has content
       if (layerText) {
-        pageTexts.push(layerText);
+        pageTexts.push(`${debugHeader}\n${layerText}`);
         continue;
       }
 
