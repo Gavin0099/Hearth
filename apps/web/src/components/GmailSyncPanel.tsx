@@ -264,7 +264,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
 
       setState({ status: "loading", message: "讀取 PDF 中..." });
       const bytes = await downloadAttachment(email.id, pdfAttachment.id, accessToken);
-      const extraction = await extractPdfText(bytes, password);
+      const extraction = await extractPdfText(bytes, password, email.bank);
       const text = extraction.text;
 
       if (extraction.source === "ocr_fallback") {

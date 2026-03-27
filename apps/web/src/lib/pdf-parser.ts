@@ -20,6 +20,9 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 const OCR_LANG_PATH = "https://tessdata.projectnaptha.com/4.0.0";
 const OCR_LANGS = ["eng", "chi_tra"];
 const OCR_RENDER_SCALE = 3;
+const CTBC_COVER_MARKERS = ["0800-024365", "0800-899-399", "7.7", "300,000", "i APP"];
+
+export type PdfBankHint = "sinopac" | "esun" | "cathay" | "taishin" | "ctbc" | "mega";
 
 type PositionedText = {
   text: string;
@@ -43,6 +46,18 @@ export type PdfTextExtractionResult = {
 
 const ROW_Y_TOLERANCE = 4.5;
 let ocrWorkerPromise: Promise<Awaited<ReturnType<typeof Tesseract.createWorker>>> | null = null;
+
+type CropRegion = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+type OcrCandidate = {
+  canvas: HTMLCanvasElement;
+  tag: string;
+};
 
 function shouldJoinWithoutSpace(previous: PositionedText, current: PositionedText) {
   const previousEnd = previous.x + previous.width;
@@ -159,6 +174,78 @@ function buildHighContrastCanvas(source: HTMLCanvasElement) {
   return canvas;
 }
 
+function cropCanvas(source: HTMLCanvasElement, region: CropRegion) {
+  const canvas = document.createElement("canvas");
+  const sx = Math.max(0, Math.floor(source.width * region.left));
+  const sy = Math.max(0, Math.floor(source.height * region.top));
+  const sw = Math.min(source.width - sx, Math.ceil(source.width * region.width));
+  const sh = Math.min(source.height - sy, Math.ceil(source.height * region.height));
+
+  canvas.width = Math.max(1, sw);
+  canvas.height = Math.max(1, sh);
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("OCR fallback failed: unable to create crop canvas context.");
+  }
+
+  context.drawImage(source, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
+function scoreCtbcOcrText(text: string) {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized) return Number.NEGATIVE_INFINITY;
+
+  const rocDateCount = (normalized.match(/\b1\d{2}\/\d{2}\/\d{2}\b/g) ?? []).length;
+  const shortDateCount = (normalized.match(/\b\d{2}\/\d{2}\b/g) ?? []).length;
+  const cardCount = (normalized.match(/\b\d{4}\b/g) ?? []).length;
+  const amountCount = (normalized.match(/\b-?\d[\d,]*(?:\.\d+)?\b/g) ?? []).length;
+  const feeCount = (normalized.match(/國外交易手續費/g) ?? []).length;
+  const headerCount = (normalized.match(/消費日|入帳起息日|卡號末四碼|消費地|幣別|台幣金額|消費暨收費摘要表/g) ?? []).length;
+  const merchantHints = (normalized.match(/7-ELEVEN|OPENAI|STEAM|APPLE|ATM|全家|超商|統一/g) ?? []).length;
+  const coverPenalty = CTBC_COVER_MARKERS.filter((marker) => normalized.includes(marker)).length * 6;
+  const transactionRowCount = (normalized.match(/(?:\b1\d{2}\/\d{2}\/\d{2}\b|\b\d{2}\/\d{2}\b).{0,80}?\b\d{4}\b/g) ?? []).length;
+
+  return (
+    (rocDateCount * 8) +
+    (shortDateCount * 3) +
+    (cardCount * 2) +
+    amountCount +
+    (feeCount * 5) +
+    (headerCount * 4) +
+    (merchantHints * 2) +
+    (transactionRowCount * 9) -
+    coverPenalty -
+    Math.max(0, 8 - normalized.length / 40)
+  );
+}
+
+function buildOcrCandidatesForBank(canvas: HTMLCanvasElement, bank?: PdfBankHint) {
+  const full = buildHighContrastCanvas(canvas);
+  const candidates: OcrCandidate[] = [{ canvas: full, tag: "full_enhanced" }];
+
+  if (bank !== "ctbc") {
+    return candidates;
+  }
+
+  const ctbcRegions: CropRegion[] = [
+    { left: 0.04, top: 0.18, width: 0.92, height: 0.76 },
+    { left: 0.05, top: 0.24, width: 0.90, height: 0.68 },
+    { left: 0.05, top: 0.30, width: 0.90, height: 0.58 },
+    { left: 0.06, top: 0.36, width: 0.88, height: 0.52 },
+    { left: 0.08, top: 0.42, width: 0.84, height: 0.46 },
+  ];
+
+  ctbcRegions.forEach((region, index) => {
+    const cropped = cropCanvas(canvas, region);
+    candidates.push({ canvas: cropped, tag: `ctbc_crop_${index + 1}` });
+    candidates.push({ canvas: buildHighContrastCanvas(cropped), tag: `ctbc_crop_${index + 1}_enhanced` });
+  });
+
+  return candidates;
+}
+
 async function extractTextLayerFromPdf(pdf: pdfjsLib.PDFDocumentProxy) {
   const pages: string[] = [];
 
@@ -189,24 +276,31 @@ async function extractTextLayerFromPdf(pdf: pdfjsLib.PDFDocumentProxy) {
   return pages.join("\n").trim();
 }
 
-async function extractTextFromPdfByOcr(pdf: pdfjsLib.PDFDocumentProxy) {
+async function extractTextFromPdfByOcr(pdf: pdfjsLib.PDFDocumentProxy, bank?: PdfBankHint) {
   const worker = await getOcrWorker();
   const pageTexts: string[] = [];
 
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const canvas = await renderPageToCanvas(page);
-    const enhancedCanvas = buildHighContrastCanvas(canvas);
+    const candidates = buildOcrCandidatesForBank(canvas, bank);
+    const results = await Promise.all(
+      candidates.map(async (candidate) => ({
+        tag: candidate.tag,
+        text: (await worker.recognize(candidate.canvas)).data.text.trim(),
+      })),
+    );
 
-    const [rawResult, enhancedResult] = await Promise.all([
-      worker.recognize(canvas),
-      worker.recognize(enhancedCanvas),
-    ]);
+    const scoredResults = results
+      .map((result) => ({
+        ...result,
+        score: bank === "ctbc" ? scoreCtbcOcrText(result.text) : result.text.length,
+      }))
+      .filter((result) => result.text);
 
-    const pageVariants = [rawResult.data.text.trim(), enhancedResult.data.text.trim()]
-      .map((text) => text.trim())
-      .filter(Boolean);
-    const bestPageText = pageVariants.sort((left, right) => right.length - left.length)[0] ?? "";
+    const bestPageText = scoredResults
+      .sort((left, right) => right.score - left.score || right.text.length - left.text.length)[0]
+      ?.text ?? "";
     pageTexts.push(bestPageText);
   }
 
@@ -216,6 +310,7 @@ async function extractTextFromPdfByOcr(pdf: pdfjsLib.PDFDocumentProxy) {
 export async function extractPdfText(
   data: Uint8Array,
   password?: string,
+  bank?: PdfBankHint,
 ): Promise<PdfTextExtractionResult> {
   const loadingTask = pdfjsLib.getDocument({
     data,
@@ -232,7 +327,7 @@ export async function extractPdfText(
     };
   }
 
-  const ocrText = await extractTextFromPdfByOcr(pdf);
+  const ocrText = await extractTextFromPdfByOcr(pdf, bank);
   if (ocrText) {
     return {
       attemptedOcr: true,
