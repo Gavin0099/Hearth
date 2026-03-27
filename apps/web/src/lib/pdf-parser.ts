@@ -361,9 +361,17 @@ export async function extractPdfText(
       const page = await pdf.getPage(i);
       const layerText = await extractPageTextLayer(page);
 
-      // Skip cover pages (marketing / header info, no parseable transactions)
-      if (layerText && CTBC_COVER_MARKERS.some((m) => layerText.includes(m)) && parseCtbcPdfTransactions(layerText).length === 0) {
-        continue;
+      // Skip cover pages (marketing / header info, no transaction table structure).
+      // Use structural signals, NOT parser success, to avoid skipping transaction pages
+      // whose format the parser can't yet handle (e.g. single-date rows, page footers with
+      // customer-service numbers that also appear on the transaction page).
+      if (layerText && CTBC_COVER_MARKERS.some((m) => layerText.includes(m))) {
+        const hasTransactionHeader = /消費日|入帳起息日|消費暨收費摘要表|卡號末四碼/.test(layerText);
+        // Count lines that look like transaction rows: a date token followed by text and a number
+        const txRowCount = (layerText.match(/\b(?:\d{2}\/\d{2}|\d{3}\/\d{2}\/\d{2})\b[^\n]{5,}\b\d[\d,]+\b/g) ?? []).length;
+        if (!hasTransactionHeader && txRowCount < 2) {
+          continue; // Looks like a cover/marketing page — skip
+        }
       }
 
       // Use text layer if it has content
