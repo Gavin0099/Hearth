@@ -769,6 +769,52 @@ function parseCtbcPdfText(text: string) {
     }
   }
 
+  // ── Fallback: no-description-on-same-line format ─────────────
+  // Some CTBC PDF versions store the merchant name on a separate line from the
+  // date/amount/card row (the PDF text layer puts them in different y-buckets).
+  // Pattern: "date date amount card4 [country] [currency foreignAmount]" on one line,
+  // description text on the preceding or following non-date line.
+  const datePattern2 = String.raw`(?:\d{2}\/\d{2}|\d{3,4}\/\d{2}\/\d{2})`;
+  const noDescRegex = new RegExp(
+    String.raw`^(?<consume>${datePattern2})\s+(?<posted>${datePattern2})\s+(?<amount>-?\d[\d,]*(?:\.\d+)?)\s+(?<card>\d{4})(?:\s+[A-Z]{2})?(?:\s+(?:TWD|NTD|USD|JPY)\s+-?\d[\d,]*(?:\.\d+)?)?$`,
+    "u",
+  );
+  const lines2 = normalizedText.split("\n");
+  for (let idx = 0; idx < lines2.length; idx++) {
+    const line = lines2[idx].trim();
+    const m = line.match(noDescRegex);
+    if (!m?.groups) continue;
+
+    // Search nearby lines (prefer previous, then next) for a non-date, non-numeric description
+    let description = "";
+    for (let d = idx - 1; d >= Math.max(0, idx - 3) && !description; d--) {
+      const candidate = lines2[d].trim();
+      if (
+        candidate &&
+        !startsWithDateToken(candidate) &&
+        !/^\d[\d,./+-]*$/.test(candidate) &&
+        !isIgnoredDescription(candidate, ctbcIgnoredMarkers)
+      ) {
+        description = candidate;
+      }
+    }
+    for (let d = idx + 1; d <= Math.min(lines2.length - 1, idx + 3) && !description; d++) {
+      const candidate = lines2[d].trim();
+      if (
+        candidate &&
+        !startsWithDateToken(candidate) &&
+        !/^\d[\d,./+-]*$/.test(candidate) &&
+        !isIgnoredDescription(candidate, ctbcIgnoredMarkers)
+      ) {
+        description = candidate;
+      }
+    }
+    if (!description) continue; // skip if no description found nearby
+
+    const tx = buildTransaction(statementYear, m.groups.consume, description, m.groups.amount);
+    if (tx) transactions.push(tx);
+  }
+
   return transactions;
 }
 
