@@ -407,12 +407,16 @@ export async function extractPdfText(
     }
 
     const combined = pageTexts.filter(Boolean).join("\n").trim();
-    if (combined) {
+    // If we attempted OCR (page 2 is image-based), do NOT fall through to the generic
+    // text-layer path — that would return the cover-page text we already skipped, making
+    // the error misleading.  Instead return the OCR result (possibly empty) so the caller
+    // sees accurate debug output and the right error message.
+    if (combined || usedOcr) {
       return {
         attemptedOcr: usedOcr,
         debug: usedOcr ? debugCandidates : undefined,
         text: combined,
-        source: usedOcr ? "ocr_fallback" : "text_layer",
+        source: combined ? (usedOcr ? "ocr_fallback" : "text_layer") : "empty",
       };
     }
   }

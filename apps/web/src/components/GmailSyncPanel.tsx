@@ -303,7 +303,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
           status: "error",
           message:
             buildParseFailureMessage(email.bank, text) +
-            (extraction.source === "ocr_fallback"
+            (extraction.attemptedOcr
               ? buildOcrDebugSuffix(extraction.debug?.ocrCandidates)
               : ""),
         });
