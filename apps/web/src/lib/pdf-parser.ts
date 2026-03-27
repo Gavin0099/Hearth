@@ -19,7 +19,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 
 const OCR_LANG_PATH = "https://tessdata.projectnaptha.com/4.0.0";
 const OCR_LANGS = ["eng", "chi_tra"];
-const OCR_RENDER_SCALE = 2;
+const OCR_RENDER_SCALE = 3;
 
 type PositionedText = {
   text: string;
@@ -133,6 +133,32 @@ async function renderPageToCanvas(page: pdfjsLib.PDFPageProxy) {
   return canvas;
 }
 
+function buildHighContrastCanvas(source: HTMLCanvasElement) {
+  const canvas = document.createElement("canvas");
+  canvas.width = source.width;
+  canvas.height = source.height;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("OCR fallback failed: unable to create preprocessing canvas context.");
+  }
+
+  context.drawImage(source, 0, 0);
+  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+  const { data } = imageData;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const grayscale = Math.round((data[i] * 0.299) + (data[i + 1] * 0.587) + (data[i + 2] * 0.114));
+    const normalized = grayscale >= 180 ? 255 : grayscale <= 110 ? 0 : grayscale;
+    data[i] = normalized;
+    data[i + 1] = normalized;
+    data[i + 2] = normalized;
+  }
+
+  context.putImageData(imageData, 0, 0);
+  return canvas;
+}
+
 async function extractTextLayerFromPdf(pdf: pdfjsLib.PDFDocumentProxy) {
   const pages: string[] = [];
 
@@ -170,8 +196,18 @@ async function extractTextFromPdfByOcr(pdf: pdfjsLib.PDFDocumentProxy) {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const canvas = await renderPageToCanvas(page);
-    const result = await worker.recognize(canvas);
-    pageTexts.push(result.data.text.trim());
+    const enhancedCanvas = buildHighContrastCanvas(canvas);
+
+    const [rawResult, enhancedResult] = await Promise.all([
+      worker.recognize(canvas),
+      worker.recognize(enhancedCanvas),
+    ]);
+
+    const pageVariants = [rawResult.data.text.trim(), enhancedResult.data.text.trim()]
+      .map((text) => text.trim())
+      .filter(Boolean);
+    const bestPageText = pageVariants.sort((left, right) => right.length - left.length)[0] ?? "";
+    pageTexts.push(bestPageText);
   }
 
   return pageTexts.filter(Boolean).join("\n").trim();
