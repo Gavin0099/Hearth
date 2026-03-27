@@ -314,3 +314,31 @@ test("parseCtbcPdfTransactions falls back to full-text scan when rows are not se
     },
   ]);
 });
+
+test("parseCtbcPdfTransactions recovers transaction rows from noisy token stream with cover-page summary fragments", () => {
+  const text = `
+115/04 7.7
+:0800-024365 02-2745-8080
+115/04/01 300,000
+115/04
+59 115/05/12 7-ELEVEN ATM (02)2171-1130 (
+115/04/03 115/04/05 OPENAI *CHATGPT SUBSCR 660 6155 US TWD 21.00
+0800-899-399
+115/04/09 115/04/10 國外交易手續費 10 6155
+`;
+
+  assert.deepEqual(parseCtbcPdfTransactions(text), [
+    {
+      date: "2026-04-03",
+      description: "OPENAI *CHATGPT SUBSCR",
+      amount: -660,
+      currency: "TWD",
+    },
+    {
+      date: "2026-04-09",
+      description: "國外交易手續費",
+      amount: -10,
+      currency: "TWD",
+    },
+  ]);
+});

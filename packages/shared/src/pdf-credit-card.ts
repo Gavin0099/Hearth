@@ -76,19 +76,29 @@ const ctbcIgnoredMarkers = [
   "\u4e0a\u671f\u9918\u984d",
 ];
 
+function normalizeFullWidthDigits(text: string) {
+  return text.replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0));
+}
+
 function normalizeWhitespace(text: string) {
   return text
-    .normalize("NFKC")
-    .replace(/((?:20\d{2}|1\d{2}|\d{2}))\s*[\/ ]\s*(\d{1,2})\s*[\/ ]\s*(\d{1,2})/g, "$1/$2/$3")
-    .replace(/(\d{1,2})\s*[\/ ]\s*(\d{1,2})(?!\s*[\/ ]\s*\d)/g, "$1/$2")
     .replace(/\u3000/g, " ")
+    .replace(/／/g, "/")
+    .replace(/．/g, ".")
+    .replace(/，/g, ",")
+    .replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0))
+    .replace(/(?<![\d/,])((?:20\d{2}|1\d{2}))\s*[\/ ]\s*(\d{1,2})\s*[\/ ]\s*(\d{1,2})(?![\d/,])/g, "$1/$2/$3")
+    .replace(/(?<![\d/,])(\d{1,2})\s*[\/ ]\s*(\d{1,2})(?!\s*[\/ ]\s*\d)(?![\d/,])/g, "$1/$2")
     .replace(/[ \t]+/g, " ")
     .replace(/\s*\n\s*/g, "\n")
     .trim();
 }
 
 function normalizeDate(dateToken: string, statementYear?: number) {
-  const normalized = dateToken.replace(/\./g, "/").replace(/-/g, "/");
+  const normalized = normalizeFullWidthDigits(dateToken)
+    .replace(/／/g, "/")
+    .replace(/[.\uff0e]/g, "/")
+    .replace(/[-－]/g, "/");
 
   // YYYY/MM/DD (Gregorian with full year)
   if (/^\d{4}\/\d{2}\/\d{2}$/.test(normalized)) {
@@ -112,7 +122,11 @@ function normalizeDate(dateToken: string, statementYear?: number) {
 }
 
 function parseAmount(raw: string) {
-  const cleaned = raw.replace(/[,\s]/g, "");
+  const cleaned = normalizeFullWidthDigits(raw)
+    .replace(/[，]/g, ",")
+    .replace(/[＋]/g, "+")
+    .replace(/[－]/g, "-")
+    .replace(/[,\s]/g, "");
   const negativeByFormat = cleaned.startsWith("-") || /^\(.*\)$/.test(cleaned);
   const numeric = Number(cleaned.replace(/[()]/g, "").replace(/^\+/, ""));
   if (!Number.isFinite(numeric) || numeric === 0) {
@@ -214,6 +228,14 @@ function normalizeGroupedNumericToken(token: string) {
   return token.replace(/[,\s]/g, "");
 }
 
+function startsWithDateToken(text: string) {
+  return /^(?:\d{2}\/\d{2}|\d{3,4}\/\d{2}\/\d{2})/.test(text);
+}
+
+function containsAdjacentDateTokens(text: string) {
+  return /(?:\d{2}\/\d{2}|\d{3,4}\/\d{2}\/\d{2})\s+(?:\d{2}\/\d{2}|\d{3,4}\/\d{2}\/\d{2})/.test(text);
+}
+
 function extractSinopacDetail(rest: string) {
   const withoutFxTail = rest
     .trim()
@@ -303,11 +325,11 @@ function parseSinopacLine(line: string, statementYear?: number) {
 
   // Filter parse artifacts from PDF y-coordinate grouping:
   // 1. Description that itself starts with a date = concatenated/shifted row
-  if (/^\d{2}\/\d{2}/.test(description)) return null;
+  if (startsWithDateToken(description)) return null;
   // 2. FX-rate lines (e.g. "USD21.000 ...")
   if (/^[A-Z]{3}\d/.test(description)) return null;
   // 3. Description containing two adjacent date tokens = merged multi-row blob
-  if (/\d{2}\/\d{2}\s+\d{2}\/\d{2}/.test(description)) return null;
+  if (containsAdjacentDateTokens(description)) return null;
 
   return buildTransaction(
     statementYear,
@@ -639,11 +661,79 @@ function parseCtbcLine(line: string, statementYear?: number) {
   if (isIgnoredDescription(description, ctbcIgnoredMarkers)) return null;
 
   // Filter PDF artifacts from line grouping / header bleed.
-  if (/^\d{2}\/\d{2}/.test(description)) return null;
+  if (startsWithDateToken(description)) return null;
   if (/^(TWD|NTD|USD|JPY)\b/.test(description)) return null;
-  if (/\d{2}\/\d{2}\s+\d{2}\/\d{2}/.test(description)) return null;
+  if (containsAdjacentDateTokens(description)) return null;
 
   return buildTransaction(statementYear, detail.dateToken, description, detail.amountToken);
+}
+
+function isCtbcDateToken(token: string) {
+  return /^(?:\d{2}\/\d{2}|\d{3,4}\/\d{2}\/\d{2})$/.test(token);
+}
+
+function isCtbcAmountToken(token: string) {
+  return /^-?\d[\d,]*(?:\.\d+)?$/.test(token);
+}
+
+function parseCtbcTokenStream(text: string, statementYear?: number) {
+  const tokens = text.split(/\s+/).filter(Boolean);
+  const transactions: ParsedPdfTransaction[] = [];
+
+  for (let i = 0; i < tokens.length - 1; i++) {
+    if (!isCtbcDateToken(tokens[i]) || !isCtbcDateToken(tokens[i + 1])) {
+      continue;
+    }
+
+    const nextRowIndex = (() => {
+      for (let j = i + 2; j < tokens.length - 1; j++) {
+        if (isCtbcDateToken(tokens[j]) && isCtbcDateToken(tokens[j + 1])) {
+          return j;
+        }
+      }
+      return tokens.length;
+    })();
+
+    const windowTokens = tokens.slice(i + 2, Math.min(nextRowIndex, i + 24));
+    if (windowTokens.length < 3) {
+      continue;
+    }
+
+    let parsed: ParsedPdfTransaction | null = null;
+
+    for (let relativeCardIndex = 1; relativeCardIndex < windowTokens.length; relativeCardIndex++) {
+      const cardToken = windowTokens[relativeCardIndex];
+      const amountToken = windowTokens[relativeCardIndex - 1];
+      if (!/^\d{4}$/.test(cardToken) || !isCtbcAmountToken(amountToken)) {
+        continue;
+      }
+
+      const descriptionTokens = windowTokens.slice(0, relativeCardIndex - 1);
+      if (descriptionTokens.length === 0) {
+        continue;
+      }
+
+      parsed = parseCtbcLine(
+        [
+          tokens[i],
+          tokens[i + 1],
+          descriptionTokens.join(" "),
+          amountToken,
+          cardToken,
+          ...windowTokens.slice(relativeCardIndex + 1),
+        ].join(" "),
+        statementYear,
+      );
+
+      if (parsed) {
+        transactions.push(parsed);
+        i = nextRowIndex - 1;
+        break;
+      }
+    }
+  }
+
+  return transactions;
 }
 
 function parseCtbcPdfText(text: string) {
@@ -658,6 +748,11 @@ function parseCtbcPdfText(text: string) {
 
   if (transactions.length > 0) {
     return transactions;
+  }
+
+  const tokenStreamTransactions = parseCtbcTokenStream(normalizedText, statementYear);
+  if (tokenStreamTransactions.length > 0) {
+    return tokenStreamTransactions;
   }
 
   const stream = normalizedText.replace(/\n/g, " ");
@@ -700,9 +795,9 @@ function parseMegaLine(line: string, statementYear?: number) {
   const description = detail.description.trim();
   if (isIgnoredDescription(description, megaIgnoredMarkers)) return null;
 
-  if (/^\d{2}\/\d{2}/.test(description)) return null;
+  if (startsWithDateToken(description)) return null;
   if (/^[A-Z]{3}\d/.test(description)) return null;
-  if (/\d{2}\/\d{2}\s+\d{2}\/\d{2}/.test(description)) return null;
+  if (containsAdjacentDateTokens(description)) return null;
 
   return buildTransaction(statementYear, match.groups.consume, description, detail.amountToken);
 }
