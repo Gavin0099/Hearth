@@ -254,31 +254,34 @@ function buildOcrCandidatesForBank(canvas: HTMLCanvasElement, bank?: PdfBankHint
   return candidates;
 }
 
+async function extractPageTextLayer(page: pdfjsLib.PDFPageProxy): Promise<string> {
+  const content = await page.getTextContent();
+  const lineBuckets: LineBucket[] = [];
+
+  for (const item of content.items) {
+    if (!("str" in item) || !item.str) continue;
+    const positioned = item as { str: string; transform: number[]; width?: number };
+    assignToLineBucket(lineBuckets, {
+      text: positioned.str,
+      x: positioned.transform[4],
+      width: positioned.width ?? 0,
+      y: positioned.transform[5],
+    });
+  }
+
+  return lineBuckets
+    .sort((a, b) => b.y - a.y)
+    .map((bucket) => rebuildLine(bucket.parts))
+    .filter(Boolean)
+    .join("\n");
+}
+
 async function extractTextLayerFromPdf(pdf: pdfjsLib.PDFDocumentProxy) {
   const pages: string[] = [];
 
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-
-    const lineBuckets: LineBucket[] = [];
-    for (const item of content.items) {
-      if (!("str" in item) || !item.str) continue;
-      const positioned = item as { str: string; transform: number[]; width?: number };
-      assignToLineBucket(lineBuckets, {
-        text: positioned.str,
-        x: positioned.transform[4],
-        width: positioned.width ?? 0,
-        y: positioned.transform[5],
-      });
-    }
-
-    const lines = lineBuckets
-      .sort((a, b) => b.y - a.y)
-      .map((bucket) => rebuildLine(bucket.parts))
-      .filter(Boolean);
-
-    pages.push(lines.join("\n"));
+    pages.push(await extractPageTextLayer(page));
   }
 
   return pages.join("\n").trim();
@@ -345,23 +348,73 @@ export async function extractPdfText(
   });
 
   const pdf = await loadingTask.promise;
-  const textLayerText = await extractTextLayerFromPdf(pdf);
-  if (textLayerText) {
-    // For CTBC, the cover page has a real text layer but transaction pages are image-based.
-    // Directly attempt parsing: if the text layer yields no transactions but contains cover
-    // markers, fall through to OCR so the transaction pages get scanned.
-    const isCtbcCoverOnly =
-      bank === "ctbc" &&
-      CTBC_COVER_MARKERS.some((m) => textLayerText.includes(m)) &&
-      parseCtbcPdfTransactions(textLayerText).length === 0;
 
-    if (!isCtbcCoverOnly) {
+  // For CTBC: process per page — skip cover pages, prefer text layer for transaction
+  // pages, fall back to OCR only for pages with no usable text layer.
+  if (bank === "ctbc") {
+    const worker = await getOcrWorker();
+    const pageTexts: string[] = [];
+    const debugCandidates: PdfTextExtractionResult["debug"] = { ocrCandidates: [] };
+    let usedOcr = false;
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const layerText = await extractPageTextLayer(page);
+
+      // Skip cover pages (marketing / header info, no parseable transactions)
+      if (layerText && CTBC_COVER_MARKERS.some((m) => layerText.includes(m)) && parseCtbcPdfTransactions(layerText).length === 0) {
+        continue;
+      }
+
+      // Use text layer if it has content
+      if (layerText) {
+        pageTexts.push(layerText);
+        continue;
+      }
+
+      // No text layer — OCR this page
+      usedOcr = true;
+      const canvas = await renderPageToCanvas(page);
+      const candidates = buildOcrCandidatesForBank(canvas, bank);
+      const results = await Promise.all(
+        candidates.map(async (candidate) => ({
+          tag: candidate.tag,
+          text: (await worker.recognize(candidate.canvas)).data.text.trim(),
+        })),
+      );
+      const scoredResults = results
+        .map((r) => ({ ...r, score: scoreCtbcOcrText(r.text) }))
+        .filter((r) => r.text);
+      const best = scoredResults.sort((a, b) => b.score - a.score || b.text.length - a.text.length)[0];
+      debugCandidates.ocrCandidates?.push(
+        ...scoredResults.slice(0, 3).map((r) => ({
+          page: i,
+          preview: r.text.replace(/\s+/g, " ").trim().slice(0, 160),
+          score: r.score,
+          tag: r.tag,
+        })),
+      );
+      if (best?.text) pageTexts.push(best.text);
+    }
+
+    const combined = pageTexts.filter(Boolean).join("\n").trim();
+    if (combined) {
       return {
-        attemptedOcr: false,
-        text: textLayerText,
-        source: "text_layer",
+        attemptedOcr: usedOcr,
+        debug: usedOcr ? debugCandidates : undefined,
+        text: combined,
+        source: usedOcr ? "ocr_fallback" : "text_layer",
       };
     }
+  }
+
+  const textLayerText = await extractTextLayerFromPdf(pdf);
+  if (textLayerText) {
+    return {
+      attemptedOcr: false,
+      text: textLayerText,
+      source: "text_layer",
+    };
   }
 
   const ocrResult = await extractTextFromPdfByOcr(pdf, bank);
