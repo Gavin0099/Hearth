@@ -40,6 +40,14 @@ export type PdfTextExtractionSource = "text_layer" | "ocr_fallback" | "empty";
 
 export type PdfTextExtractionResult = {
   attemptedOcr: boolean;
+  debug?: {
+    ocrCandidates?: Array<{
+      page: number;
+      preview: string;
+      score: number;
+      tag: string;
+    }>;
+  };
   text: string;
   source: PdfTextExtractionSource;
 };
@@ -279,6 +287,9 @@ async function extractTextLayerFromPdf(pdf: pdfjsLib.PDFDocumentProxy) {
 async function extractTextFromPdfByOcr(pdf: pdfjsLib.PDFDocumentProxy, bank?: PdfBankHint) {
   const worker = await getOcrWorker();
   const pageTexts: string[] = [];
+  const debugCandidates: PdfTextExtractionResult["debug"] = {
+    ocrCandidates: [],
+  };
 
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
@@ -301,10 +312,26 @@ async function extractTextFromPdfByOcr(pdf: pdfjsLib.PDFDocumentProxy, bank?: Pd
     const bestPageText = scoredResults
       .sort((left, right) => right.score - left.score || right.text.length - left.text.length)[0]
       ?.text ?? "";
+
+    const topCandidates = scoredResults
+      .slice()
+      .sort((left, right) => right.score - left.score || right.text.length - left.text.length)
+      .slice(0, 3)
+      .map((result) => ({
+        page: i,
+        preview: result.text.replace(/\s+/g, " ").trim().slice(0, 160),
+        score: result.score,
+        tag: result.tag,
+      }));
+    debugCandidates.ocrCandidates?.push(...topCandidates);
+
     pageTexts.push(bestPageText);
   }
 
-  return pageTexts.filter(Boolean).join("\n").trim();
+  return {
+    debug: debugCandidates,
+    text: pageTexts.filter(Boolean).join("\n").trim(),
+  };
 }
 
 export async function extractPdfText(
@@ -327,10 +354,12 @@ export async function extractPdfText(
     };
   }
 
-  const ocrText = await extractTextFromPdfByOcr(pdf, bank);
+  const ocrResult = await extractTextFromPdfByOcr(pdf, bank);
+  const ocrText = ocrResult.text;
   if (ocrText) {
     return {
       attemptedOcr: true,
+      debug: ocrResult.debug,
       text: ocrText,
       source: "ocr_fallback",
     };
@@ -338,6 +367,7 @@ export async function extractPdfText(
 
   return {
     attemptedOcr: true,
+    debug: ocrResult.debug,
     text: "",
     source: "empty",
   };

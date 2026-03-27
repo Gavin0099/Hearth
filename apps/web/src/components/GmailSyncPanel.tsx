@@ -123,6 +123,21 @@ function buildParseFailureMessage(bank: BankKey, text: string) {
   return `${BANK_DISPLAY_NAMES[bank]} PDF 已讀取，但目前 parser 沒抓到交易。前幾行內容：${preview || "（空白）"}`;
 }
 
+function buildOcrDebugSuffix(
+  candidates?: Array<{ page: number; preview: string; score: number; tag: string }>,
+) {
+  if (!candidates || candidates.length === 0) {
+    return "";
+  }
+
+  const top = candidates
+    .slice(0, 2)
+    .map((candidate) => `p${candidate.page}/${candidate.tag}: ${candidate.preview || "（空白）"}`)
+    .join(" | ");
+
+  return top ? ` OCR 候選：${top}` : "";
+}
+
 function buildEmptyExtractionMessage(
   bank: BankKey,
   source: PdfTextExtractionSource,
@@ -274,7 +289,9 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       if (!text.trim()) {
         setState({
           status: "error",
-          message: buildEmptyExtractionMessage(email.bank, extraction.source, extraction.attemptedOcr),
+          message:
+            buildEmptyExtractionMessage(email.bank, extraction.source, extraction.attemptedOcr) +
+            buildOcrDebugSuffix(extraction.debug?.ocrCandidates),
         });
         return;
       }
@@ -284,7 +301,11 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       if (parsed.length === 0) {
         setState({
           status: "error",
-          message: buildParseFailureMessage(email.bank, text),
+          message:
+            buildParseFailureMessage(email.bank, text) +
+            (extraction.source === "ocr_fallback"
+              ? buildOcrDebugSuffix(extraction.debug?.ocrCandidates)
+              : ""),
         });
         return;
       }
