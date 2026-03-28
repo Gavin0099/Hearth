@@ -6,7 +6,8 @@
       "Bash(find d:/Hearth/apps/api/src -name types*)",
       "Skill(update-config)",
       "Skill(update-config:*)",
-      "Bash(git revert:*)"
+      "Bash(git revert:*)",
+      "Bash(git -C D:/Hearth log --oneline -5)"
     ],
     "additionalDirectories": [
       "C:\\Users\\daish\\.claude"
