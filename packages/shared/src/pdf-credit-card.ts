@@ -94,7 +94,7 @@ function normalizeWhitespace(text: string) {
     .trim();
 }
 
-function normalizeDate(dateToken: string, statementYear?: number) {
+function normalizeDate(dateToken: string, statementYear?: number, statementMonth?: number) {
   const normalized = normalizeFullWidthDigits(dateToken)
     .replace(/／/g, "/")
     .replace(/[.\uff0e]/g, "/")
@@ -111,14 +111,19 @@ function normalizeDate(dateToken: string, statementYear?: number) {
     return `${Number(rocMatch[1]) + 1911}-${rocMatch[2]}-${rocMatch[3]}`;
   }
 
-  // MM/DD (no year)
+  // MM/DD (no year) — apply cross-year heuristic when statement month is known:
+  // if the transaction month is more than 3 months ahead of the statement month,
+  // it belongs to the previous year (e.g. 12/26 in a March statement → prev year).
   const match = normalized.match(/^(\d{2})\/(\d{2})$/);
   if (!match) {
     return null;
   }
 
   const year = statementYear ?? new Date().getFullYear();
-  return `${year}-${match[1]}-${match[2]}`;
+  const txMonth = Number(match[1]);
+  const resolvedYear =
+    statementMonth !== undefined && txMonth - statementMonth > 3 ? year - 1 : year;
+  return `${resolvedYear}-${match[1]}-${match[2]}`;
 }
 
 function parseAmount(raw: string) {
@@ -145,6 +150,22 @@ function inferStatementYear(text: string) {
   const roc = text.match(/\b(1\d{2})[\/.-]\d{1,2}[\/.-]\d{1,2}\b/);
   if (roc) {
     return Number(roc[1]) + 1911;
+  }
+
+  return undefined;
+}
+
+function inferStatementMonth(text: string) {
+  // Try Gregorian full date first (e.g. 2026/03/28)
+  const explicit = text.match(/\b20\d{2}[\/.-](\d{1,2})[\/.-]\d{1,2}\b/);
+  if (explicit) {
+    return Number(explicit[1]);
+  }
+
+  // ROC full date (e.g. 115/03/28)
+  const roc = text.match(/\b1\d{2}[\/.-](\d{1,2})[\/.-]\d{1,2}\b/);
+  if (roc) {
+    return Number(roc[1]);
   }
 
   return undefined;
@@ -197,8 +218,9 @@ function buildTransaction(
   description: string,
   rawAmount: string,
   currencyToken?: string,
+  statementMonth?: number,
 ) {
-  const date = normalizeDate(dateToken, statementYear);
+  const date = normalizeDate(dateToken, statementYear, statementMonth);
   const amount = normalizeSignedAmount(description, rawAmount);
   if (!date || amount === null) {
     return null;
@@ -305,7 +327,7 @@ function extractSinopacDetail(rest: string) {
   };
 }
 
-function parseSinopacLine(line: string, statementYear?: number) {
+function parseSinopacLine(line: string, statementYear?: number, statementMonth?: number) {
   const match = line.match(
     /^(?<consume>\d{2}\/\d{2})\s+(?<posted>\d{2}\/\d{2})\s+(?:(?<card>\d{4})\s+)?(?<rest>.+)$/u,
   );
@@ -336,16 +358,19 @@ function parseSinopacLine(line: string, statementYear?: number) {
     match.groups.consume,
     description,
     detail.amountToken,
+    undefined,
+    statementMonth,
   );
 }
 
 function parseSinopacPdfText(text: string) {
   const normalizedText = normalizeWhitespace(text);
   const statementYear = inferStatementYear(normalizedText);
+  const statementMonth = inferStatementMonth(normalizedText);
   const transactions: ParsedPdfTransaction[] = [];
 
   normalizedText.split("\n").forEach((line) => {
-    const parsed = parseSinopacLine(line.trim(), statementYear);
+    const parsed = parseSinopacLine(line.trim(), statementYear, statementMonth);
     if (parsed) {
       transactions.push(parsed);
     }
@@ -385,6 +410,7 @@ function extractEsunDetail(line: string) {
 function parseEsunPdfText(text: string) {
   const normalizedText = normalizeWhitespace(text);
   const statementYear = inferStatementYear(normalizedText);
+  const statementMonth = inferStatementMonth(normalizedText);
   const transactions: ParsedPdfTransaction[] = [];
   let activeSection: "none" | "fees" | "spend" = "none";
 
@@ -432,6 +458,7 @@ function parseEsunPdfText(text: string) {
       description,
       detail.amountToken,
       detail.currencyToken,
+      statementMonth,
     );
     if (transaction) {
       transactions.push(transaction);
@@ -488,6 +515,7 @@ function parseCathayLines(
   lines: string[],
   statementYear: number | undefined,
   sectionGated: boolean,
+  statementMonth?: number,
 ): ParsedPdfTransaction[] {
   const transactions: ParsedPdfTransaction[] = [];
   let activeSection = !sectionGated;
@@ -521,6 +549,7 @@ function parseCathayLines(
       description,
       detail.amountToken,
       detail.currencyToken,
+      statementMonth,
     );
     if (transaction) transactions.push(transaction);
   }
@@ -531,14 +560,15 @@ function parseCathayLines(
 function parseCathayPdfText(text: string) {
   const normalizedText = normalizeWhitespace(text);
   const statementYear = inferStatementYear(normalizedText);
+  const statementMonth = inferStatementMonth(normalizedText);
   const lines = normalizedText.split("\n");
 
   // Try section-gated first (more precise)
-  const gated = parseCathayLines(lines, statementYear, true);
+  const gated = parseCathayLines(lines, statementYear, true, statementMonth);
   if (gated.length > 0) return gated;
 
   // Fallback: scan all lines without section gating
-  return parseCathayLines(lines, statementYear, false);
+  return parseCathayLines(lines, statementYear, false, statementMonth);
 }
 
 // ─────────────────────────────────────────────────────────────

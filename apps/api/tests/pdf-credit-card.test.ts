@@ -33,13 +33,13 @@ test("parseSinopacPdfTransactions handles purchases, cashback, installments, and
       currency: "TWD",
     },
     {
-      date: "2026-12-22",
+      date: "2025-12-22",
       description: "6-2 \u671f\uff1a\u5e33\u55ae\u5206\u671f \u5229\u606f",
       amount: -130,
       currency: "TWD",
     },
     {
-      date: "2026-12-26",
+      date: "2025-12-26",
       description: "6-2 \u671f\uff1a\u9060\u96c4\u58fd\u671f\u4fdd\u55ae 9 7 0",
       amount: -5635,
       currency: "TWD",
@@ -97,7 +97,7 @@ test("parseSinopacPdfTransactions keeps current installment amount when statemen
 
   assert.deepEqual(parseSinopacPdfTransactions(text), [
     {
-      date: "2026-12-26",
+      date: "2025-12-26",
       description: "6- 2 期 : 遠雄續期保費9705",
       amount: -5635,
       currency: "TWD",
@@ -131,7 +131,7 @@ test("parseEsunPdfTransactions limits parsing to detail sections and handles cas
       currency: "TWD",
     },
     {
-      date: "2026-12-25",
+      date: "2025-12-25",
       description: "\u704c\u6e89\u773c\u79d1\u8a3a\u6240-\u53f0\u5317 \u520606\u671f\u4e4b\u7b2c03\u671f",
       amount: -16333,
       currency: "TWD",
