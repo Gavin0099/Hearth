@@ -1026,8 +1026,30 @@ function parseMegaPdfText(text: string) {
 // Multiple currency sections (新臺幣 / 美元) are detected from headers.
 // ─────────────────────────────────────────────────────────────
 
+function collapseInterCharSpaces(text: string): string {
+  // Some PDFs (e.g. 玉山綜合對帳單) emit each character with surrounding spaces.
+  // Collapse runs of "single-non-space-char SPACE single-non-space-char" sequences
+  // so that e.g. "綜 合 對 帳 單" → "綜合對帳單" and "0 2 / 0 1" → "02/01".
+  // We repeat until stable because each pass only merges adjacent pairs.
+  let prev = "";
+  let cur = text;
+  // Limit iterations to avoid infinite loops
+  for (let i = 0; i < 20 && cur !== prev; i++) {
+    prev = cur;
+    // Merge: (non-space char)(space)(non-space char) when both are single chars
+    // We match a single char, a space, then a single char — but only if the
+    // surrounding characters are also spaces or line boundaries (word boundary context).
+    // Strategy: if a "word" (sequence of non-space chars) has length 1, and its
+    // neighbour word also has length 1, merge them.
+    cur = cur.replace(/(?<=(^| ))(\S) (\S)(?=( |$))/gm, "$2$3");
+  }
+  return cur;
+}
+
 function parseSinopacBankPdfText(text: string): ParsedPdfTransaction[] {
-  const normalizedText = normalizeWhitespace(text);
+  // Pre-process: collapse inter-character spaces common in some bank PDF extractions
+  const deSpaced = collapseInterCharSpaces(text);
+  const normalizedText = normalizeWhitespace(deSpaced);
   const lines = normalizedText.split("\n");
 
   let currency = "TWD";
