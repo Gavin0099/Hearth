@@ -18,10 +18,13 @@ import {
   parseMegaPdfText,
   parseSinopacBankPdfText,
   parseSinopacPdfText,
+  parseSinopacLoanSection,
+  parseSinopacInsuranceSection,
   parseTaishinPdfText,
   type ParsedTransaction,
 } from "../lib/pdf-parser";
 import { fetchUserSettings } from "../lib/user-settings";
+import { saveBankSnapshot } from "../lib/bank-snapshots";
 
 type GmailSyncPanelProps = {
   session: Session | null;
@@ -383,6 +386,33 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         }
 
         const warnStr = warnings.length > 0 ? `（${warnings.join("；")}）` : "";
+
+        // Parse and save loan/insurance snapshots from the same PDF text
+        const statementDateMatch = text.match(/對帳單期間[：:]\s*(\d{4})\/(\d{2})\/\d{2}/);
+        const statementDate = statementDateMatch
+          ? `${statementDateMatch[1]}-${statementDateMatch[2]}-01`
+          : email.date
+            ? `${email.date.slice(0, 7)}-01`
+            : new Date().toISOString().slice(0, 7) + '-01';
+
+        try {
+          const loanRecords = parseSinopacLoanSection(text);
+          if (loanRecords.length > 0) {
+            await saveBankSnapshot(email.bank, 'loan', statementDate, loanRecords);
+          }
+        } catch {
+          // non-fatal: skip loan snapshot
+        }
+
+        try {
+          const insuranceRecords = parseSinopacInsuranceSection(text);
+          if (insuranceRecords.length > 0) {
+            await saveBankSnapshot(email.bank, 'insurance', statementDate, insuranceRecords);
+          }
+        } catch {
+          // non-fatal: skip insurance snapshot
+        }
+
         setState({
           status: "done",
           message: `匯入完成，新增 ${totalImported} 筆，略過 ${totalSkipped} 筆。${warnStr}`,

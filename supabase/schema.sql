@@ -114,3 +114,15 @@ create table if not exists user_settings (
 
 alter table user_settings
   add column if not exists taishin_pdf_password text;
+
+create table if not exists bank_snapshots (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users,
+  bank text not null,
+  type text not null,
+  statement_date date not null,
+  data jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(user_id, bank, type, statement_date)
+);

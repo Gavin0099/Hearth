@@ -1181,6 +1181,206 @@ function parseSinopacBankPdfText(text: string): ParsedPdfTransaction[] {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Loan & Insurance Types
+// ─────────────────────────────────────────────────────────────
+
+export type ParsedLoanRecord = {
+  accountNo: string;
+  paymentDate: string;  // YYYY-MM-DD
+  paymentAmount: number;
+  principal: number;
+  interest: number;
+  penalty: number;
+  remainingBalance: number;
+};
+
+export type ParsedInsuranceRecord = {
+  insuranceType: 'non-investment' | 'investment';
+  policyNo: string;
+  company: string;
+  productName: string;
+  insuredPerson: string;
+  startDate: string;
+  endDate: string;
+  currency: string;
+  coverage: number;
+  nextPremium: number;
+  paymentPeriod: string;
+  accumulatedPremium: number;
+  nextPaymentDate: string;
+};
+
+// ─────────────────────────────────────────────────────────────
+// Loan Section Parser
+// ─────────────────────────────────────────────────────────────
+
+function parseDateToIso(dateToken: string): string {
+  // Handle YYYY/MM/DD or YYYY-MM-DD
+  const m = dateToken.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if (!m) return dateToken;
+  return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+}
+
+function parsePlainAmount(s: string): number {
+  return Number(s.replace(/,/g, '')) || 0;
+}
+
+export function parseSinopacLoanSection(text: string): ParsedLoanRecord[] {
+  const deSpaced = collapseInterCharSpaces(text);
+  const normalized = normalizeWhitespace(deSpaced);
+  const lines = normalized.split('\n').map((l) => l.trim()).filter(Boolean);
+
+  // Find the 貸款 section
+  const loanSectionIdx = lines.findIndex((l) => /^貸\s*款$|貸款/.test(l));
+  if (loanSectionIdx === -1) return [];
+
+  const records: ParsedLoanRecord[] = [];
+
+  // Account number pattern: digits/dashes/asterisks like 007-05*-**10734-*/420005
+  const acctRe = /[\d]{3}-[\d*]+-[\d*]+-[\d*]+(?:\/\d+)?/;
+
+  for (let i = loanSectionIdx + 1; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Stop at next major section
+    if (/^保\s*險$|^保險$|^投\s*資$|^投資$|^外\s*匯$|^外匯$/.test(line)) break;
+
+    const acctMatch = line.match(acctRe);
+    if (!acctMatch) continue;
+
+    // Extract all date tokens and numbers from the line
+    const dateMatches = [...line.matchAll(/\d{4}\/\d{2}\/\d{2}/g)];
+    if (dateMatches.length === 0) continue;
+
+    // Remove account number and dates, collect the remaining number tokens
+    let rest = line;
+    rest = rest.replace(acctRe, '');
+    rest = rest.replace(/\d{4}\/\d{2}\/\d{2}/g, '');
+    const numTokens = rest.split(/\s+/).filter((t) => /^\d[\d,]*$/.test(t));
+
+    if (numTokens.length < 5) continue;
+
+    try {
+      const record: ParsedLoanRecord = {
+        accountNo: acctMatch[0],
+        paymentDate: parseDateToIso(dateMatches[0][0]),
+        paymentAmount: parsePlainAmount(numTokens[0]),
+        principal: parsePlainAmount(numTokens[1]),
+        interest: parsePlainAmount(numTokens[2]),
+        penalty: parsePlainAmount(numTokens[3]),
+        remainingBalance: parsePlainAmount(numTokens[4]),
+      };
+      records.push(record);
+    } catch {
+      // skip malformed line
+    }
+  }
+
+  return records;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Insurance Section Parser
+// ─────────────────────────────────────────────────────────────
+
+export function parseSinopacInsuranceSection(text: string): ParsedInsuranceRecord[] {
+  const deSpaced = collapseInterCharSpaces(text);
+  const normalized = normalizeWhitespace(deSpaced);
+  const lines = normalized.split('\n').map((l) => l.trim()).filter(Boolean);
+
+  // Find the 保險 section
+  const insuranceSectionIdx = lines.findIndex((l) => /^保\s*險$|^保險/.test(l));
+  if (insuranceSectionIdx === -1) return [];
+
+  const records: ParsedInsuranceRecord[] = [];
+
+  // Policy number pattern: letter(s) + digits + asterisks + digits
+  const policyRe = /[A-Z]\d+\*+\d+/;
+  const currencyRe = /\b(TWD|USD|JPY|EUR)\b/;
+
+  let i = insuranceSectionIdx + 1;
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Stop at next major section
+    if (/^貸\s*款$|^貸款$|^投\s*資$|^投資$|^外\s*匯$|^外匯$/.test(line)) break;
+
+    const policyMatch = line.match(policyRe);
+    if (!policyMatch) {
+      i++;
+      continue;
+    }
+
+    // This line is the first row of a policy entry
+    // Peek at next line — if it starts with digits (繳費年期) or 年繳/月繳 pattern, merge it
+    const nextLine = lines[i + 1] ?? '';
+    const isSecondRow = /^\d+年\/|^月繳|^年繳|^半年繳|^季繳/.test(nextLine) || /^\d+,/.test(nextLine) || /^\d{4}\/\d{2}\/\d{2}$/.test(nextLine);
+    const combined = isSecondRow ? line + ' ' + nextLine : line;
+    if (isSecondRow) i++;
+
+    try {
+      const policyNo = policyMatch[0];
+
+      // Extract dates
+      const dateMatches = [...combined.matchAll(/\d{4}\/\d{2}\/\d{2}/g)];
+
+      // Extract currency
+      const currencyMatch = combined.match(currencyRe);
+      const currency = currencyMatch ? currencyMatch[1] : 'TWD';
+
+      // Extract all number tokens (comma-formatted amounts)
+      const numTokens = combined
+        .replace(policyRe, '')
+        .replace(/\d{4}\/\d{2}\/\d{2}/g, '')
+        .replace(currencyRe, '')
+        .split(/\s+/)
+        .filter((t) => /^\d[\d,]*$/.test(t));
+
+      // Extract payment period token like "20年/年繳"
+      const paymentPeriodMatch = combined.match(/\d+年\/[年月季半年]+繳/);
+      const paymentPeriod = paymentPeriodMatch ? paymentPeriodMatch[0] : '';
+
+      // Determine insurance type: investment type usually has "投資型" or lacks coverage/premium fields
+      const insuranceType: 'non-investment' | 'investment' =
+        combined.includes('投資型') ? 'investment' : 'non-investment';
+
+      // Find company name: after policy number, before product name
+      // Heuristic: extract Chinese text tokens after policyNo
+      const afterPolicyNo = combined.slice(combined.indexOf(policyNo) + policyNo.length).trim();
+      // Split into Chinese text chunks
+      const chineseChunks = afterPolicyNo.match(/[\u4e00-\u9fff\u3400-\u4dbf]+(?:[\u4e00-\u9fff\u3400-\u4dbf\w]*)?/g) ?? [];
+
+      const company = chineseChunks[0] ?? '';
+      const productName = chineseChunks.slice(1, 3).join('') ?? '';
+      const insuredPerson = chineseChunks[chineseChunks.length - 1] ?? '';
+
+      const record: ParsedInsuranceRecord = {
+        insuranceType,
+        policyNo,
+        company,
+        productName,
+        insuredPerson,
+        startDate: dateMatches[0] ? parseDateToIso(dateMatches[0][0]) : '',
+        endDate: dateMatches[1] ? parseDateToIso(dateMatches[1][0]) : '',
+        currency,
+        coverage: numTokens[0] ? parsePlainAmount(numTokens[0]) : 0,
+        nextPremium: numTokens[1] ? parsePlainAmount(numTokens[1]) : 0,
+        paymentPeriod,
+        accumulatedPremium: numTokens[2] ? parsePlainAmount(numTokens[2]) : 0,
+        nextPaymentDate: dateMatches[2] ? parseDateToIso(dateMatches[2][0]) : '',
+      };
+      records.push(record);
+    } catch {
+      // skip malformed entry
+    }
+
+    i++;
+  }
+
+  return records;
+}
+
+// ─────────────────────────────────────────────────────────────
 // Exports
 // ─────────────────────────────────────────────────────────────
 

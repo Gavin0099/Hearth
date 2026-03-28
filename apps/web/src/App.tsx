@@ -7,6 +7,8 @@ import { BankLedgerPanel } from "./components/BankLedgerPanel";
 import { CreditCardLedgerPanel } from "./components/CreditCardLedgerPanel";
 import { GmailSyncPanel } from "./components/GmailSyncPanel";
 import { ImportPanel } from "./components/ImportPanel";
+import { InsurancePanel } from "./components/InsurancePanel";
+import { LoanPanel } from "./components/LoanPanel";
 import { MonthlyReportPanel } from "./components/MonthlyReportPanel";
 import { PortfolioPanel } from "./components/PortfolioPanel";
 import { RecurringTemplatesPanel } from "./components/RecurringTemplatesPanel";
@@ -15,7 +17,7 @@ import { TransactionsPanel } from "./components/TransactionsPanel";
 import { getCurrentSession, signInWithGoogle, signOut } from "./lib/auth";
 import { getSupabaseBrowserClient } from "./lib/supabase";
 
-type AppView = "home" | "ledger" | "bank" | "settings";
+type AppView = "home" | "ledger" | "bank" | "loan" | "insurance" | "settings";
 
 const buildCommit = __APP_COMMIT__;
 const buildTime = __APP_BUILD_TIME__;
@@ -134,6 +136,20 @@ export function App() {
             銀行明細
           </button>
           <button
+            className={`app-nav-tab${currentView === "loan" ? " active" : ""}`}
+            onClick={() => setCurrentView("loan")}
+            type="button"
+          >
+            貸款
+          </button>
+          <button
+            className={`app-nav-tab${currentView === "insurance" ? " active" : ""}`}
+            onClick={() => setCurrentView("insurance")}
+            type="button"
+          >
+            保險
+          </button>
+          <button
             className={`app-nav-tab${currentView === "settings" ? " active" : ""}`}
             onClick={() => setCurrentView("settings")}
             type="button"
@@ -185,6 +201,18 @@ export function App() {
       {currentView === "bank" && (
         <section className="two-column">
           <BankLedgerPanel session={session} />
+        </section>
+      )}
+
+      {currentView === "loan" && (
+        <section className="two-column">
+          <LoanPanel session={session} />
+        </section>
+      )}
+
+      {currentView === "insurance" && (
+        <section className="two-column">
+          <InsurancePanel session={session} />
         </section>
       )}
 

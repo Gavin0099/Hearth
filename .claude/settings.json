@@ -11,7 +11,9 @@
       "Bash(git -C D:/Hearth diff packages/shared/src/pdf-credit-card.ts)",
       "Bash(git -C D:/Hearth show HEAD:packages/shared/src/pdf-credit-card.ts)",
       "Bash(npx tsc:*)",
-      "Bash(python -m json.tool)"
+      "Bash(python -m json.tool)",
+      "Bash(find d:/Hearth -name *.sql)",
+      "Read(//d//**)"
     ],
     "additionalDirectories": [
       "C:\\Users\\daish\\.claude"

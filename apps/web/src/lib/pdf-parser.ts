@@ -10,8 +10,12 @@ import {
   parseSinopacBankPdfTransactions,
   parseSinopacPdfTransactions,
   parseTaishinPdfTransactions,
+  parseSinopacLoanSection,
+  parseSinopacInsuranceSection,
   type ParsedPdfTransaction,
 } from "@hearth/shared";
+
+export { parseSinopacLoanSection, parseSinopacInsuranceSection };
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
