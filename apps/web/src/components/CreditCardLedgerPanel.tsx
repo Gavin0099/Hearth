@@ -73,10 +73,17 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
     });
   }, [session]);
 
+  const availableMonths = [...new Set(transactions.map((t) => t.date.slice(0, 7)))].sort().reverse();
+  const availableBanks = [...new Set(
+    transactions.map((t) => resolveTransactionLabel(t, accountNameMap.get(t.account_id)))
+  )].sort();
+
   const filtered = transactions.filter((transaction) => {
+    const accountName = accountNameMap.get(transaction.account_id);
+    if (filterMonth && !transaction.date.startsWith(filterMonth)) return false;
+    if (filterBank && resolveTransactionLabel(transaction, accountName) !== filterBank) return false;
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
-    const accountName = accountNameMap.get(transaction.account_id);
     return (
       (transaction.description ?? "").toLowerCase().includes(query) ||
       (transaction.category ?? "").toLowerCase().includes(query) ||
@@ -166,6 +173,36 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
               setVisibleCount(PAGE_SIZE);
             }}
           />
+        </label>
+        <label className="ledger-toolbar-field">
+          <span>月份</span>
+          <select
+            value={filterMonth}
+            onChange={(event) => {
+              setFilterMonth(event.target.value);
+              setVisibleCount(PAGE_SIZE);
+            }}
+          >
+            <option value="">全部</option>
+            {availableMonths.map((month) => (
+              <option key={month} value={month}>{month}</option>
+            ))}
+          </select>
+        </label>
+        <label className="ledger-toolbar-field">
+          <span>銀行</span>
+          <select
+            value={filterBank}
+            onChange={(event) => {
+              setFilterBank(event.target.value);
+              setVisibleCount(PAGE_SIZE);
+            }}
+          >
+            <option value="">全部</option>
+            {availableBanks.map((bank) => (
+              <option key={bank} value={bank}>{bank}</option>
+            ))}
+          </select>
         </label>
         {transactions.length > 0 && (
           <div className="ledger-toolbar-field" style={{ justifyContent: "flex-end" }}>
