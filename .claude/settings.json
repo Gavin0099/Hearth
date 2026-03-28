@@ -7,7 +7,9 @@
       "Skill(update-config)",
       "Skill(update-config:*)",
       "Bash(git revert:*)",
-      "Bash(git -C D:/Hearth log --oneline -5)"
+      "Bash(git -C D:/Hearth log --oneline -5)",
+      "Bash(git -C D:/Hearth diff packages/shared/src/pdf-credit-card.ts)",
+      "Bash(git -C D:/Hearth show HEAD:packages/shared/src/pdf-credit-card.ts)"
     ],
     "additionalDirectories": [
       "C:\\Users\\daish\\.claude"
