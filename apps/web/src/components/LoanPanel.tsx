@@ -58,11 +58,25 @@ export function LoanPanel({ session }: { session: Session | null }) {
       .catch((err: Error) => { setLoadError(err.message); setLoading(false); });
   }, [session]);
 
-  async function handleDelete(id: string) {
+  async function handleDeleteSnapshot(id: string) {
     setDeletingIds((prev) => new Set([...prev, id]));
     await deleteBankSnapshot(id);
     setSnapshots((prev) => prev.filter((s) => s.id !== id));
     setDeletingIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+  }
+
+  async function handleDeleteRecord(snap: LoanSnapshotItem, idx: number) {
+    const key = `${snap.id}-${idx}`;
+    setDeletingIds((prev) => new Set([...prev, key]));
+    const newData = (snap.data as ParsedLoanRecord[]).filter((_, i) => i !== idx);
+    if (newData.length === 0) {
+      await deleteBankSnapshot(snap.id);
+      setSnapshots((prev) => prev.filter((s) => s.id !== snap.id));
+    } else {
+      await saveBankSnapshot(snap.bank, "loan", snap.statement_date, newData);
+      setSnapshots((prev) => prev.map((s) => s.id === snap.id ? { ...s, data: newData } : s));
+    }
+    setDeletingIds((prev) => { const next = new Set(prev); next.delete(key); return next; });
   }
 
   async function handleAdd() {
@@ -188,19 +202,8 @@ export function LoanPanel({ session }: { session: Session | null }) {
             const records = Array.isArray(snap.data) ? snap.data : [];
             return (
               <div key={snap.id} style={{ marginBottom: "16px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
-                  <span style={{ fontSize: "0.85rem", color: "var(--text-muted, #888)" }}>
-                    {formatDate(snap.statement_date)} 對帳單
-                  </span>
-                  <button
-                    className="ledger-delete-btn"
-                    disabled={deletingIds.has(snap.id)}
-                    onClick={() => void handleDelete(snap.id)}
-                    type="button"
-                    aria-label="刪除此期對帳單"
-                  >
-                    ×
-                  </button>
+                <div style={{ fontSize: "0.85rem", color: "var(--text-muted, #888)", marginBottom: "8px" }}>
+                  {formatDate(snap.statement_date)} 對帳單
                 </div>
                 <div className="ledger-table-wrapper">
                   <table className="ledger-table">
@@ -213,6 +216,7 @@ export function LoanPanel({ session }: { session: Session | null }) {
                         <th className="ledger-th-amount">繳息金額</th>
                         <th className="ledger-th-amount">違約金</th>
                         <th className="ledger-th-amount">本金餘額</th>
+                        <th></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -225,6 +229,15 @@ export function LoanPanel({ session }: { session: Session | null }) {
                           <td className="ledger-amount negative">{formatAmount(rec.interest)}</td>
                           <td className="ledger-amount">{formatAmount(rec.penalty)}</td>
                           <td className="ledger-amount positive">{formatAmount(rec.remainingBalance)}</td>
+                          <td>
+                            <button
+                              className="ledger-delete-btn"
+                              disabled={deletingIds.has(`${snap.id}-${idx}`)}
+                              onClick={() => void handleDeleteRecord(snap, idx)}
+                              type="button"
+                              aria-label="刪除"
+                            >×</button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

@@ -80,11 +80,25 @@ export function InsurancePanel({ session }: { session: Session | null }) {
       .catch((err: Error) => { setLoadError(err.message); setLoading(false); });
   }, [session]);
 
-  async function handleDelete(id: string) {
+  async function handleDeleteSnapshot(id: string) {
     setDeletingIds((prev) => new Set([...prev, id]));
     await deleteBankSnapshot(id);
     setSnapshots((prev) => prev.filter((s) => s.id !== id));
     setDeletingIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+  }
+
+  async function handleDeleteRecord(snap: InsuranceSnapshotItem, idx: number) {
+    const key = `${snap.id}-${idx}`;
+    setDeletingIds((prev) => new Set([...prev, key]));
+    const newData = (snap.data as ParsedInsuranceRecord[]).filter((_, i) => i !== idx);
+    if (newData.length === 0) {
+      await deleteBankSnapshot(snap.id);
+      setSnapshots((prev) => prev.filter((s) => s.id !== snap.id));
+    } else {
+      await saveBankSnapshot(snap.bank, "insurance", snap.statement_date, newData);
+      setSnapshots((prev) => prev.map((s) => s.id === snap.id ? { ...s, data: newData } : s));
+    }
+    setDeletingIds((prev) => { const next = new Set(prev); next.delete(key); return next; });
   }
 
   async function handleAdd() {
@@ -250,19 +264,8 @@ export function InsurancePanel({ session }: { session: Session | null }) {
             const records = Array.isArray(snap.data) ? snap.data : [];
             return (
               <div key={snap.id} style={{ marginBottom: "20px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "10px" }}>
-                  <span style={{ fontSize: "0.85rem", color: "var(--text-muted, #888)" }}>
-                    {formatDate(snap.statement_date)} 對帳單
-                  </span>
-                  <button
-                    className="ledger-delete-btn"
-                    disabled={deletingIds.has(snap.id)}
-                    onClick={() => void handleDelete(snap.id)}
-                    type="button"
-                    aria-label="刪除此期對帳單"
-                  >
-                    ×
-                  </button>
+                <div style={{ fontSize: "0.85rem", color: "var(--text-muted, #888)", marginBottom: "10px" }}>
+                  {formatDate(snap.statement_date)} 對帳單
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                   {records.map((rec, idx) => (
@@ -272,6 +275,14 @@ export function InsurancePanel({ session }: { session: Session | null }) {
                         <span style={{ fontSize: "0.8rem", color: "var(--text-muted, #888)" }}>
                           {rec.insuranceType === "investment" ? "投資型" : "非投資型"}
                         </span>
+                        <button
+                          className="ledger-delete-btn"
+                          disabled={deletingIds.has(`${snap.id}-${idx}`)}
+                          onClick={() => void handleDeleteRecord(snap, idx)}
+                          type="button"
+                          aria-label="刪除此保單"
+                          style={{ marginLeft: "auto" }}
+                        >×</button>
                       </div>
                       <div className="insurance-card-body">
                         <div className="insurance-row">
