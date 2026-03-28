@@ -333,7 +333,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       const result = await importTransactionsCsv(
         accountId,
         csvFile,
-        isBankStatement ? `gmail_bank_${email.bank}` : `gmail_pdf_${email.bank}`,
+        (isBankStatement ? `gmail_bank_${email.bank}` : `gmail_pdf_${email.bank}`) as Parameters<typeof importTransactionsCsv>[2],
       );
 
       if (result.status === "error") {

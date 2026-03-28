@@ -8,7 +8,9 @@ type TransactionsCsvSource =
   | "gmail_pdf_cathay"
   | "gmail_pdf_taishin"
   | "gmail_pdf_ctbc"
-  | "gmail_pdf_mega";
+  | "gmail_pdf_mega"
+  | "gmail_bank_sinopac"
+  | "gmail_bank_esun";
 
 export async function importTransactionsCsv(
   accountId: string,
