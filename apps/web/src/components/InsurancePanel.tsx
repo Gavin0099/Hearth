@@ -296,8 +296,18 @@ export function InsurancePanel({ session }: { session: Session | null }) {
             const records = Array.isArray(snap.data) ? snap.data : [];
             return (
               <div key={snap.id} style={{ marginBottom: "20px" }}>
-                <div style={{ fontSize: "0.85rem", color: "var(--text-muted, #888)", marginBottom: "10px" }}>
-                  {formatDate(snap.statement_date)} 對帳單
+                <div className="snapshot-header">
+                  <div style={{ fontSize: "0.85rem", color: "var(--text-muted, #888)" }}>
+                    {formatDate(snap.statement_date)} 對帳單
+                  </div>
+                  <button
+                    className="snapshot-delete-button"
+                    disabled={deletingIds.has(snap.id)}
+                    onClick={() => void handleDeleteSnapshot(snap.id)}
+                    type="button"
+                  >
+                    刪除此月
+                  </button>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                   {records.map((rec, idx) => (
@@ -308,7 +318,7 @@ export function InsurancePanel({ session }: { session: Session | null }) {
                           {rec.insuranceType === "investment" ? "投資型" : "非投資型"}
                         </span>
                         <button
-                          className="ledger-delete-btn"
+                          className="ledger-delete-btn always-visible"
                           disabled={deletingIds.has(`${snap.id}-${idx}`)}
                           onClick={() => void handleDeleteRecord(snap, idx)}
                           type="button"

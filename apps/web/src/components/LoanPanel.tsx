@@ -226,8 +226,18 @@ export function LoanPanel({ session }: { session: Session | null }) {
             const records = Array.isArray(snap.data) ? snap.data : [];
             return (
               <div key={snap.id} style={{ marginBottom: "16px" }}>
-                <div style={{ fontSize: "0.85rem", color: "var(--text-muted, #888)", marginBottom: "8px" }}>
-                  {formatDate(snap.statement_date)} 對帳單
+                <div className="snapshot-header">
+                  <div style={{ fontSize: "0.85rem", color: "var(--text-muted, #888)" }}>
+                    {formatDate(snap.statement_date)} 對帳單
+                  </div>
+                  <button
+                    className="snapshot-delete-button"
+                    disabled={deletingIds.has(snap.id)}
+                    onClick={() => void handleDeleteSnapshot(snap.id)}
+                    type="button"
+                  >
+                    刪除此月
+                  </button>
                 </div>
                 <div className="ledger-table-wrapper">
                   <table className="ledger-table">
@@ -255,7 +265,7 @@ export function LoanPanel({ session }: { session: Session | null }) {
                           <td className="ledger-amount positive">{formatAmount(rec.remainingBalance)}</td>
                           <td>
                             <button
-                              className="ledger-delete-btn"
+                              className="ledger-delete-btn always-visible"
                               disabled={deletingIds.has(`${snap.id}-${idx}`)}
                               onClick={() => void handleDeleteRecord(snap, idx)}
                               type="button"
