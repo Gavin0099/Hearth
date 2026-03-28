@@ -1027,23 +1027,33 @@ function parseMegaPdfText(text: string) {
 // ─────────────────────────────────────────────────────────────
 
 function collapseInterCharSpaces(text: string): string {
-  // Some PDFs (e.g. 玉山綜合對帳單) emit each character with surrounding spaces.
-  // Collapse runs of "single-non-space-char SPACE single-non-space-char" sequences
-  // so that e.g. "綜 合 對 帳 單" → "綜合對帳單" and "0 2 / 0 1" → "02/01".
-  // We repeat until stable because each pass only merges adjacent pairs.
-  let prev = "";
-  let cur = text;
-  // Limit iterations to avoid infinite loops
-  for (let i = 0; i < 20 && cur !== prev; i++) {
-    prev = cur;
-    // Merge: (non-space char)(space)(non-space char) when both are single chars
-    // We match a single char, a space, then a single char — but only if the
-    // surrounding characters are also spaces or line boundaries (word boundary context).
-    // Strategy: if a "word" (sequence of non-space chars) has length 1, and its
-    // neighbour word also has length 1, merge them.
-    cur = cur.replace(/(?<=(^| ))(\S) (\S)(?=( |$))/gm, "$2$3");
-  }
-  return cur;
+  // Some PDFs (e.g. 玉山綜合對帳單) emit each character with surrounding spaces,
+  // so "綜合對帳單" becomes "綜 合 對 帳 單" and "02/01" becomes "0 2 / 0 1".
+  // Strategy: for each line, if ≥60% of space-separated tokens are single chars,
+  // treat the line as "spaced" and merge consecutive single-char tokens together.
+  return text
+    .split("\n")
+    .map((line) => {
+      const tokens = line.split(" ").filter(Boolean);
+      if (tokens.length < 4) return line;
+      const singleCharCount = tokens.filter((t) => t.length === 1).length;
+      if (singleCharCount / tokens.length < 0.6) return line;
+
+      // Merge consecutive single-char tokens; multi-char tokens act as natural separators
+      const merged: string[] = [];
+      let current = "";
+      for (const token of tokens) {
+        if (token.length === 1) {
+          current += token;
+        } else {
+          if (current) { merged.push(current); current = ""; }
+          merged.push(token);
+        }
+      }
+      if (current) merged.push(current);
+      return merged.join(" ");
+    })
+    .join("\n");
 }
 
 function parseSinopacBankPdfText(text: string): ParsedPdfTransaction[] {
