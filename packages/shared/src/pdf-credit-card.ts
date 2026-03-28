@@ -3,6 +3,8 @@ export type ParsedPdfTransaction = {
   description: string;
   amount: number;
   currency: string;
+  /** 子帳號末碼，用於多子帳戶對帳單（如永豐綜合對帳單） */
+  subAccount?: string;
 };
 
 const supportedCurrencies = ["TWD", "NTD", "USD", "JPY"] as const;
