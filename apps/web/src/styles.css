@@ -320,6 +320,26 @@ body {
   overflow-x: auto;
 }
 
+.ledger-account-section {
+  margin-top: 20px;
+}
+
+.ledger-account-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.ledger-account-summary {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--text-muted, #888);
+}
+
 .ledger-table {
   width: 100%;
   border-collapse: collapse;
