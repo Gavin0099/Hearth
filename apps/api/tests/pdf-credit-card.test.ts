@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   parseCtbcPdfTransactions,
   parseEsunPdfTransactions,
+  parseMegaPdfTransactions,
   parseSinopacPdfTransactions,
   parseTaishinPdfTransactions,
 } from "@hearth/shared";
@@ -310,6 +311,58 @@ test("parseCtbcPdfTransactions falls back to full-text scan when rows are not se
       date: "2026-01-09",
       description: "統一-超商-央和",
       amount: -297,
+      currency: "TWD",
+    },
+  ]);
+});
+
+test("parseMegaPdfTransactions handles full ROC year dates with fullwidth description on same line", () => {
+  const text = `
+115/03/12 $180,000 $18,000／$72,000
+台 幣 495.00 - 495.00 + 0.00 + 495.00 = 495.00 495.00 115/03/27
+115/03/04已繳款金額-全國繳稅費平台 -495.00
+5241-70XX-XXXX-8677 本期交易明細
+115/03/10 115/03/12 Ｇｏｇｏｒｏ Ｎｅｔｗｏｒｋ TAOYUAN TWD 499.00 499.00
+115/03/12 Gogoro電池資費回饋 TWD -4.00 -4.00
+`;
+
+  assert.deepEqual(parseMegaPdfTransactions(text), [
+    {
+      date: "2026-03-10",
+      description: "Ｇｏｇｏｒｏ Ｎｅｔｗｏｒｋ TAOYUAN",
+      amount: -499,
+      currency: "TWD",
+    },
+    {
+      date: "2026-03-12",
+      description: "Gogoro電池資費回饋",
+      amount: 4,
+      currency: "TWD",
+    },
+  ]);
+});
+
+test("parseMegaPdfTransactions handles description on adjacent line (date+amount row without description)", () => {
+  // In some Mega PDFs the description occupies a different y-bucket than the date/amount row
+  const text = `
+5241-70XX-XXXX-8677 本期交易明細
+Ｇｏｇｏｒｏ Ｎｅｔｗｏｒｋ TAOYUAN
+115/03/10 115/03/12 TWD 499.00 499.00
+Gogoro電池資費回饋
+115/03/12 TWD -4.00 -4.00
+`;
+
+  assert.deepEqual(parseMegaPdfTransactions(text), [
+    {
+      date: "2026-03-10",
+      description: "Ｇｏｇｏｒｏ Ｎｅｔｗｏｒｋ TAOYUAN",
+      amount: -499,
+      currency: "TWD",
+    },
+    {
+      date: "2026-03-12",
+      description: "Gogoro電池資費回饋",
+      amount: 4,
       currency: "TWD",
     },
   ]);

@@ -881,15 +881,109 @@ function parseMegaLine(line: string, statementYear?: number) {
   return buildTransaction(statementYear, match.groups.consume, description, detail.amountToken);
 }
 
+function isMegaDescriptionCandidate(line: string) {
+  const t = line.trim();
+  if (!t) return false;
+  if (startsWithDateToken(t)) return false;
+  if (/^\d[\d,./+-]*$/.test(t)) return false;
+  if (/^(?:TWD|NTD|USD|JPY|EUR|GBP|AUD|CAD|HKD|SGD|CNY)$/.test(t)) return false;
+  if (isIgnoredDescription(t, megaIgnoredMarkers)) return false;
+  return true;
+}
+
 function parseMegaPdfText(text: string) {
   const normalizedText = normalizeWhitespace(text);
   const statementYear = inferStatementYear(normalizedText);
   const transactions: ParsedPdfTransaction[] = [];
+  const lines = normalizedText.split("\n");
+  const datePattern = String.raw`(?:\d{3}\/\d{2}\/\d{2}|\d{2}\/\d{2})`;
 
-  normalizedText.split("\n").forEach((line) => {
-    const parsed = parseMegaLine(line.trim(), statementYear);
-    if (parsed) transactions.push(parsed);
-  });
+  // Regex for date-only rows (no parseable description in the rest field)
+  const noDescRegex = new RegExp(
+    String.raw`^(?<consume>${datePattern})\s+(?<posted>${datePattern})\s+(?:(?<card>\d{4})\s+)?(?<rest>(?:(?:TWD|NTD|USD|JPY|EUR|GBP|AUD|CAD|HKD|SGD|CNY)\s+)?-?\d[\d,]*(?:\.\d+)?(?:\s+-?\d[\d,]*(?:\.\d+)?)*)$`,
+    "u",
+  );
+
+  // Regex for single-date rows (refund / fee lines with one date)
+  const singleDateRegex = new RegExp(
+    String.raw`^(?<posted>${datePattern})\s+(?<rest>.+)$`,
+    "u",
+  );
+
+  for (let idx = 0; idx < lines.length; idx++) {
+    const line = lines[idx].trim();
+
+    // Standard two-date line with description included
+    const parsed = parseMegaLine(line, statementYear);
+    if (parsed) {
+      transactions.push(parsed);
+      continue;
+    }
+
+    // Two-date line where description is on an adjacent line
+    const noDescMatch = line.match(noDescRegex);
+    if (noDescMatch?.groups) {
+      let description = "";
+      for (let d = idx - 1; d >= Math.max(0, idx - 3) && !description; d--) {
+        if (isMegaDescriptionCandidate(lines[d])) description = lines[d].trim();
+      }
+      if (!description) {
+        for (let d = idx + 1; d <= Math.min(lines.length - 1, idx + 3) && !description; d++) {
+          if (isMegaDescriptionCandidate(lines[d])) description = lines[d].trim();
+        }
+      }
+      if (description) {
+        // Extract the last numeric token from rest as the TWD amount
+        const restTokens = noDescMatch.groups.rest.trim().split(/\s+/).filter(Boolean);
+        const amountToken = restTokens[restTokens.length - 1];
+        if (amountToken) {
+          const tx = buildTransaction(statementYear, noDescMatch.groups.consume, description, amountToken);
+          if (tx) {
+            transactions.push(tx);
+            continue;
+          }
+        }
+      }
+    }
+
+    // Single-date line (e.g. refund rows with only a posted date)
+    const sdMatch = line.match(singleDateRegex);
+    if (sdMatch?.groups && !startsWithDateToken(sdMatch.groups.rest)) {
+      const detail = extractMegaDetail(sdMatch.groups.rest);
+      if (detail) {
+        // Rest contains an embedded description
+        const description = detail.description.trim();
+        if (
+          description &&
+          !isIgnoredDescription(description, megaIgnoredMarkers) &&
+          !startsWithDateToken(description) &&
+          !containsAdjacentDateTokens(description)
+        ) {
+          const tx = buildTransaction(statementYear, sdMatch.groups.posted, description, detail.amountToken);
+          if (tx) transactions.push(tx);
+        }
+      } else {
+        // No description in rest — look at adjacent lines
+        const restTokens = sdMatch.groups.rest.trim().split(/\s+/).filter(Boolean);
+        const amountToken = restTokens[restTokens.length - 1];
+        if (amountToken && /^-?\d[\d,]*(?:\.\d+)?$/.test(amountToken)) {
+          let description = "";
+          for (let d = idx - 1; d >= Math.max(0, idx - 3) && !description; d--) {
+            if (isMegaDescriptionCandidate(lines[d])) description = lines[d].trim();
+          }
+          if (!description) {
+            for (let d = idx + 1; d <= Math.min(lines.length - 1, idx + 3) && !description; d++) {
+              if (isMegaDescriptionCandidate(lines[d])) description = lines[d].trim();
+            }
+          }
+          if (description) {
+            const tx = buildTransaction(statementYear, sdMatch.groups.posted, description, amountToken);
+            if (tx) transactions.push(tx);
+          }
+        }
+      }
+    }
+  }
 
   return transactions;
 }
