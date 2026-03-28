@@ -4,7 +4,6 @@ import type { AccountRecord, TransactionRecord } from "@hearth/shared";
 import { transactionCategories } from "@hearth/shared";
 import { fetchAccounts } from "../lib/accounts";
 import {
-  clearTransactions,
   deleteTransaction,
   fetchTransactions,
   updateTransaction,
@@ -12,6 +11,8 @@ import {
 
 const CATEGORY_LABELS = transactionCategories.map((c) => c.label);
 const PAGE_SIZE = 50;
+
+const BANK_SOURCES = ["gmail_bank_sinopac", "gmail_bank_esun"] as const;
 
 const BANK_SOURCE_LABELS: Record<string, string> = {
   gmail_bank_sinopac: "永豐",
@@ -43,7 +44,7 @@ export function BankLedgerPanel({ session }: { session: Session | null }) {
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [clearing, setClearing] = useState(false);
 
-  const bankAccounts = accounts.filter((account) => account.type === "cash_bank");
+  const bankAccounts = accounts;
   const accountNameMap = new Map(bankAccounts.map((account) => [account.id, account.name]));
 
   useEffect(() => {
@@ -59,25 +60,20 @@ export function BankLedgerPanel({ session }: { session: Session | null }) {
     setLoading(true);
     setLoadError(null);
     setVisibleCount(PAGE_SIZE);
-    // Fetch transactions for all cash_bank accounts
-    void Promise.all(
-      bankAccounts.map((account) => fetchTransactions({ account_id: account.id })),
-    ).then((results) => {
+    // Fetch all transactions, then filter by bank statement sources client-side
+    void fetchTransactions().then((result) => {
       setLoading(false);
-      const all: TransactionRecord[] = [];
-      for (const result of results) {
-        if (result.status === "error") {
-          setLoadError(result.error);
-          return;
-        }
-        all.push(...result.items);
+      if (result.status === "error") {
+        setLoadError(result.error);
+        return;
       }
-      // Sort by date descending
-      all.sort((a, b) => b.date.localeCompare(a.date));
-      setTransactions(all);
+      const bankTxs = result.items.filter(
+        (t) => t.source && (BANK_SOURCES as readonly string[]).includes(t.source),
+      );
+      bankTxs.sort((a, b) => b.date.localeCompare(a.date));
+      setTransactions(bankTxs);
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, accounts.map((a) => a.id).join(",")]);
+  }, [session]);
 
   const availableMonths = [...new Set(transactions.map((t) => t.date.slice(0, 7)))].sort().reverse();
   const availableAccounts = [...new Set(
@@ -156,15 +152,15 @@ export function BankLedgerPanel({ session }: { session: Session | null }) {
   }
 
   async function handleClearAll() {
-    if (bankAccounts.length === 0 || transactions.length === 0) return;
+    if (transactions.length === 0) return;
 
-    if (!window.confirm(`確定要清空全部銀行帳戶交易嗎？目前共有 ${transactions.length} 筆，這個動作無法復原。`)) {
+    if (!window.confirm(`確定要清空全部銀行帳單交易嗎？目前共有 ${transactions.length} 筆，這個動作無法復原。`)) {
       return;
     }
 
     setClearing(true);
-    for (const account of bankAccounts) {
-      await clearTransactions(account.id);
+    for (const tx of transactions) {
+      await deleteTransaction(tx.id);
     }
     setTransactions([]);
     setClearing(false);

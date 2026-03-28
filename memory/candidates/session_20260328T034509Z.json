@@ -1,0 +1,9 @@
+{
+  "captured_at": "2026-03-28T03:45:09.110377+00:00",
+  "task": "Capture final output",
+  "summary": "Candidate memory from Gemini output",
+  "risk": "medium",
+  "oversight": "review-required",
+  "source_text": "[Governance Contract]\nLANG = C++\nLEVEL = L2\nSCOPE = feature\nPLAN = Runtime governance / smoke test\nLOADED = SYSTEM_PROMPT, HUMAN-OVERSIGHT\nCONTEXT = runtime-layer -> smoke validation; NOT: platform rewrite\nPRESSURE = SAFE (20/200)\nRULES = common,python\nRISK = medium\nOVERSIGHT = review-required\nMEMORY_MODE = candidate\n",
+  "status": "candidate"
+}
