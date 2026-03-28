@@ -1019,11 +1019,118 @@ function parseMegaPdfText(text: string) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// 永豐 銀行帳戶 綜合對帳單
+// Row shape (after PDF text extraction):
+//   YYYY/MM/DD  摘要  [支出 or 存入 amount]  balance  [備註/資金用途]
+// Sign is determined by balance delta: balance[i] - balance[i-1].
+// Multiple currency sections (新臺幣 / 美元) are detected from headers.
+// ─────────────────────────────────────────────────────────────
+
+function parseSinopacBankPdfText(text: string): ParsedPdfTransaction[] {
+  const normalizedText = normalizeWhitespace(text);
+  const lines = normalizedText.split("\n");
+
+  let currency = "TWD";
+
+  interface BankRow {
+    date: string;
+    description: string;
+    amount: number;
+    balance: number;
+    currency: string;
+  }
+
+  const rawRows: BankRow[] = [];
+  let openingBalance: number | null = null;
+
+  // Regex to detect comma-formatted amounts (not raw reference IDs)
+  const amountRe = /^\d{1,3}(?:,\d{3})*(?:\.\d{1,4})?$/;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Currency section detection from account header lines
+    if (trimmed.includes("美元") || /\bUSD\b/.test(trimmed)) {
+      currency = "USD";
+    } else if (trimmed.includes("新臺幣") || /\bTWD\b/.test(trimmed)) {
+      currency = "TWD";
+    }
+
+    // Opening balance line (期初餘額 / 前期結餘)
+    if (openingBalance === null && /期初餘額|前期結餘|上期結餘/.test(trimmed)) {
+      const ob = trimmed.match(/(\d{1,3}(?:,\d{3})*(?:\.\d{1,4})?)(?:\s|$)/);
+      if (ob) {
+        openingBalance = Number(ob[1].replace(/,/g, ""));
+      }
+    }
+
+    // Transaction row: starts with YYYY/MM/DD
+    const rowMatch = trimmed.match(/^(?<date>\d{4}\/\d{2}\/\d{2})\s+(?<rest>.+)$/u);
+    if (!rowMatch?.groups) continue;
+
+    const tokens = rowMatch.groups.rest.split(/\s+/).filter(Boolean);
+
+    // Collect comma-formatted amount-like tokens with their positions
+    const amountTokens = tokens
+      .map((t, i) => ({ i, v: amountRe.test(t) ? Number(t.replace(/,/g, "")) : null }))
+      .filter((x): x is { i: number; v: number } => x.v !== null && x.v > 0);
+
+    // Need at least 2 amount-like tokens: [transaction_amount, balance]
+    if (amountTokens.length < 2) continue;
+
+    const balance = amountTokens[amountTokens.length - 1].v;
+    const amount = amountTokens[amountTokens.length - 2].v;
+    const firstAmountIdx = amountTokens[amountTokens.length - 2].i;
+
+    // Description = tokens before the transaction amount
+    const descTokens = tokens.slice(0, firstAmountIdx).filter((t) => !/^\d+$/.test(t));
+    // Remarks = tokens after balance (filter out pure digit reference numbers)
+    const balanceIdx = amountTokens[amountTokens.length - 1].i;
+    const remarkTokens = tokens.slice(balanceIdx + 1).filter((t) => !/^\d{6,}$/.test(t));
+
+    const description = [...descTokens, ...remarkTokens].join(" ").trim();
+    if (!description) continue;
+
+    rawRows.push({
+      date: rowMatch.groups.date.replace(/\//g, "-"),
+      description,
+      amount,
+      balance,
+      currency,
+    });
+  }
+
+  // Determine sign from balance delta
+  const transactions: ParsedPdfTransaction[] = [];
+  for (let i = 0; i < rawRows.length; i++) {
+    const row = rawRows[i];
+    const prevBalance = i === 0
+      ? (openingBalance ?? row.balance - row.amount)
+      : rawRows[i - 1].balance;
+    const delta = row.balance - prevBalance;
+    const signedAmount = delta >= 0 ? row.amount : -row.amount;
+
+    transactions.push({
+      date: row.date,
+      description: row.description,
+      amount: signedAmount,
+      currency: row.currency,
+    });
+  }
+
+  return transactions;
+}
+
+// ─────────────────────────────────────────────────────────────
 // Exports
 // ─────────────────────────────────────────────────────────────
 
 export function parseSinopacPdfTransactions(text: string) {
   return parseSinopacPdfText(text);
+}
+
+export function parseSinopacBankPdfTransactions(text: string) {
+  return parseSinopacBankPdfText(text);
 }
 
 export function parseEsunPdfTransactions(text: string) {

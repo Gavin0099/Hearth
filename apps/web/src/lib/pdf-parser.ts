@@ -7,6 +7,7 @@ import {
   parseCtbcPdfTransactions,
   parseEsunPdfTransactions,
   parseMegaPdfTransactions,
+  parseSinopacBankPdfTransactions,
   parseSinopacPdfTransactions,
   parseTaishinPdfTransactions,
   type ParsedPdfTransaction,
@@ -469,4 +470,8 @@ export function parseCtbcPdfText(text: string): ParsedTransaction[] {
 
 export function parseMegaPdfText(text: string): ParsedTransaction[] {
   return parseMegaPdfTransactions(text);
+}
+
+export function parseSinopacBankPdfText(text: string): ParsedTransaction[] {
+  return parseSinopacBankPdfTransactions(text);
 }

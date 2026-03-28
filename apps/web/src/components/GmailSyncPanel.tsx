@@ -16,6 +16,7 @@ import {
   type PdfTextExtractionSource,
   parseEsunPdfText,
   parseMegaPdfText,
+  parseSinopacBankPdfText,
   parseSinopacPdfText,
   parseTaishinPdfText,
   type ParsedTransaction,
@@ -62,19 +63,19 @@ const BANK_PARSERS: Record<BankKey, (text: string) => ParsedTransaction[]> = {
   mega: parseMegaPdfText,
 };
 
-function resolveImportAccountId(bank: BankKey, accounts: AccountRecord[]) {
-  const creditAccounts = accounts.filter((account) => account.type === "cash_credit");
-  if (creditAccounts.length === 0) {
+function resolveImportAccountId(bank: BankKey, accounts: AccountRecord[], accountType: "cash_credit" | "cash_bank") {
+  const filtered = accounts.filter((account) => account.type === accountType);
+  if (filtered.length === 0) {
     return "";
   }
 
-  const matched = creditAccounts.find((account) =>
+  const matched = filtered.find((account) =>
     BANK_NAME_KEYWORDS[bank].some((keyword) =>
       account.name.toLowerCase().includes(keyword.toLowerCase()),
     ),
   );
 
-  return matched?.id ?? creditAccounts[0]?.id ?? "";
+  return matched?.id ?? filtered[0]?.id ?? "";
 }
 
 function extractPreviewLines(text: string) {
@@ -235,11 +236,15 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       return;
     }
 
-    const accountId = resolveImportAccountId(email.bank, accounts);
+    const isBankStatement = email.subject.includes("綜合對帳單") || email.subject.includes("存款對帳單");
+    const accountType = isBankStatement ? "cash_bank" : "cash_credit";
+    const accountId = resolveImportAccountId(email.bank, accounts, accountType);
     if (!accountId) {
       setState({
         status: "error",
-        message: "找不到可用的信用卡帳戶。請先建立至少一個 `信用卡` 類型帳戶。",
+        message: isBankStatement
+          ? "找不到可用的銀行帳戶。請先建立對應的 `銀行/現金` 類型帳戶。"
+          : "找不到可用的信用卡帳戶。請先建立至少一個 `信用卡` 類型帳戶。",
       });
       return;
     }
@@ -298,7 +303,9 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         return;
       }
 
-      const parsed = BANK_PARSERS[email.bank](text);
+      const parsed = isBankStatement && email.bank === "sinopac"
+        ? parseSinopacBankPdfText(text)
+        : BANK_PARSERS[email.bank](text);
 
       if (parsed.length === 0) {
         setState({
@@ -326,7 +333,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       const result = await importTransactionsCsv(
         accountId,
         csvFile,
-        `gmail_pdf_${email.bank}`,
+        isBankStatement ? `gmail_bank_${email.bank}` : `gmail_pdf_${email.bank}`,
       );
 
       if (result.status === "error") {
