@@ -33,6 +33,8 @@ type SyncState =
   | { status: "error"; message: string }
   | { status: "done"; message: string };
 
+const GMAIL_ENABLED_BANKS = ["sinopac", "esun"] as const satisfies BankKey[];
+
 const BANK_DISPLAY_NAMES: Record<BankKey, string> = {
   sinopac: "永豐",
   esun: "玉山",
@@ -183,7 +185,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
     }
 
     const results = await Promise.all(
-      (Object.keys(BANK_DISPLAY_NAMES) as BankKey[]).map(async (bank) => {
+      GMAIL_ENABLED_BANKS.map(async (bank) => {
         try {
           return {
             bank,
@@ -350,7 +352,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
   return (
     <article className="panel">
       <h2>Gmail 帳單同步</h2>
-      <p>自動抓取永豐、玉山、國泰、台新、中信、兆豐信用卡帳單，匯入後以銀行標籤區分，不需要逐封指定帳戶。</p>
+      <p>自動抓取永豐、玉山信用卡帳單，匯入後以銀行標籤區分，不需要逐封指定帳戶。</p>
 
       <button
         className="action-button"
