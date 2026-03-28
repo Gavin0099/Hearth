@@ -63,19 +63,29 @@ const BANK_PARSERS: Record<BankKey, (text: string) => ParsedTransaction[]> = {
   mega: parseMegaPdfText,
 };
 
-function resolveImportAccountId(bank: BankKey, accounts: AccountRecord[], accountType: "cash_credit" | "cash_bank") {
-  const filtered = accounts.filter((account) => account.type === accountType);
-  if (filtered.length === 0) {
-    return "";
-  }
+function resolveImportAccountId(bank: BankKey, accounts: AccountRecord[], currency?: string) {
+  const keywords = BANK_NAME_KEYWORDS[bank];
 
-  const matched = filtered.find((account) =>
-    BANK_NAME_KEYWORDS[bank].some((keyword) =>
-      account.name.toLowerCase().includes(keyword.toLowerCase()),
-    ),
+  // Match by bank name keywords; if currency given, prefer accounts whose name also contains currency hint
+  const bankMatches = accounts.filter((account) =>
+    keywords.some((kw) => account.name.toLowerCase().includes(kw.toLowerCase())),
   );
 
-  return matched?.id ?? filtered[0]?.id ?? "";
+  if (currency && currency !== "TWD") {
+    const currencyHints: Record<string, string[]> = {
+      USD: ["美元", "美金", "usd"],
+      JPY: ["日幣", "日圓", "jpy"],
+      EUR: ["歐元", "eur"],
+    };
+    const hints = currencyHints[currency] ?? [currency.toLowerCase()];
+    const currencyMatch = bankMatches.find((account) =>
+      hints.some((h) => account.name.toLowerCase().includes(h)),
+    );
+    if (currencyMatch) return currencyMatch.id;
+  }
+
+  // Fall back: first bank-name match (any type), then any account
+  return bankMatches[0]?.id ?? accounts[0]?.id ?? "";
 }
 
 function extractPreviewLines(text: string) {
@@ -233,9 +243,8 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       email.attachments.some(
         (a) => a.filename.includes("綜合對帳單") || a.filename.toLowerCase().includes("statement"),
       );
-    const accountType = isBankStatement ? "cash_bank" : "cash_credit";
 
-    // Always fetch accounts fresh so we don't rely on potentially stale state
+    // Always fetch accounts fresh
     const accountsResult = await fetchAccounts();
     if (accountsResult.status === "error") {
       setState({ status: "error", message: accountsResult.error });
@@ -243,24 +252,6 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
     }
     const freshAccounts = accountsResult.items;
     setAccounts(freshAccounts);
-
-    let accountId = resolveImportAccountId(email.bank, freshAccounts, accountType);
-    let accountTypeFallback = false;
-
-    // If bank statement but no cash_bank account, fall back to any matching account
-    if (!accountId && isBankStatement) {
-      accountId = resolveImportAccountId(email.bank, freshAccounts, "cash_credit") ||
-        (freshAccounts[0]?.id ?? "");
-      accountTypeFallback = Boolean(accountId);
-    }
-
-    if (!accountId) {
-      setState({
-        status: "error",
-        message: `找不到可用帳戶。目前帳戶：${freshAccounts.map((a) => `${a.name}(${a.type})`).join("、") || "無"}。`,
-      });
-      return;
-    }
 
     setState({ status: "loading", message: `下載 ${email.subject} 中...` });
 
