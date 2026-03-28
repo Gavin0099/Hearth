@@ -1065,6 +1065,7 @@ function parseSinopacBankPdfText(text: string): ParsedPdfTransaction[] {
   const lines = normalizedText.split("\n");
 
   let currency = "TWD";
+  let subAccount = ""; // 目前所在的子帳號末碼，例如 "27100"
 
   interface BankRow {
     date: string;
@@ -1072,29 +1073,49 @@ function parseSinopacBankPdfText(text: string): ParsedPdfTransaction[] {
     amount: number;
     balance: number;
     currency: string;
+    subAccount: string;
   }
 
-  const rawRows: BankRow[] = [];
-  let openingBalance: number | null = null;
+  // 每個子帳號各自的 rawRows，key = "${currency}-${subAccount}"
+  const sectionRows = new Map<string, { rows: BankRow[]; openingBalance: number | null }>();
+
+  function currentSection() {
+    const key = `${currency}-${subAccount}`;
+    if (!sectionRows.has(key)) {
+      sectionRows.set(key, { rows: [], openingBalance: null });
+    }
+    return sectionRows.get(key)!;
+  }
 
   // Regex to detect comma-formatted amounts (not raw reference IDs)
   const amountRe = /^\d{1,3}(?:,\d{3})*(?:\.\d{1,4})?$/;
+  // Regex to detect account number lines (e.g. "007-00*-**27100-*" or "198-01*-**38042-*")
+  const acctNoRe = /\b\d{3}-\d{2}\*?-\*{0,2}(\d{4,6})-?\*?\b/;
 
   for (const line of lines) {
     const trimmed = line.trim();
 
-    // Currency section detection from account header lines
+    // Currency section detection
     if (trimmed.includes("美元") || /\bUSD\b/.test(trimmed)) {
       currency = "USD";
+    } else if (trimmed.includes("日圓") || trimmed.includes("日幣") || /\bJPY\b/.test(trimmed)) {
+      currency = "JPY";
     } else if (trimmed.includes("新臺幣") || /\bTWD\b/.test(trimmed)) {
       currency = "TWD";
     }
 
-    // Opening balance line (期初餘額 / 前期結餘)
-    if (openingBalance === null && /期初餘額|前期結餘|上期結餘/.test(trimmed)) {
+    // Sub-account detection: pick up account number lines
+    const acctMatch = trimmed.match(acctNoRe);
+    if (acctMatch) {
+      subAccount = acctMatch[1]; // e.g. "27100"
+    }
+
+    // Opening balance line (期初餘額 / 前期結餘) — per sub-account section
+    const section = currentSection();
+    if (section.openingBalance === null && /期初餘額|前期結餘|上期結餘/.test(trimmed)) {
       const ob = trimmed.match(/(\d{1,3}(?:,\d{3})*(?:\.\d{1,4})?)(?:\s|$)/);
       if (ob) {
-        openingBalance = Number(ob[1].replace(/,/g, ""));
+        section.openingBalance = Number(ob[1].replace(/,/g, ""));
       }
     }
 
@@ -1125,31 +1146,35 @@ function parseSinopacBankPdfText(text: string): ParsedPdfTransaction[] {
     const description = [...descTokens, ...remarkTokens].join(" ").trim();
     if (!description) continue;
 
-    rawRows.push({
+    section.rows.push({
       date: rowMatch.groups.date.replace(/\//g, "-"),
       description,
       amount,
       balance,
       currency,
+      subAccount,
     });
   }
 
-  // Determine sign from balance delta
+  // Determine sign from balance delta, per sub-account section
   const transactions: ParsedPdfTransaction[] = [];
-  for (let i = 0; i < rawRows.length; i++) {
-    const row = rawRows[i];
-    const prevBalance = i === 0
-      ? (openingBalance ?? row.balance - row.amount)
-      : rawRows[i - 1].balance;
-    const delta = row.balance - prevBalance;
-    const signedAmount = delta >= 0 ? row.amount : -row.amount;
+  for (const { rows, openingBalance } of sectionRows.values()) {
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const prevBalance = i === 0
+        ? (openingBalance ?? row.balance - row.amount)
+        : rows[i - 1].balance;
+      const delta = row.balance - prevBalance;
+      const signedAmount = delta >= 0 ? row.amount : -row.amount;
 
-    transactions.push({
-      date: row.date,
-      description: row.description,
-      amount: signedAmount,
-      currency: row.currency,
-    });
+      transactions.push({
+        date: row.date,
+        description: row.description,
+        amount: signedAmount,
+        currency: row.currency,
+        subAccount: row.subAccount || undefined,
+      });
+    }
   }
 
   return transactions;

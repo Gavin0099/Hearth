@@ -63,14 +63,25 @@ const BANK_PARSERS: Record<BankKey, (text: string) => ParsedTransaction[]> = {
   mega: parseMegaPdfText,
 };
 
-function resolveImportAccountId(bank: BankKey, accounts: AccountRecord[], currency?: string) {
+function resolveImportAccountId(
+  bank: BankKey,
+  accounts: AccountRecord[],
+  currency?: string,
+  subAccount?: string,
+) {
   const keywords = BANK_NAME_KEYWORDS[bank];
 
-  // Match by bank name keywords; if currency given, prefer accounts whose name also contains currency hint
   const bankMatches = accounts.filter((account) =>
     keywords.some((kw) => account.name.toLowerCase().includes(kw.toLowerCase())),
   );
 
+  // 若有子帳號末碼，優先找名稱含該末碼的帳戶
+  if (subAccount) {
+    const subMatch = bankMatches.find((account) => account.name.includes(subAccount));
+    if (subMatch) return subMatch.id;
+  }
+
+  // 依貨幣匹配
   if (currency && currency !== "TWD") {
     const currencyHints: Record<string, string[]> = {
       USD: ["美元", "美金", "usd"],
@@ -84,7 +95,7 @@ function resolveImportAccountId(bank: BankKey, accounts: AccountRecord[], curren
     if (currencyMatch) return currencyMatch.id;
   }
 
-  // Fall back: first bank-name match (any type), then any account
+  // 退而求其次：同銀行第一個帳戶，或任意帳戶
   return bankMatches[0]?.id ?? accounts[0]?.id ?? "";
 }
 
@@ -324,26 +335,29 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       }
 
       if (isBankStatement) {
-        // Group by currency, import each group to the matching sub-account
-        const byCurrency = new Map<string, typeof parsed>();
+        // Group by (currency, subAccount) — each distinct sub-account gets its own import
+        const bySection = new Map<string, typeof parsed>();
         for (const tx of parsed) {
-          const cur = tx.currency ?? "TWD";
-          if (!byCurrency.has(cur)) byCurrency.set(cur, []);
-          byCurrency.get(cur)!.push(tx);
+          const key = `${tx.currency ?? "TWD"}__${tx.subAccount ?? ""}`;
+          if (!bySection.has(key)) bySection.set(key, []);
+          bySection.get(key)!.push(tx);
         }
 
         let totalImported = 0;
         let totalSkipped = 0;
         const warnings: string[] = [];
 
-        for (const [currency, txList] of byCurrency) {
-          const targetAccountId = resolveImportAccountId(email.bank, freshAccounts, currency);
+        for (const txList of bySection.values()) {
+          const currency = txList[0].currency ?? "TWD";
+          const subAccount = txList[0].subAccount;
+          const targetAccountId = resolveImportAccountId(email.bank, freshAccounts, currency, subAccount);
           if (!targetAccountId) {
-            warnings.push(`找不到 ${currency} 帳戶，略過 ${txList.length} 筆`);
+            warnings.push(`找不到 ${currency}${subAccount ? `(..${subAccount})` : ""} 帳戶，略過 ${txList.length} 筆`);
             continue;
           }
 
-          setState({ status: "loading", message: `匯入 ${currency} 共 ${txList.length} 筆...` });
+          const label = `${currency}${subAccount ? `(..${subAccount})` : ""}`;
+          setState({ status: "loading", message: `匯入 ${label} 共 ${txList.length} 筆...` });
 
           const csvLines = [
             "date,amount,currency,category,description",
