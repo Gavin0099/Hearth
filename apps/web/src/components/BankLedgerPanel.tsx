@@ -12,7 +12,14 @@ import {
 const CATEGORY_LABELS = transactionCategories.map((c) => c.label);
 const PAGE_SIZE = 50;
 
-const BANK_SOURCES = ["gmail_bank_sinopac", "gmail_bank_esun"] as const;
+const BANK_SOURCES = [
+  "gmail_bank_sinopac",
+  "gmail_bank_esun",
+  "gmail_bank_cathay",
+  "gmail_bank_taishin",
+  "gmail_bank_ctbc",
+  "gmail_bank_mega",
+] as const;
 
 const BANK_SOURCE_LABELS: Record<string, string> = {
   gmail_bank_sinopac: "永豐",

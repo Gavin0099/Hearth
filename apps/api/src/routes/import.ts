@@ -137,6 +137,10 @@ function resolveTransactionsCsvSource(rawValue: FormDataEntryValue | null) {
     "gmail_pdf_mega",
     "gmail_bank_sinopac",
     "gmail_bank_esun",
+    "gmail_bank_cathay",
+    "gmail_bank_taishin",
+    "gmail_bank_ctbc",
+    "gmail_bank_mega",
   ];
   return allowed.includes(value) ? value : "csv_import";
 }
