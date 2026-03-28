@@ -92,7 +92,15 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
     );
   });
 
-  const visible = filtered.slice(0, visibleCount);
+  // Group filtered transactions by account label
+  const groupedByAccount = new Map<string, TransactionRecord[]>();
+  for (const transaction of filtered) {
+    const label = resolveTransactionLabel(transaction, accountNameMap.get(transaction.account_id));
+    if (!groupedByAccount.has(label)) groupedByAccount.set(label, []);
+    groupedByAccount.get(label)!.push(transaction);
+  }
+  const accountGroups = [...groupedByAccount.entries()].sort(([a], [b]) => a.localeCompare(b));
+
   const totalExpense = filtered
     .filter((transaction) => transaction.amount < 0)
     .reduce((sum, transaction) => sum + Math.abs(Number(transaction.amount)), 0);
@@ -235,83 +243,89 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
         </p>
       )}
 
-      {visible.length > 0 && (
+      {accountGroups.length > 0 && (
         <>
-          <div className="ledger-table-wrapper">
-            <table className="ledger-table">
-              <thead>
-                <tr>
-                  <th>日期</th>
-                  <th>標籤</th>
-                  <th>說明</th>
-                  <th className="ledger-th-amount">金額</th>
-                  <th>分類</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((transaction) => {
-                  const accountName = accountNameMap.get(transaction.account_id);
-                  return (
-                    <tr key={transaction.id}>
-                      <td className="ledger-date">{transaction.date}</td>
-                      <td>
-                        <span className="ledger-account-badge">
-                          {resolveTransactionLabel(transaction, accountName)}
-                        </span>
-                      </td>
-                      <td className="ledger-desc">{transaction.description ?? "—"}</td>
-                      <td
-                        className={`ledger-amount ${transaction.amount < 0 ? "negative" : "positive"}`}
-                      >
-                        {transaction.amount < 0 ? "-" : "+"}NT${" "}
-                        {Math.abs(Number(transaction.amount)).toLocaleString()}
-                      </td>
-                      <td className="ledger-category-cell">
-                        {editingId === transaction.id ? (
-                          <input
-                            autoFocus
-                            className="ledger-category-input"
-                            list="ledger-category-options"
-                            value={editingCategory}
-                            onChange={(event) => setEditingCategory(event.target.value)}
-                            onBlur={() => void saveCategory(transaction.id)}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter") void saveCategory(transaction.id);
-                              if (event.key === "Escape") cancelEdit();
-                            }}
-                          />
-                        ) : (
-                          <button
-                            className={`ledger-category-badge${
-                              transaction.category ? "" : " uncategorized"
-                            }`}
-                            onClick={() => startEdit(transaction)}
-                            type="button"
+          {accountGroups.map(([label, groupTransactions]) => {
+            const groupExpense = groupTransactions
+              .filter((t) => t.amount < 0)
+              .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
+            return (
+              <section key={label} className="ledger-account-section">
+                <h3 className="ledger-account-heading">
+                  {label}
+                  <span className="ledger-account-summary">
+                    {groupTransactions.length} 筆 · 支出 NT$ {groupExpense.toLocaleString()}
+                  </span>
+                </h3>
+                <div className="ledger-table-wrapper">
+                  <table className="ledger-table">
+                    <thead>
+                      <tr>
+                        <th>日期</th>
+                        <th>說明</th>
+                        <th className="ledger-th-amount">金額</th>
+                        <th>分類</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {groupTransactions.map((transaction) => (
+                        <tr key={transaction.id}>
+                          <td className="ledger-date">{transaction.date}</td>
+                          <td className="ledger-desc">{transaction.description ?? "—"}</td>
+                          <td
+                            className={`ledger-amount ${transaction.amount < 0 ? "negative" : "positive"}`}
                           >
-                            {savingIds.has(transaction.id)
-                              ? "儲存中..."
-                              : (transaction.category ?? "未分類")}
-                          </button>
-                        )}
-                      </td>
-                      <td>
-                        <button
-                          className="ledger-delete-btn"
-                          disabled={deletingIds.has(transaction.id)}
-                          onClick={() => void handleDelete(transaction.id)}
-                          type="button"
-                          aria-label="刪除"
-                        >
-                          ×
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                            {transaction.amount < 0 ? "-" : "+"}NT${" "}
+                            {Math.abs(Number(transaction.amount)).toLocaleString()}
+                          </td>
+                          <td className="ledger-category-cell">
+                            {editingId === transaction.id ? (
+                              <input
+                                autoFocus
+                                className="ledger-category-input"
+                                list="ledger-category-options"
+                                value={editingCategory}
+                                onChange={(event) => setEditingCategory(event.target.value)}
+                                onBlur={() => void saveCategory(transaction.id)}
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter") void saveCategory(transaction.id);
+                                  if (event.key === "Escape") cancelEdit();
+                                }}
+                              />
+                            ) : (
+                              <button
+                                className={`ledger-category-badge${
+                                  transaction.category ? "" : " uncategorized"
+                                }`}
+                                onClick={() => startEdit(transaction)}
+                                type="button"
+                              >
+                                {savingIds.has(transaction.id)
+                                  ? "儲存中..."
+                                  : (transaction.category ?? "未分類")}
+                              </button>
+                            )}
+                          </td>
+                          <td>
+                            <button
+                              className="ledger-delete-btn"
+                              disabled={deletingIds.has(transaction.id)}
+                              onClick={() => void handleDelete(transaction.id)}
+                              type="button"
+                              aria-label="刪除"
+                            >
+                              ×
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            );
+          })}
 
           <datalist id="ledger-category-options">
             {CATEGORY_LABELS.map((category) => (
