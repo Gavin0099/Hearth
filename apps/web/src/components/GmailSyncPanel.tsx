@@ -323,32 +323,91 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         return;
       }
 
-      setState({ status: "loading", message: `準備匯入 ${parsed.length} 筆交易...` });
+      if (isBankStatement) {
+        // Group by currency, import each group to the matching sub-account
+        const byCurrency = new Map<string, typeof parsed>();
+        for (const tx of parsed) {
+          const cur = tx.currency ?? "TWD";
+          if (!byCurrency.has(cur)) byCurrency.set(cur, []);
+          byCurrency.get(cur)!.push(tx);
+        }
 
-      const csvLines = [
-        "date,amount,currency,category,description",
-        ...parsed.map(
-          (transaction) =>
-            `${transaction.date},${transaction.amount},${transaction.currency},,${transaction.description.replace(/,/g, " ")}`,
-        ),
-      ].join("\n");
+        let totalImported = 0;
+        let totalSkipped = 0;
+        const warnings: string[] = [];
 
-      const csvFile = new File([csvLines], "gmail-import.csv", { type: "text/csv" });
-      const result = await importTransactionsCsv(
-        accountId,
-        csvFile,
-        (isBankStatement ? `gmail_bank_${email.bank}` : `gmail_pdf_${email.bank}`) as Parameters<typeof importTransactionsCsv>[2],
-      );
+        for (const [currency, txList] of byCurrency) {
+          const targetAccountId = resolveImportAccountId(email.bank, freshAccounts, currency);
+          if (!targetAccountId) {
+            warnings.push(`找不到 ${currency} 帳戶，略過 ${txList.length} 筆`);
+            continue;
+          }
 
-      if (result.status === "error") {
-        setState({ status: "error", message: result.error });
-        return;
+          setState({ status: "loading", message: `匯入 ${currency} 共 ${txList.length} 筆...` });
+
+          const csvLines = [
+            "date,amount,currency,category,description",
+            ...txList.map(
+              (tx) => `${tx.date},${tx.amount},${tx.currency},,${tx.description.replace(/,/g, " ")}`,
+            ),
+          ].join("\n");
+
+          const csvFile = new File([csvLines], `gmail-bank-${currency}.csv`, { type: "text/csv" });
+          const result = await importTransactionsCsv(
+            targetAccountId,
+            csvFile,
+            `gmail_bank_${email.bank}` as Parameters<typeof importTransactionsCsv>[2],
+          );
+
+          if (result.status === "error") {
+            setState({ status: "error", message: result.error });
+            return;
+          }
+
+          totalImported += result.imported;
+          totalSkipped += result.skipped;
+        }
+
+        const warnStr = warnings.length > 0 ? `（${warnings.join("；")}）` : "";
+        setState({
+          status: "done",
+          message: `匯入完成，新增 ${totalImported} 筆，略過 ${totalSkipped} 筆。${warnStr}`,
+        });
+      } else {
+        // Credit card: single account import
+        const accountId = resolveImportAccountId(email.bank, freshAccounts);
+        if (!accountId) {
+          setState({ status: "error", message: "找不到對應帳戶。" });
+          return;
+        }
+
+        setState({ status: "loading", message: `準備匯入 ${parsed.length} 筆交易...` });
+
+        const csvLines = [
+          "date,amount,currency,category,description",
+          ...parsed.map(
+            (tx) => `${tx.date},${tx.amount},${tx.currency},,${tx.description.replace(/,/g, " ")}`,
+          ),
+        ].join("\n");
+
+        const csvFile = new File([csvLines], "gmail-import.csv", { type: "text/csv" });
+        const result = await importTransactionsCsv(
+          accountId,
+          csvFile,
+          `gmail_pdf_${email.bank}` as Parameters<typeof importTransactionsCsv>[2],
+        );
+
+        if (result.status === "error") {
+          setState({ status: "error", message: result.error });
+          return;
+        }
+
+        setState({
+          status: "done",
+          message: `匯入完成，新增 ${result.imported} 筆，略過 ${result.skipped} 筆。`,
+        });
       }
 
-      setState({
-        status: "done",
-        message: `匯入完成，新增 ${result.imported} 筆，略過 ${result.skipped} 筆。${accountTypeFallback ? "（找不到銀行帳戶，已改存入信用卡帳戶，建議建立一個「銀行/現金」類型帳戶。）" : ""}`,
-      });
       onImported();
     } catch (error) {
       setState({
