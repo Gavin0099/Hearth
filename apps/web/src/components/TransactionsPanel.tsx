@@ -83,7 +83,7 @@ export function TransactionsPanel({
         return;
       }
 
-      const accounts = accountsResult.items;
+      const accounts = accountsResult.items.filter((a) => a.type === "cash_bank");
       const resolvedFilters: TransactionsQuery = {
         ...filters,
         account_id: filters.account_id || accounts[0]?.id || undefined,
