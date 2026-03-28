@@ -234,13 +234,23 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         (a) => a.filename.includes("綜合對帳單") || a.filename.toLowerCase().includes("statement"),
       );
     const accountType = isBankStatement ? "cash_bank" : "cash_credit";
-    const accountId = resolveImportAccountId(email.bank, accounts, accountType);
+
+    // Always fetch accounts fresh so we don't rely on potentially stale state
+    const accountsResult = await fetchAccounts();
+    if (accountsResult.status === "error") {
+      setState({ status: "error", message: accountsResult.error });
+      return;
+    }
+    const freshAccounts = accountsResult.items;
+    setAccounts(freshAccounts);
+
+    const accountId = resolveImportAccountId(email.bank, freshAccounts, accountType);
     if (!accountId) {
       setState({
         status: "error",
         message: isBankStatement
-          ? "找不到可用的銀行帳戶。請先建立對應的 `銀行/現金` 類型帳戶。"
-          : "找不到可用的信用卡帳戶。請先建立至少一個 `信用卡` 類型帳戶。",
+          ? `找不到可用的銀行帳戶（cash_bank）。目前帳戶：${freshAccounts.map((a) => `${a.name}(${a.type})`).join("、") || "無"}。`
+          : `找不到可用的信用卡帳戶（cash_credit）。目前帳戶：${freshAccounts.map((a) => `${a.name}(${a.type})`).join("、") || "無"}。`,
       });
       return;
     }
