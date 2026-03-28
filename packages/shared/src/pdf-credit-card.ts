@@ -1288,93 +1288,100 @@ export function parseSinopacInsuranceSection(text: string): ParsedInsuranceRecor
   const normalized = normalizeWhitespace(deSpaced);
   const lines = normalized.split('\n').map((l) => l.trim()).filter(Boolean);
 
-  // Find the 保險 section
-  const insuranceSectionIdx = lines.findIndex((l) => /^保\s*險$|^保險/.test(l));
+  // 找到「保險」區段起始
+  const insuranceSectionIdx = lines.findIndex((l) => /^保險$/.test(l));
   if (insuranceSectionIdx === -1) return [];
 
+  // 終止條件：到「貸款」、「投資」等下一個主要區段
+  const sectionEndRe = /^貸款$|^投資$|^外匯$|^訊息公告$|^利率$/;
+
+  // Policy number pattern（保單號碼：字母開頭 + 數字 + 星號 + 數字）
+  const policyNoRe = /^[A-Z]\d[\d*]+\d$/;
+
+  // 收集每個保單號碼之後的所有行，直到下一個保單或區段結束
   const records: ParsedInsuranceRecord[] = [];
 
-  // Policy number pattern: letter(s) + digits + asterisks + digits
-  const policyRe = /[A-Z]\d+\*+\d+/;
-  const currencyRe = /\b(TWD|USD|JPY|EUR)\b/;
+  // 判斷目前是否在非投資型或投資型區塊
+  let currentInsuranceType: 'non-investment' | 'investment' = 'non-investment';
 
   let i = insuranceSectionIdx + 1;
   while (i < lines.length) {
     const line = lines[i];
+    if (sectionEndRe.test(line)) break;
 
-    // Stop at next major section
-    if (/^貸\s*款$|^貸款$|^投\s*資$|^投資$|^外\s*匯$|^外匯$/.test(line)) break;
+    // 判斷保險類型標題行
+    if (line.includes('非投資型')) { currentInsuranceType = 'non-investment'; i++; continue; }
+    if (line.includes('投資型')) { currentInsuranceType = 'investment'; i++; continue; }
 
-    const policyMatch = line.match(policyRe);
-    if (!policyMatch) {
-      i++;
-      continue;
+    // 找到保單號碼行
+    if (!policyNoRe.test(line)) { i++; continue; }
+
+    const policyNo = line;
+
+    // 蒐集此保單後續所有行（直到下一個保單號碼、區段結束、或超過合理行數）
+    const collected: string[] = [];
+    let j = i + 1;
+    while (j < lines.length && j < i + 20) {
+      const l = lines[j];
+      if (sectionEndRe.test(l)) break;
+      if (policyNoRe.test(l)) break; // 下一張保單開始
+      collected.push(l);
+      j++;
     }
 
-    // This line is the first row of a policy entry
-    // Peek at next line — if it starts with digits (繳費年期) or 年繳/月繳 pattern, merge it
-    const nextLine = lines[i + 1] ?? '';
-    const isSecondRow = /^\d+年\/|^月繳|^年繳|^半年繳|^季繳/.test(nextLine) || /^\d+,/.test(nextLine) || /^\d{4}\/\d{2}\/\d{2}$/.test(nextLine);
-    const combined = isSecondRow ? line + ' ' + nextLine : line;
-    if (isSecondRow) i++;
+    const combined = collected.join(' ');
 
-    try {
-      const policyNo = policyMatch[0];
+    // 從 combined 提取各欄位
+    // 日期：YYYY/MM/DD
+    const dateMatches = [...combined.matchAll(/\d{4}\/\d{2}\/\d{2}/g)];
 
-      // Extract dates
-      const dateMatches = [...combined.matchAll(/\d{4}\/\d{2}\/\d{2}/g)];
+    // 貨幣
+    const currencyMatch = combined.match(/\b(TWD|USD|JPY|EUR)\b/);
+    const currency = currencyMatch?.[1] ?? 'TWD';
 
-      // Extract currency
-      const currencyMatch = combined.match(currencyRe);
-      const currency = currencyMatch ? currencyMatch[1] : 'TWD';
+    // 純數字金額 token（逗號格式，去除日期和貨幣後剩下的）
+    const stripped = combined
+      .replace(/\d{4}\/\d{2}\/\d{2}/g, '')
+      .replace(/\b(TWD|USD|JPY|EUR)\b/g, '')
+      .replace(/\d+年\/[年月季半]+繳/g, '');
+    const numTokens = stripped.split(/\s+/).filter((t) => /^\d[\d,]*$/.test(t));
 
-      // Extract all number tokens (comma-formatted amounts)
-      const numTokens = combined
-        .replace(policyRe, '')
-        .replace(/\d{4}\/\d{2}\/\d{2}/g, '')
-        .replace(currencyRe, '')
-        .split(/\s+/)
-        .filter((t) => /^\d[\d,]*$/.test(t));
+    // 繳費年期（如「20年/年繳」）
+    const paymentPeriodMatch = combined.match(/\d+年\/[年月季半年]+繳/);
+    const paymentPeriod = paymentPeriodMatch?.[0] ?? '';
 
-      // Extract payment period token like "20年/年繳"
-      const paymentPeriodMatch = combined.match(/\d+年\/[年月季半年]+繳/);
-      const paymentPeriod = paymentPeriodMatch ? paymentPeriodMatch[0] : '';
+    // 中文名稱 chunks — 排除標題性關鍵詞
+    const headerKeywords = /保單號碼|保險公司|商品名稱|被保險人|保單生效日|保單到期日|保單幣別|主約保額|下期應繳|累計已繳|年期|繳別/;
+    const chineseChunks = combined
+      .split(/\s+/)
+      .filter((t) => /^[\u4e00-\u9fff]{2,}/.test(t) && !headerKeywords.test(t));
 
-      // Determine insurance type: investment type usually has "投資型" or lacks coverage/premium fields
-      const insuranceType: 'non-investment' | 'investment' =
-        combined.includes('投資型') ? 'investment' : 'non-investment';
+    // 公司名稱：通常含「壽」「產」「險」等字
+    const companyKeywords = /壽|產|險|銀行|人壽/;
+    const company = chineseChunks.find((t) => companyKeywords.test(t)) ?? chineseChunks[0] ?? '';
+    const productName = chineseChunks.filter((t) => t !== company).join('');
 
-      // Find company name: after policy number, before product name
-      // Heuristic: extract Chinese text tokens after policyNo
-      const afterPolicyNo = combined.slice(combined.indexOf(policyNo) + policyNo.length).trim();
-      // Split into Chinese text chunks
-      const chineseChunks = afterPolicyNo.match(/[\u4e00-\u9fff\u3400-\u4dbf]+(?:[\u4e00-\u9fff\u3400-\u4dbf\w]*)?/g) ?? [];
+    // 被保險人：英文字母開頭的 masked ID（如 P122****74）
+    const insuredMatch = combined.match(/[A-Z]\d[\d*]+\d/);
+    const insuredPerson = insuredMatch?.[0] ?? '';
 
-      const company = chineseChunks[0] ?? '';
-      const productName = chineseChunks.slice(1, 3).join('') ?? '';
-      const insuredPerson = chineseChunks[chineseChunks.length - 1] ?? '';
+    records.push({
+      insuranceType: currentInsuranceType,
+      policyNo,
+      company,
+      productName,
+      insuredPerson,
+      startDate: dateMatches[0] ? parseDateToIso(dateMatches[0][0]) : '',
+      endDate: dateMatches[1] ? parseDateToIso(dateMatches[1][0]) : '',
+      currency,
+      coverage: numTokens[0] ? parsePlainAmount(numTokens[0]) : 0,
+      nextPremium: numTokens[1] ? parsePlainAmount(numTokens[1]) : 0,
+      paymentPeriod,
+      accumulatedPremium: numTokens[2] ? parsePlainAmount(numTokens[2]) : 0,
+      nextPaymentDate: dateMatches[2] ? parseDateToIso(dateMatches[2][0]) : '',
+    });
 
-      const record: ParsedInsuranceRecord = {
-        insuranceType,
-        policyNo,
-        company,
-        productName,
-        insuredPerson,
-        startDate: dateMatches[0] ? parseDateToIso(dateMatches[0][0]) : '',
-        endDate: dateMatches[1] ? parseDateToIso(dateMatches[1][0]) : '',
-        currency,
-        coverage: numTokens[0] ? parsePlainAmount(numTokens[0]) : 0,
-        nextPremium: numTokens[1] ? parsePlainAmount(numTokens[1]) : 0,
-        paymentPeriod,
-        accumulatedPremium: numTokens[2] ? parsePlainAmount(numTokens[2]) : 0,
-        nextPaymentDate: dateMatches[2] ? parseDateToIso(dateMatches[2][0]) : '',
-      };
-      records.push(record);
-    } catch {
-      // skip malformed entry
-    }
-
-    i++;
+    i = j;
   }
 
   return records;
