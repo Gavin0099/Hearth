@@ -1,0 +1,5 @@
+[external_repo_onboarding_index]
+history_dir=D:\Hearth\memory\governance_onboarding\history
+reports=1
+[reports]
+20260328_034016.json | ok=False | repo_root=D:\Hearth | contract_path=D:\Hearth\contract.yaml | generated_at=2026-03-28T03:40:16.879929+00:00

@@ -1,0 +1,91 @@
+{
+  "ok": false,
+  "repo_root": "D:\\Hearth",
+  "contract_path": "D:\\Hearth\\contract.yaml",
+  "generated_at": "2026-03-28T03:40:16.879929+00:00",
+  "readiness": {
+    "ready": true,
+    "checks": {
+      "git_repo_present": true,
+      "hooks_ready": true,
+      "plan_present": true,
+      "plan_fresh_enough": true,
+      "contract_resolved": true,
+      "contract_files_complete": true,
+      "project_facts_present": false,
+      "project_facts_intakeable": false,
+      "project_facts_drift_free": false,
+      "governance_baseline_present": true,
+      "governance_drift_clean": true,
+      "framework_version_known": false,
+      "framework_version_current": false,
+      "framework_release_compatible": true
+    },
+    "contract": {
+      "source": "explicit",
+      "path": "D:\\Hearth\\contract.yaml",
+      "name": "hearth-contract",
+      "domain": "household-finance",
+      "plugin_version": "1.0.0",
+      "documents": 5,
+      "rule_roots": 1,
+      "validators": 0,
+      "missing_documents": [],
+      "missing_behavior_overrides": [],
+      "missing_validators": []
+    },
+    "plan": {
+      "path": "D:\\Hearth\\PLAN.md",
+      "status": "FRESH",
+      "days_since_update": 6,
+      "threshold_days": 7,
+      "errors": [],
+      "warnings": []
+    },
+    "hooks": {
+      "valid": true,
+      "framework_root": "D:\\meiandraybook",
+      "checks": {
+        "git_hooks_dir_present": true,
+        "pre_commit_installed": true,
+        "pre_push_installed": true,
+        "framework_root_config_present": true,
+        "framework_root_exists": true,
+        "framework_file:scripts/lib/python.sh": true,
+        "framework_file:scripts/run-runtime-governance.sh": true,
+        "framework_file:governance_tools/plan_freshness.py": true,
+        "framework_file:governance_tools/contract_validator.py": true
+      },
+      "errors": [],
+      "warnings": []
+    },
+    "project_facts": {
+      "status": "missing",
+      "available": false,
+      "reason": "No external project facts found under D:\\Hearth\\memory",
+      "remediation_hint": "python governance_tools/external_project_facts_intake.py --repo D:\\Hearth"
+    },
+    "warnings": [
+      "project-facts: No external project facts found under D:\\Hearth\\memory",
+      "framework-version: framework lock file missing",
+      "framework-version: adopted release not recorded"
+    ],
+    "errors": []
+  },
+  "smoke": {
+    "ok": false,
+    "rules": [
+      "common"
+    ],
+    "plan_path": "D:\\Hearth\\PLAN.md",
+    "contract_path": "D:\\Hearth\\contract.yaml",
+    "pre_task_ok": false,
+    "session_start_ok": false,
+    "post_task_ok": null,
+    "post_task_cases": [],
+    "warnings": [],
+    "errors": [
+      "Contract rule roots resolved, but no external rule packs were discovered."
+    ]
+  }
+}

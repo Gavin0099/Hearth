@@ -1,0 +1,50 @@
+External Repo Onboarding Report
+
+ok                = False
+repo_root         = D:\Hearth
+contract_path     = D:\Hearth\contract.yaml
+generated_at      = 2026-03-28T03:40:16.879929+00:00
+readiness_ready   = True
+smoke_ok          = False
+project_facts      = status=missing | artifact_exists=None | artifact_drift=None | source=None
+
+[readiness]
+contract_files_complete  = True
+contract_resolved        = True
+framework_release_compatible = True
+framework_version_current = False
+framework_version_known  = False
+git_repo_present         = True
+governance_baseline_present = True
+governance_drift_clean   = True
+hooks_ready              = True
+plan_fresh_enough        = True
+plan_present             = True
+project_facts_drift_free = False
+project_facts_intakeable = False
+project_facts_present    = False
+
+[project_facts]
+status             = missing
+source_file        = None
+source_filename    = None
+sync_direction     = None
+artifact_path      = None
+artifact_exists    = None
+artifact_drift     = None
+reason             = No external project facts found under D:\Hearth\memory
+remediation_hint   = python governance_tools/external_project_facts_intake.py --repo D:\Hearth
+
+[smoke]
+rules             = common
+pre_task_ok       = False
+session_start_ok  = False
+post_task_ok      = None
+
+errors: 1
+- smoke: Contract rule roots resolved, but no external rule packs were discovered.
+
+warnings: 3
+- readiness: project-facts: No external project facts found under D:\Hearth\memory
+- readiness: framework-version: framework lock file missing
+- readiness: framework-version: adopted release not recorded

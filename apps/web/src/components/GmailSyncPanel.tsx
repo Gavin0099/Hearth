@@ -244,13 +244,20 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
     const freshAccounts = accountsResult.items;
     setAccounts(freshAccounts);
 
-    const accountId = resolveImportAccountId(email.bank, freshAccounts, accountType);
+    let accountId = resolveImportAccountId(email.bank, freshAccounts, accountType);
+    let accountTypeFallback = false;
+
+    // If bank statement but no cash_bank account, fall back to any matching account
+    if (!accountId && isBankStatement) {
+      accountId = resolveImportAccountId(email.bank, freshAccounts, "cash_credit") ||
+        (freshAccounts[0]?.id ?? "");
+      accountTypeFallback = Boolean(accountId);
+    }
+
     if (!accountId) {
       setState({
         status: "error",
-        message: isBankStatement
-          ? `找不到可用的銀行帳戶（cash_bank）。目前帳戶：${freshAccounts.map((a) => `${a.name}(${a.type})`).join("、") || "無"}。`
-          : `找不到可用的信用卡帳戶（cash_credit）。目前帳戶：${freshAccounts.map((a) => `${a.name}(${a.type})`).join("、") || "無"}。`,
+        message: `找不到可用帳戶。目前帳戶：${freshAccounts.map((a) => `${a.name}(${a.type})`).join("、") || "無"}。`,
       });
       return;
     }
@@ -349,7 +356,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
 
       setState({
         status: "done",
-        message: `匯入完成，新增 ${result.imported} 筆，略過 ${result.skipped} 筆。`,
+        message: `匯入完成，新增 ${result.imported} 筆，略過 ${result.skipped} 筆。${accountTypeFallback ? "（找不到銀行帳戶，已改存入信用卡帳戶，建議建立一個「銀行/現金」類型帳戶。）" : ""}`,
       });
       onImported();
     } catch (error) {
