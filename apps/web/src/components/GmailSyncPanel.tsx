@@ -159,20 +159,11 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
   const [accounts, setAccounts] = useState<AccountRecord[]>([]);
 
   async function handleConnect() {
-    setState({ status: "loading", message: "載入信用卡帳戶中..." });
+    setState({ status: "loading", message: "載入帳戶中..." });
 
     const accountsResult = await fetchAccounts();
     if (accountsResult.status === "error") {
       setState({ status: "error", message: accountsResult.error });
-      return;
-    }
-
-    const creditAccounts = accountsResult.items.filter((account) => account.type === "cash_credit");
-    if (creditAccounts.length === 0) {
-      setState({
-        status: "error",
-        message: "請先建立至少一個信用卡帳戶，Gmail 帳單同步才能寫入交易資料。",
-      });
       return;
     }
 
@@ -236,7 +227,12 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       return;
     }
 
-    const isBankStatement = email.subject.includes("綜合對帳單") || email.subject.includes("存款對帳單");
+    const isBankStatement =
+      email.subject.includes("綜合對帳單") ||
+      email.subject.includes("存款對帳單") ||
+      email.attachments.some(
+        (a) => a.filename.includes("綜合對帳單") || a.filename.toLowerCase().includes("statement"),
+      );
     const accountType = isBankStatement ? "cash_bank" : "cash_credit";
     const accountId = resolveImportAccountId(email.bank, accounts, accountType);
     if (!accountId) {
