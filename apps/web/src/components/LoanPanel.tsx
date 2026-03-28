@@ -25,6 +25,18 @@ function formatDate(dateStr: string): string {
 
 type LoanSnapshotItem = BankSnapshot & { data: ParsedLoanRecord[] };
 
+function buildLoanRecordKey(record: ParsedLoanRecord): string {
+  return [
+    record.accountNo,
+    record.paymentDate,
+    record.paymentAmount,
+    record.principal,
+    record.interest,
+    record.penalty,
+    record.remainingBalance,
+  ].join("|");
+}
+
 const emptyForm = {
   bank: "sinopac",
   statementDate: new Date().toISOString().slice(0, 7) + "-01",
@@ -46,64 +58,76 @@ export function LoanPanel({ session }: { session: Session | null }) {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
 
+  async function loadSnapshots() {
+    setLoadError(null);
+    const items = await fetchBankSnapshots();
+    setSnapshots(items.filter((s) => s.type === "loan") as LoanSnapshotItem[]);
+  }
+
   useEffect(() => {
     if (!session) return;
     setLoading(true);
-    setLoadError(null);
-    fetchBankSnapshots()
-      .then((items) => {
-        setSnapshots(items.filter((s) => s.type === "loan") as LoanSnapshotItem[]);
-        setLoading(false);
-      })
+    void loadSnapshots()
+      .then(() => setLoading(false))
       .catch((err: Error) => { setLoadError(err.message); setLoading(false); });
   }, [session]);
 
   async function handleDeleteSnapshot(id: string) {
     setDeletingIds((prev) => new Set([...prev, id]));
-    await deleteBankSnapshot(id);
-    setSnapshots((prev) => prev.filter((s) => s.id !== id));
-    setDeletingIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+    try {
+      await deleteBankSnapshot(id);
+      await loadSnapshots();
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "刪除貸款明細失敗");
+    } finally {
+      setDeletingIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+    }
   }
 
   async function handleDeleteRecord(snap: LoanSnapshotItem, idx: number) {
     const key = `${snap.id}-${idx}`;
     setDeletingIds((prev) => new Set([...prev, key]));
-    const newData = (snap.data as ParsedLoanRecord[]).filter((_, i) => i !== idx);
-    if (newData.length === 0) {
-      await deleteBankSnapshot(snap.id);
-      setSnapshots((prev) => prev.filter((s) => s.id !== snap.id));
-    } else {
-      await saveBankSnapshot(snap.bank, "loan", snap.statement_date, newData);
-      setSnapshots((prev) => prev.map((s) => s.id === snap.id ? { ...s, data: newData } : s));
+    try {
+      const newData = (snap.data as ParsedLoanRecord[]).filter((_, i) => i !== idx);
+      if (newData.length === 0) {
+        await deleteBankSnapshot(snap.id);
+      } else {
+        await saveBankSnapshot(snap.bank, "loan", snap.statement_date, newData);
+      }
+      await loadSnapshots();
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "刪除貸款明細失敗");
+    } finally {
+      setDeletingIds((prev) => { const next = new Set(prev); next.delete(key); return next; });
     }
-    setDeletingIds((prev) => { const next = new Set(prev); next.delete(key); return next; });
   }
 
   async function handleAdd() {
     setSaving(true);
-    const record: ParsedLoanRecord = {
-      accountNo: form.accountNo.trim(),
-      paymentDate: form.paymentDate,
-      paymentAmount: Number(form.paymentAmount.replace(/,/g, "")),
-      principal: Number(form.principal.replace(/,/g, "")),
-      interest: Number(form.interest.replace(/,/g, "")),
-      penalty: Number(form.penalty.replace(/,/g, "")),
-      remainingBalance: Number(form.remainingBalance.replace(/,/g, "")),
-    };
+    try {
+      const record: ParsedLoanRecord = {
+        accountNo: form.accountNo.trim(),
+        paymentDate: form.paymentDate,
+        paymentAmount: Number(form.paymentAmount.replace(/,/g, "")),
+        principal: Number(form.principal.replace(/,/g, "")),
+        interest: Number(form.interest.replace(/,/g, "")),
+        penalty: Number(form.penalty.replace(/,/g, "")),
+        remainingBalance: Number(form.remainingBalance.replace(/,/g, "")),
+      };
 
-    // 找出同一 bank + statementDate 的現有快照，合併進去
-    const existing = snapshots.find(
-      (s) => s.bank === form.bank && s.statement_date.slice(0, 7) === form.statementDate.slice(0, 7),
-    );
-    const newData = existing ? [...(existing.data as ParsedLoanRecord[]), record] : [record];
-    await saveBankSnapshot(form.bank, "loan", form.statementDate, newData);
-
-    // 重新載入
-    const items = await fetchBankSnapshots();
-    setSnapshots(items.filter((s) => s.type === "loan") as LoanSnapshotItem[]);
-    setForm(emptyForm);
-    setShowForm(false);
-    setSaving(false);
+      const existing = snapshots.find(
+        (s) => s.bank === form.bank && s.statement_date.slice(0, 7) === form.statementDate.slice(0, 7),
+      );
+      const newData = existing ? [...(existing.data as ParsedLoanRecord[]), record] : [record];
+      await saveBankSnapshot(form.bank, "loan", form.statementDate, newData);
+      await loadSnapshots();
+      setForm(emptyForm);
+      setShowForm(false);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "儲存貸款明細失敗");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (!session) return null;
@@ -221,7 +245,7 @@ export function LoanPanel({ session }: { session: Session | null }) {
                     </thead>
                     <tbody>
                       {records.map((rec, idx) => (
-                        <tr key={idx}>
+                        <tr key={buildLoanRecordKey(rec)}>
                           <td className="ledger-desc">{rec.accountNo}</td>
                           <td className="ledger-date">{formatDate(rec.paymentDate)}</td>
                           <td className="ledger-amount">{formatAmount(rec.paymentAmount)}</td>

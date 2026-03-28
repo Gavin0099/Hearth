@@ -25,6 +25,24 @@ function formatDate(dateStr: string): string {
 
 type InsuranceSnapshotItem = BankSnapshot & { data: ParsedInsuranceRecord[] };
 
+function buildInsuranceRecordKey(record: ParsedInsuranceRecord): string {
+  return [
+    record.insuranceType,
+    record.policyNo,
+    record.company,
+    record.productName,
+    record.insuredPerson,
+    record.startDate,
+    record.endDate,
+    record.currency,
+    record.coverage,
+    record.paymentPeriod,
+    record.nextPremium,
+    record.nextPaymentDate,
+    record.accumulatedPremium,
+  ].join("|");
+}
+
 const emptyForm: {
   bank: string;
   statementDate: string;
@@ -68,68 +86,82 @@ export function InsurancePanel({ session }: { session: Session | null }) {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
 
+  async function loadSnapshots() {
+    setLoadError(null);
+    const items = await fetchBankSnapshots();
+    setSnapshots(items.filter((s) => s.type === "insurance") as InsuranceSnapshotItem[]);
+  }
+
   useEffect(() => {
     if (!session) return;
     setLoading(true);
-    setLoadError(null);
-    fetchBankSnapshots()
-      .then((items) => {
-        setSnapshots(items.filter((s) => s.type === "insurance") as InsuranceSnapshotItem[]);
-        setLoading(false);
-      })
+    void loadSnapshots()
+      .then(() => setLoading(false))
       .catch((err: Error) => { setLoadError(err.message); setLoading(false); });
   }, [session]);
 
   async function handleDeleteSnapshot(id: string) {
     setDeletingIds((prev) => new Set([...prev, id]));
-    await deleteBankSnapshot(id);
-    setSnapshots((prev) => prev.filter((s) => s.id !== id));
-    setDeletingIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+    try {
+      await deleteBankSnapshot(id);
+      await loadSnapshots();
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "刪除保險明細失敗");
+    } finally {
+      setDeletingIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+    }
   }
 
   async function handleDeleteRecord(snap: InsuranceSnapshotItem, idx: number) {
     const key = `${snap.id}-${idx}`;
     setDeletingIds((prev) => new Set([...prev, key]));
-    const newData = (snap.data as ParsedInsuranceRecord[]).filter((_, i) => i !== idx);
-    if (newData.length === 0) {
-      await deleteBankSnapshot(snap.id);
-      setSnapshots((prev) => prev.filter((s) => s.id !== snap.id));
-    } else {
-      await saveBankSnapshot(snap.bank, "insurance", snap.statement_date, newData);
-      setSnapshots((prev) => prev.map((s) => s.id === snap.id ? { ...s, data: newData } : s));
+    try {
+      const newData = (snap.data as ParsedInsuranceRecord[]).filter((_, i) => i !== idx);
+      if (newData.length === 0) {
+        await deleteBankSnapshot(snap.id);
+      } else {
+        await saveBankSnapshot(snap.bank, "insurance", snap.statement_date, newData);
+      }
+      await loadSnapshots();
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "刪除保險明細失敗");
+    } finally {
+      setDeletingIds((prev) => { const next = new Set(prev); next.delete(key); return next; });
     }
-    setDeletingIds((prev) => { const next = new Set(prev); next.delete(key); return next; });
   }
 
   async function handleAdd() {
     setSaving(true);
-    const record: ParsedInsuranceRecord = {
-      insuranceType: form.insuranceType,
-      policyNo: form.policyNo.trim(),
-      company: form.company.trim(),
-      productName: form.productName.trim(),
-      insuredPerson: form.insuredPerson.trim(),
-      startDate: form.startDate,
-      endDate: form.endDate,
-      currency: form.currency,
-      coverage: Number(form.coverage.replace(/,/g, "")),
-      paymentPeriod: form.paymentPeriod.trim(),
-      nextPremium: Number(form.nextPremium.replace(/,/g, "")),
-      nextPaymentDate: form.nextPaymentDate,
-      accumulatedPremium: Number(form.accumulatedPremium.replace(/,/g, "")),
-    };
+    try {
+      const record: ParsedInsuranceRecord = {
+        insuranceType: form.insuranceType,
+        policyNo: form.policyNo.trim(),
+        company: form.company.trim(),
+        productName: form.productName.trim(),
+        insuredPerson: form.insuredPerson.trim(),
+        startDate: form.startDate,
+        endDate: form.endDate,
+        currency: form.currency,
+        coverage: Number(form.coverage.replace(/,/g, "")),
+        paymentPeriod: form.paymentPeriod.trim(),
+        nextPremium: Number(form.nextPremium.replace(/,/g, "")),
+        nextPaymentDate: form.nextPaymentDate,
+        accumulatedPremium: Number(form.accumulatedPremium.replace(/,/g, "")),
+      };
 
-    const existing = snapshots.find(
-      (s) => s.bank === form.bank && s.statement_date.slice(0, 7) === form.statementDate.slice(0, 7),
-    );
-    const newData = existing ? [...(existing.data as ParsedInsuranceRecord[]), record] : [record];
-    await saveBankSnapshot(form.bank, "insurance", form.statementDate, newData);
-
-    const items = await fetchBankSnapshots();
-    setSnapshots(items.filter((s) => s.type === "insurance") as InsuranceSnapshotItem[]);
-    setForm(emptyForm);
-    setShowForm(false);
-    setSaving(false);
+      const existing = snapshots.find(
+        (s) => s.bank === form.bank && s.statement_date.slice(0, 7) === form.statementDate.slice(0, 7),
+      );
+      const newData = existing ? [...(existing.data as ParsedInsuranceRecord[]), record] : [record];
+      await saveBankSnapshot(form.bank, "insurance", form.statementDate, newData);
+      await loadSnapshots();
+      setForm(emptyForm);
+      setShowForm(false);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "儲存保險明細失敗");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (!session) return null;
@@ -269,7 +301,7 @@ export function InsurancePanel({ session }: { session: Session | null }) {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                   {records.map((rec, idx) => (
-                    <div key={idx} className="insurance-card">
+                    <div key={buildInsuranceRecordKey(rec)} className="insurance-card">
                       <div className="insurance-card-header">
                         <span style={{ fontWeight: 600 }}>{rec.policyNo}</span>
                         <span style={{ fontSize: "0.8rem", color: "var(--text-muted, #888)" }}>
