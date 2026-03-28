@@ -61,3 +61,26 @@ bankSnapshotsRoutes.put("/", async (c) => {
 
   return c.json({ status: "ok" });
 });
+
+bankSnapshotsRoutes.delete("/:id", async (c) => {
+  const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
+  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
+  const user = await resolveAuthenticatedUser(c.req.raw, c.env);
+  if (!user) {
+    return c.json({ error: "Unauthorized", status: "error" }, 401);
+  }
+
+  const id = c.req.param("id");
+  const supabase = createSupabaseAdminClient(c.env);
+  const { error } = await supabase
+    .from("bank_snapshots")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) {
+    return c.json({ error: error.message, status: "error" }, 500);
+  }
+
+  return c.json({ status: "ok" });
+});

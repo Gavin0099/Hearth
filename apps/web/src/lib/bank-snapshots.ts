@@ -29,6 +29,13 @@ export async function fetchBankSnapshots(): Promise<BankSnapshot[]> {
   return data.items ?? [];
 }
 
+export async function deleteBankSnapshot(id: string): Promise<void> {
+  const response = await apiFetch(`/api/bank-snapshots/${id}`, { method: "DELETE" });
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+}
+
 export async function saveBankSnapshot(
   bank: string,
   type: string,
