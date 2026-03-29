@@ -4,6 +4,7 @@ import {
   parseCtbcPdfTransactions,
   parseEsunPdfTransactions,
   parseMegaPdfTransactions,
+  parseSinopacInsuranceSection,
   parseSinopacPdfTransactions,
   parseTaishinPdfTransactions,
 } from "@hearth/shared";
@@ -392,6 +393,37 @@ test("parseCtbcPdfTransactions recovers transaction rows from noisy token stream
       description: "國外交易手續費",
       amount: -10,
       currency: "TWD",
+    },
+  ]);
+});
+
+test("parseSinopacInsuranceSection handles inline insurance header and policy rows", () => {
+  const text = `
+永豐銀行綜合對帳單
+保險 非投資型
+P12****77401 非投資型
+富邦人壽
+安心醫療健康保險
+P122****74
+2009/05/27 2094/05/26 TWD 2,000 20年/年繳 23,859 2030/05/27 418,433
+貸款
+`;
+
+  assert.deepEqual(parseSinopacInsuranceSection(text), [
+    {
+      insuranceType: "non-investment",
+      policyNo: "P12****77401",
+      company: "富邦人壽",
+      productName: "安心醫療健康保險",
+      insuredPerson: "P122****74",
+      startDate: "2009-05-27",
+      endDate: "2094-05-26",
+      currency: "TWD",
+      coverage: 2000,
+      nextPremium: 23859,
+      paymentPeriod: "20年/年繳",
+      accumulatedPremium: 418433,
+      nextPaymentDate: "2030-05-27",
     },
   ]);
 });

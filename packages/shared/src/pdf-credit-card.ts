@@ -1287,16 +1287,34 @@ export function parseSinopacInsuranceSection(text: string): ParsedInsuranceRecor
   const deSpaced = collapseInterCharSpaces(text);
   const normalized = normalizeWhitespace(deSpaced);
   const lines = normalized.split('\n').map((l) => l.trim()).filter(Boolean);
+  const policyNoRe = /\b[A-Z]\d[\d*]+\d\b/;
+
+  function looksLikePolicyStart(index: number) {
+    const line = lines[index];
+    if (!policyNoRe.test(line)) return false;
+
+    const sameLineHasTypeHint = line.includes("非投資型") || line.includes("投資型");
+    const detailPreview = lines.slice(index + 1, Math.min(lines.length, index + 4));
+    const hasStandaloneChineseDetails = detailPreview.some((candidate) => {
+      const condensed = candidate.replace(/\s+/g, "");
+      return /^[\u4e00-\u9fff]{2,}$/.test(condensed)
+        && !/^(貸款|投資|外匯|訊息公告|利率)$/.test(condensed);
+    });
+
+    return sameLineHasTypeHint || hasStandaloneChineseDetails;
+  }
 
   // 找到「保險」區段起始
-  const insuranceSectionIdx = lines.findIndex((l) => /^保險$/.test(l));
+  const insuranceSectionIdx = lines.findIndex((line, index) => {
+    if (!/保\s*險/.test(line)) return false;
+
+    const nearby = lines.slice(index, Math.min(lines.length, index + 6)).join(" ");
+    return /非投資型|投資型|保單號碼|[A-Z]\d[\d*]+\d/.test(nearby);
+  });
   if (insuranceSectionIdx === -1) return [];
 
   // 終止條件：到「貸款」、「投資」等下一個主要區段
-  const sectionEndRe = /^貸款$|^投資$|^外匯$|^訊息公告$|^利率$/;
-
-  // Policy number pattern（保單號碼：字母開頭 + 數字 + 星號 + 數字）
-  const policyNoRe = /^[A-Z]\d[\d*]+\d$/;
+  const sectionEndRe = /^貸\s*款$|^投\s*資$|^外\s*匯$|^訊息公告$|^利率$/;
 
   // 收集每個保單號碼之後的所有行，直到下一個保單或區段結束
   const records: ParsedInsuranceRecord[] = [];
@@ -1310,21 +1328,31 @@ export function parseSinopacInsuranceSection(text: string): ParsedInsuranceRecor
     if (sectionEndRe.test(line)) break;
 
     // 判斷保險類型標題行
-    if (line.includes('非投資型')) { currentInsuranceType = 'non-investment'; i++; continue; }
-    if (line.includes('投資型')) { currentInsuranceType = 'investment'; i++; continue; }
+    if (line.includes('非投資型')) {
+      currentInsuranceType = 'non-investment';
+    } else if (line.includes('投資型')) {
+      currentInsuranceType = 'investment';
+    }
 
     // 找到保單號碼行
-    if (!policyNoRe.test(line)) { i++; continue; }
+    if (!looksLikePolicyStart(i)) { i++; continue; }
 
-    const policyNo = line;
+    const policyMatch = line.match(policyNoRe);
+    if (!policyMatch) { i++; continue; }
+
+    const policyNo = policyMatch[0];
 
     // 蒐集此保單後續所有行（直到下一個保單號碼、區段結束、或超過合理行數）
     const collected: string[] = [];
+    const inlineRemainder = line.replace(policyNo, '').trim();
+    if (inlineRemainder) {
+      collected.push(inlineRemainder);
+    }
     let j = i + 1;
     while (j < lines.length && j < i + 20) {
       const l = lines[j];
       if (sectionEndRe.test(l)) break;
-      if (policyNoRe.test(l)) break; // 下一張保單開始
+      if (looksLikePolicyStart(j)) break; // 下一張保單開始
       collected.push(l);
       j++;
     }
@@ -1351,7 +1379,7 @@ export function parseSinopacInsuranceSection(text: string): ParsedInsuranceRecor
     const paymentPeriod = paymentPeriodMatch?.[0] ?? '';
 
     // 中文名稱 chunks — 排除標題性關鍵詞
-    const headerKeywords = /保單號碼|保險公司|商品名稱|被保險人|保單生效日|保單到期日|保單幣別|主約保額|下期應繳|累計已繳|年期|繳別/;
+    const headerKeywords = /保單號碼|保險公司|商品名稱|被保險人|保單生效日|保單到期日|保單幣別|主約保額|下期應繳|累計已繳|年期|繳別|非投資型|投資型/;
     const chineseChunks = combined
       .split(/\s+/)
       .filter((t) => /^[\u4e00-\u9fff]{2,}/.test(t) && !headerKeywords.test(t));
@@ -1362,8 +1390,8 @@ export function parseSinopacInsuranceSection(text: string): ParsedInsuranceRecor
     const productName = chineseChunks.filter((t) => t !== company).join('');
 
     // 被保險人：英文字母開頭的 masked ID（如 P122****74）
-    const insuredMatch = combined.match(/[A-Z]\d[\d*]+\d/);
-    const insuredPerson = insuredMatch?.[0] ?? '';
+    const insuredMatches = [...combined.matchAll(/[A-Z]\d[\d*]+\d/g)].map((match) => match[0]);
+    const insuredPerson = insuredMatches.find((token) => token !== policyNo) ?? '';
 
     records.push({
       insuranceType: currentInsuranceType,
