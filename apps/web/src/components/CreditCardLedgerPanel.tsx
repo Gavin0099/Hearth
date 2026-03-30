@@ -20,6 +20,7 @@ const GMAIL_SOURCE_LABELS: Record<string, string> = {
   gmail_pdf_taishin: "台新",
   gmail_pdf_ctbc: "中信",
   gmail_pdf_mega: "兆豐",
+  credit_card_tw: "信用卡匯入",
 };
 
 const BANK_TONE_CLASS: Record<string, string> = {
@@ -40,11 +41,7 @@ function resolveTransactionLabel(transaction: TransactionRecord, accountName: st
   return accountName ?? "未知";
 }
 
-function isCreditCardTransaction(transaction: TransactionRecord, creditAccountIds: Set<string>) {
-  if (creditAccountIds.has(transaction.account_id)) {
-    return true;
-  }
-
+function isCreditCardTransaction(transaction: TransactionRecord) {
   return Boolean(transaction.source && transaction.source in GMAIL_SOURCE_LABELS);
 }
 
@@ -82,10 +79,9 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
   const [clearing, setClearing] = useState(false);
 
   const creditAccounts = accounts.filter((account) => account.type === "cash_credit");
-  const creditAccountIds = new Set(creditAccounts.map((account) => account.id));
   const accountNameMap = new Map(creditAccounts.map((account) => [account.id, account.name]));
   const creditTransactions = transactions
-    .filter((transaction) => isCreditCardTransaction(transaction, creditAccountIds))
+    .filter((transaction) => isCreditCardTransaction(transaction))
     .sort((left, right) => right.date.localeCompare(left.date) || Math.abs(right.amount) - Math.abs(left.amount));
 
   const availableMonths = [...new Set(creditTransactions.map((transaction) => transaction.date.slice(0, 7)))]
@@ -287,7 +283,7 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
         break;
       }
     }
-    setTransactions((current) => current.filter((transaction) => !creditAccountIds.has(transaction.account_id)));
+    setTransactions((current) => current.filter((transaction) => !isCreditCardTransaction(transaction)));
     setClearing(false);
   }
 
