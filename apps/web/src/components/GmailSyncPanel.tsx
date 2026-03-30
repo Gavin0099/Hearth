@@ -483,7 +483,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
 
         setState({
           status: "done",
-          message: `匯入完成，新增 ${totalImported} 筆，略過 ${totalSkipped} 筆。${warnStr}${snapshotSummary}${esunLoanDebug}`,
+          message: `${BANK_DISPLAY_NAMES[email.bank]}｜${email.subject}｜匯入完成，新增 ${totalImported} 筆，略過 ${totalSkipped} 筆。${warnStr}${snapshotSummary}${esunLoanDebug}`,
         });
       } else {
         if (loanRecords.length > 0) {
@@ -510,7 +510,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
 
           setState({
             status: "done",
-            message: `這封帳單沒有匯入交易，但已更新${snapshotParts.join("、")}。`,
+            message: `${BANK_DISPLAY_NAMES[email.bank]}｜${email.subject}｜這封帳單沒有匯入交易，但已更新${snapshotParts.join("、")}。`,
           });
           onImported();
           return;
@@ -545,7 +545,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
 
         setState({
           status: "done",
-          message: `匯入完成，新增 ${result.imported} 筆，略過 ${result.skipped} 筆。${
+          message: `${BANK_DISPLAY_NAMES[email.bank]}｜${email.subject}｜匯入完成，新增 ${result.imported} 筆，略過 ${result.skipped} 筆。${
             loanRecords.length > 0 ? ` 並更新貸款快照 ${loanRecords.length} 筆。` : ""
           }${
             insuranceRecords.length > 0 ? ` 並更新保險快照 ${insuranceRecords.length} 筆。` : ""
