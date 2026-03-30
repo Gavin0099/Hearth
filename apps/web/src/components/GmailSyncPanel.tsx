@@ -193,6 +193,32 @@ function buildEmptyExtractionMessage(
   return `${BANK_DISPLAY_NAMES[bank]} PDF 沒有可用文字層，系統也還沒有成功辨識出 OCR 文字。`;
 }
 
+function buildEsunLoanDebugSuffix(
+  bank: BankKey,
+  loanRecordsCount: number,
+  candidates?: Array<{ page: number; preview: string; score: number; tag: string }>,
+) {
+  if (bank !== "esun" || loanRecordsCount > 0 || !candidates?.length) {
+    return "";
+  }
+
+  const assetCandidates = candidates.filter((candidate) =>
+    candidate.tag.includes("asset_probe") ||
+    /貸款|保險|個人擔保貸款|\*{3}/.test(candidate.preview),
+  );
+  if (assetCandidates.length === 0) {
+    return " 玉山貸款偵測：目前 OCR 沒有抓到明顯的貸款關鍵字。";
+  }
+
+  const preview = assetCandidates
+    .slice(0, 2)
+    .map((candidate) => `p${candidate.page}: ${candidate.preview || "（空白）"}`)
+    .join(" | ")
+    .slice(0, 280);
+
+  return ` 玉山貸款偵測預覽：${preview}`;
+}
+
 export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
   const [state, setState] = useState<SyncState>({ status: "idle" });
   const [emails, setEmails] = useState<GmailBillEmail[]>([]);
@@ -436,10 +462,15 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         if (savedLoanCount > 0) snapshotParts.push(`貸款快照 ${savedLoanCount} 筆`);
         if (savedInsuranceCount > 0) snapshotParts.push(`保險快照 ${savedInsuranceCount} 筆`);
         const snapshotSummary = snapshotParts.length > 0 ? ` 並更新${snapshotParts.join("、")}。` : "";
+        const esunLoanDebug = buildEsunLoanDebugSuffix(
+          email.bank,
+          loanRecords.length,
+          extraction.debug?.ocrCandidates,
+        );
 
         setState({
           status: "done",
-          message: `匯入完成，新增 ${totalImported} 筆，略過 ${totalSkipped} 筆。${warnStr}${snapshotSummary}`,
+          message: `匯入完成，新增 ${totalImported} 筆，略過 ${totalSkipped} 筆。${warnStr}${snapshotSummary}${esunLoanDebug}`,
         });
       } else {
         if (loanRecords.length > 0) {
@@ -505,7 +536,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
             loanRecords.length > 0 ? ` 並更新貸款快照 ${loanRecords.length} 筆。` : ""
           }${
             insuranceRecords.length > 0 ? ` 並更新保險快照 ${insuranceRecords.length} 筆。` : ""
-          }`,
+          }${buildEsunLoanDebugSuffix(email.bank, loanRecords.length, extraction.debug?.ocrCandidates)}`,
         });
       }
 
