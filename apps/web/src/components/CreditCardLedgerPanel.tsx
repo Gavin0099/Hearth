@@ -248,8 +248,38 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
     .filter((item) => item.count > 0)
     .sort((left, right) => right.amount - left.amount);
 
+  const trendMonths = recentMonthsDesc.slice().reverse();
+  const monthTrend = trendMonths.map((month) => {
+    const monthLabel = formatMonthLabel(month).replace(" / ", "/");
+    const bankBreakdown = [...new Set(
+      creditTransactions
+        .filter((transaction) => transaction.date.startsWith(month))
+        .map((transaction) => resolveTransactionLabel(transaction, accountNameMap.get(transaction.account_id))),
+    )]
+      .sort()
+      .map((bank) => ({
+        bank,
+        amount: creditTransactions
+          .filter((transaction) =>
+            transaction.date.startsWith(month) &&
+            transaction.amount < 0 &&
+            resolveTransactionLabel(transaction, accountNameMap.get(transaction.account_id)) === bank)
+          .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0),
+      }))
+      .filter((item) => item.amount > 0)
+      .sort((left, right) => right.amount - left.amount);
+
+    return {
+      month,
+      label: monthLabel,
+      total: bankBreakdown.reduce((sum, item) => sum + item.amount, 0),
+      bankBreakdown,
+    };
+  });
+
   const topBankAmount = bankTotals[0]?.amount ?? 0;
   const topCategoryAmount = categoryTotals[0]?.amount ?? 0;
+  const topTrendAmount = monthTrend.reduce((max, item) => Math.max(max, item.total), 0);
   const categorizedExpense = categoryTotals.reduce((sum, item) => sum + item.amount, 0);
   const coverageRatio = monthExpenseTotal > 0 ? categorizedExpense / monthExpenseTotal : 0;
 
@@ -542,6 +572,58 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
           </section>
 
           <aside className="review-side-column">
+            <section className="review-side-card">
+              <div className="review-section-header compact">
+                <div>
+                  <h3>月支出趨勢</h3>
+                  <p>最近 4 個月信用卡支出</p>
+                </div>
+                <span className="review-coverage-pill">{trendMonths.length} 個月</span>
+              </div>
+
+              <div className="review-trend-chart">
+                <div className="review-trend-y-axis">
+                  {[1, 0.75, 0.5, 0.25, 0].map((ratio) => {
+                    const value = topTrendAmount > 0 ? Math.round(topTrendAmount * ratio) : 0;
+                    return (
+                      <span key={ratio}>
+                        {value >= 1000 ? `NT$${Math.round(value / 1000)}K` : `NT$${value}`}
+                      </span>
+                    );
+                  })}
+                </div>
+
+                <div className="review-trend-plot">
+                  {[1, 0.75, 0.5, 0.25, 0].map((ratio) => (
+                    <div key={ratio} className="review-trend-grid-line" style={{ bottom: `${ratio * 100}%` }} />
+                  ))}
+
+                  <div className="review-trend-bars">
+                    {monthTrend.map((item) => (
+                      <div key={item.month} className="review-trend-column">
+                        <div className={`review-trend-bar-shell${selectedMonth === item.month ? " active" : ""}`}>
+                          <div
+                            className="review-trend-bar"
+                            style={{ height: `${topTrendAmount > 0 ? (item.total / topTrendAmount) * 100 : 0}%` }}
+                          >
+                            {item.bankBreakdown.map((bankItem) => (
+                              <div
+                                key={`${item.month}-${bankItem.bank}`}
+                                className={`review-trend-segment ${BANK_TONE_CLASS[bankItem.bank] ?? "review-bank-tone-default"}`}
+                                style={{ height: `${item.total > 0 ? (bankItem.amount / item.total) * 100 : 0}%` }}
+                                title={`${item.label} ${bankItem.bank} ${formatCurrency(bankItem.amount)}`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        <span className="review-trend-label">{item.month.slice(5, 7)}月</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <section className="review-side-card">
               <div className="review-section-header compact">
                 <div>

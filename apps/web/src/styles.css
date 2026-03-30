@@ -1089,6 +1089,89 @@ tr:hover .ledger-delete-btn {
   gap: 14px;
 }
 
+.review-trend-chart {
+  padding: 4px 20px 8px;
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.review-trend-y-axis {
+  height: 240px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 8px 0 22px;
+  color: #9b8d80;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.review-trend-plot {
+  position: relative;
+  height: 240px;
+  padding: 8px 0 22px;
+}
+
+.review-trend-grid-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid rgba(91, 66, 44, 0.09);
+}
+
+.review-trend-bars {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+
+.review-trend-column {
+  height: 100%;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.review-trend-bar-shell {
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.review-trend-bar-shell.active .review-trend-bar {
+  box-shadow: 0 0 0 2px rgba(140, 77, 34, 0.18);
+}
+
+.review-trend-bar {
+  width: min(72px, 100%);
+  min-height: 6px;
+  border-radius: 12px 12px 8px 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column-reverse;
+  background: rgba(91, 66, 44, 0.08);
+}
+
+.review-trend-segment {
+  width: 100%;
+}
+
+.review-trend-label {
+  text-align: center;
+  color: #7a6758;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .review-bar-row {
   display: grid;
   grid-template-columns: 88px minmax(0, 1fr) 88px;
@@ -1173,6 +1256,18 @@ tr:hover .ledger-delete-btn {
   .review-bar-row,
   .review-bar-row.bank {
     grid-template-columns: 1fr;
+  }
+
+  .review-trend-chart {
+    grid-template-columns: 1fr;
+  }
+
+  .review-trend-y-axis {
+    display: none;
+  }
+
+  .review-trend-bars {
+    gap: 10px;
   }
 
   .detail-metric-grid,
