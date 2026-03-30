@@ -198,10 +198,15 @@ function buildEsunLoanDebugSuffix(
   loanRecordsCount: number,
   text: string,
   isBankStatement: boolean,
+  saveError?: string | null,
   candidates?: Array<{ page: number; preview: string; score: number; tag: string }>,
 ) {
-  if (bank !== "esun" || loanRecordsCount > 0) {
+  if (bank !== "esun") {
     return "";
+  }
+
+  if (loanRecordsCount > 0) {
+    return ` 玉山貸款偵測：parser=${loanRecordsCount} 筆${saveError ? `；snapshot寫入失敗=${saveError}` : "；snapshot寫入成功"}`;
   }
 
   const lines = text
@@ -382,6 +387,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
           : new Date().toISOString().slice(0, 7) + "-01";
       const loanRecords = LOAN_SECTION_PARSERS[email.bank]?.(text) ?? [];
       const insuranceRecords = email.bank === "sinopac" ? parseSinopacInsuranceSection(text) : [];
+      let loanSaveError: string | null = null;
 
       const parsed = isBankStatement
         ? BANK_STATEMENT_PARSERS[email.bank](text)
@@ -450,14 +456,13 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         const warnStr = warnings.length > 0 ? `（${warnings.join("；")}）` : "";
         let savedLoanCount = 0;
         let savedInsuranceCount = 0;
-
         try {
           if (loanRecords.length > 0) {
             await saveBankSnapshot(email.bank, 'loan', statementDate, loanRecords);
             savedLoanCount = loanRecords.length;
           }
-        } catch {
-          // non-fatal: skip loan snapshot
+        } catch (error) {
+          loanSaveError = error instanceof Error ? error.message : "unknown";
         }
 
         try {
@@ -478,6 +483,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
           loanRecords.length,
           text,
           isBankStatement,
+          loanSaveError,
           extraction.debug?.ocrCandidates,
         );
 
@@ -489,8 +495,8 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         if (loanRecords.length > 0) {
           try {
             await saveBankSnapshot(email.bank, "loan", statementDate, loanRecords);
-          } catch {
-            // non-fatal: keep transaction import path working
+          } catch (error) {
+            loanSaveError = error instanceof Error ? error.message : "unknown";
           }
         }
 
@@ -549,7 +555,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
             loanRecords.length > 0 ? ` 並更新貸款快照 ${loanRecords.length} 筆。` : ""
           }${
             insuranceRecords.length > 0 ? ` 並更新保險快照 ${insuranceRecords.length} 筆。` : ""
-          }${buildEsunLoanDebugSuffix(email.bank, loanRecords.length, text, isBankStatement, extraction.debug?.ocrCandidates)}`,
+          }${buildEsunLoanDebugSuffix(email.bank, loanRecords.length, text, isBankStatement, loanSaveError, extraction.debug?.ocrCandidates)}`,
         });
       }
 
