@@ -1443,6 +1443,11 @@ export function parseEsunLoanSection(text: string): ParsedLoanRecord[] {
 
   const sectionEndRe = /^保\s*險$|^保險$|^投\s*資$|^投資$|^外\s*匯$|^外匯$|^說明[:：]?$/;
   const sectionLines: string[] = [];
+  const headerLine = lines[loanSectionIdx];
+  if (headerLine) {
+    sectionLines.push(headerLine);
+  }
+
   for (let i = loanSectionIdx + 1; i < lines.length; i++) {
     const line = lines[i];
     if (sectionEndRe.test(line)) break;
@@ -1461,11 +1466,12 @@ export function parseEsunLoanSection(text: string): ParsedLoanRecord[] {
     const amountMatches = [...line.matchAll(/\d[\d,]*\.\d{2}/g)].map((match) => parsePlainAmount(match[0]));
     if (amountMatches.length === 0) continue;
 
-    const accountMatch = line.match(/\b\d{6,8}\*{3}\d{3}\b/);
+    const accountMatch = line.match(/\b(?:\d\s*){6,8}(?:\*\s*){3}(?:\d\s*){3}\b/);
     if (!accountMatch) continue;
+    const normalizedAccountNo = accountMatch[0].replace(/\s+/g, "");
 
     records.push({
-      accountNo: accountMatch[0],
+      accountNo: normalizedAccountNo,
       paymentDate,
       paymentAmount: 0,
       principal: 0,

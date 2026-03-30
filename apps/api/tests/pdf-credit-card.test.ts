@@ -453,6 +453,26 @@ test("parseEsunLoanSection extracts masked loan accounts and balances", () => {
   ]);
 });
 
+test("parseEsunLoanSection handles inline data-date header and spaced masked account", () => {
+  const text = `
+貸款 資料日期:2026/02/26
+個人擔保貸款 0 4 8 4 1 6 5 * * * 4 0 6 TWD 9,600,000.00
+說明：
+`;
+
+  assert.deepEqual(parseEsunLoanSection(text), [
+    {
+      accountNo: "0484165***406",
+      paymentDate: "2026-02-26",
+      paymentAmount: 0,
+      principal: 0,
+      interest: 0,
+      penalty: 0,
+      remainingBalance: 9600000,
+    },
+  ]);
+});
+
 test("parseSinopacInsuranceSection handles inline insurance header and policy rows", () => {
   const text = `
 永豐銀行綜合對帳單
