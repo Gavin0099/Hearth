@@ -402,6 +402,8 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         }
 
         const warnStr = warnings.length > 0 ? `（${warnings.join("；")}）` : "";
+        let savedLoanCount = 0;
+        let savedInsuranceCount = 0;
 
         // Parse and save loan/insurance snapshots from the same PDF text
         const statementDateMatch = text.match(/對帳單期間[：:]\s*(\d{4})\/(\d{2})\/\d{2}/);
@@ -415,6 +417,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
           const loanRecords = LOAN_SECTION_PARSERS[email.bank]?.(text) ?? [];
           if (loanRecords.length > 0) {
             await saveBankSnapshot(email.bank, 'loan', statementDate, loanRecords);
+            savedLoanCount = loanRecords.length;
           }
         } catch {
           // non-fatal: skip loan snapshot
@@ -424,14 +427,20 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
           const insuranceRecords = parseSinopacInsuranceSection(text);
           if (insuranceRecords.length > 0) {
             await saveBankSnapshot(email.bank, 'insurance', statementDate, insuranceRecords);
+            savedInsuranceCount = insuranceRecords.length;
           }
         } catch {
           // non-fatal: skip insurance snapshot
         }
 
+        const snapshotParts: string[] = [];
+        if (savedLoanCount > 0) snapshotParts.push(`貸款快照 ${savedLoanCount} 筆`);
+        if (savedInsuranceCount > 0) snapshotParts.push(`保險快照 ${savedInsuranceCount} 筆`);
+        const snapshotSummary = snapshotParts.length > 0 ? ` 並更新${snapshotParts.join("、")}。` : "";
+
         setState({
           status: "done",
-          message: `匯入完成，新增 ${totalImported} 筆，略過 ${totalSkipped} 筆。${warnStr}`,
+          message: `匯入完成，新增 ${totalImported} 筆，略過 ${totalSkipped} 筆。${warnStr}${snapshotSummary}`,
         });
       } else {
         // Credit card: single account import

@@ -1457,7 +1457,7 @@ export function parseEsunLoanSection(text: string): ParsedLoanRecord[] {
 
   const scanLines = sectionLines.length > 0 ? sectionLines : lines;
   const joinedScanText = scanLines.join(" ");
-  const dataDateMatch = joinedScanText.match(/資料日期[:：]?\s*(\d{3,4}\/\d{2}\/\d{2})/);
+  const dataDateMatch = joinedScanText.match(/資料日期[:：]?\s*((?:\d{3}|\d{4})[\/\-]\d{2}[\/\-]\d{2})/);
   const paymentDate = dataDateMatch ? parseDateToIso(dataDateMatch[1]) : "";
   const records: ParsedLoanRecord[] = [];
   const seenAccounts = new Set<string>();
@@ -1466,17 +1466,23 @@ export function parseEsunLoanSection(text: string): ParsedLoanRecord[] {
     const line = scanLines[i];
     const candidate = [line, scanLines[i + 1]].filter(Boolean).join(" ");
 
-    if (!/[A-Z0-9*]{4,}/.test(candidate) || !/\d[\d,]*(?:\.\d{2})?/.test(candidate)) {
+    if (!/[A-Z0-9*]{4,}/.test(candidate)) {
       continue;
     }
-
-    const amountMatches = [...candidate.matchAll(/\d[\d,]*(?:\.\d{2})?/g)].map((match) => parsePlainAmount(match[0]));
-    if (amountMatches.length === 0) continue;
 
     const accountMatch = candidate.match(/\b(?:\d\s*){6,8}(?:\*\s*){2,4}(?:\d\s*){3}\b/);
     if (!accountMatch) continue;
     const normalizedAccountNo = accountMatch[0].replace(/\s+/g, "");
     if (seenAccounts.has(normalizedAccountNo)) continue;
+
+    const amountSource = candidate
+      .slice((accountMatch.index ?? 0) + accountMatch[0].length)
+      .replace(/\b(?:TWD|NTD|USD|JPY)\b/g, " ");
+    const amountMatches = [
+      ...amountSource.matchAll(/\d{1,3}(?:,\d{3})*(?:\.\d{2})?|\d+(?:\.\d{2})?/g),
+    ].map((match) => parsePlainAmount(match[0]));
+    if (amountMatches.length === 0) continue;
+
     seenAccounts.add(normalizedAccountNo);
 
     records.push({
