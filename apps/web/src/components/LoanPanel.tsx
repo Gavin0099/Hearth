@@ -143,10 +143,11 @@ export function LoanPanel({ session }: { session: Session | null }) {
   }
 
   return (
-    <article className="panel">
+    <article className="panel detail-panel">
       <h2>貸款明細</h2>
+      <p className="detail-panel-intro">按銀行與對帳單月份整理貸款快照，方便快速比對每月餘額、繳款與本金攤還。</p>
 
-      <div style={{ marginBottom: "16px" }}>
+      <div className="detail-panel-actions">
         <button
           className="action-button"
           type="button"
@@ -157,8 +158,8 @@ export function LoanPanel({ session }: { session: Session | null }) {
       </div>
 
       {showForm && (
-        <div className="ledger-toolbar" style={{ flexDirection: "column", alignItems: "stretch", gap: "10px", marginBottom: "20px", padding: "16px", border: "1px solid var(--border, #ddd)", borderRadius: "8px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+        <div className="ledger-toolbar detail-entry-form">
+          <div className="detail-entry-grid">
             <label className="ledger-toolbar-field">
               <span>銀行</span>
               <select value={form.bank} onChange={(e) => setForm((f) => ({ ...f, bank: e.target.value }))}>
@@ -224,15 +225,19 @@ export function LoanPanel({ session }: { session: Session | null }) {
       )}
 
       {[...byBank.entries()].map(([bank, bankSnaps]) => (
-        <section key={bank} className="ledger-account-section">
-          <h3 className="ledger-account-heading">{BANK_DISPLAY_NAMES[bank] ?? bank}</h3>
+        <section key={bank} className="ledger-account-section detail-bank-section">
+          <div className="detail-bank-header">
+            <h3 className="ledger-account-heading">{BANK_DISPLAY_NAMES[bank] ?? bank}</h3>
+            <span className="detail-bank-pill">{bankSnaps.length} 期對帳單</span>
+          </div>
           {bankSnaps.map((snap) => {
             const records = Array.isArray(snap.data) ? snap.data : [];
             return (
-              <div key={snap.id} style={{ marginBottom: "16px" }}>
+              <div key={snap.id} className="snapshot-block">
                 <div className="snapshot-header">
-                  <div style={{ fontSize: "0.85rem", color: "var(--text-muted, #888)" }}>
-                    {formatDate(snap.statement_date)} 對帳單
+                  <div className="snapshot-meta">
+                    <div className="snapshot-statement-date">{formatDate(snap.statement_date)} 對帳單</div>
+                    <div className="snapshot-record-count">{records.length} 筆貸款快照</div>
                   </div>
                   <button
                     className="snapshot-delete-button"
@@ -243,7 +248,7 @@ export function LoanPanel({ session }: { session: Session | null }) {
                     刪除此月
                   </button>
                 </div>
-                <div className="detail-card-list">
+                <div className="detail-card-list detail-card-list-compact">
                   {records.map((rec, idx) => (
                     <section key={buildLoanRecordKey(rec)} className="detail-card loan-card">
                       <div className="detail-card-header">
