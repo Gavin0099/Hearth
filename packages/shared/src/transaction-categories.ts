@@ -6,6 +6,11 @@ export type TransactionCategory = {
 
 export const transactionCategories: TransactionCategory[] = [
   {
+    id: "lifestyle",
+    label: "生活",
+    keywords: ["超商", "日用品", "生活用品", "雜貨", "7-11", "7-eleven", "全家", "familymart"],
+  },
+  {
     id: "food",
     label: "餐飲",
     keywords: [
@@ -25,9 +30,9 @@ export const transactionCategories: TransactionCategory[] = [
     ],
   },
   {
-    id: "groceries",
-    label: "生活購物",
-    keywords: ["超市", "日用品", "全聯", "家樂福", "蝦皮"],
+    id: "shopping",
+    label: "購物",
+    keywords: ["蝦皮", "momo", "pchome", "百貨", "網購", "購物"],
   },
   {
     id: "transport",
@@ -47,12 +52,57 @@ export const transactionCategories: TransactionCategory[] = [
   {
     id: "housing",
     label: "居住",
-    keywords: ["房租", "管理費", "水電", "瓦斯", "網路"],
+    keywords: ["房租", "管理費", "水電", "瓦斯", "網路", "租金"],
   },
   {
     id: "family",
     label: "家庭",
     keywords: ["孝親", "育兒", "幼稚園", "保母"],
+  },
+  {
+    id: "entertainment",
+    label: "娛樂",
+    keywords: ["電影", "遊戲", "steam", "netflix", "spotify", "娛樂"],
+  },
+  {
+    id: "investment",
+    label: "投資",
+    keywords: ["券商", "證券", "etf", "基金", "投資", "股票"],
+  },
+  {
+    id: "insurance",
+    label: "保險",
+    keywords: ["保費", "人壽", "保險"],
+  },
+  {
+    id: "loan",
+    label: "貸款",
+    keywords: ["房貸", "信貸", "貸款", "放款本息"],
+  },
+  {
+    id: "tax_fee",
+    label: "稅費",
+    keywords: ["稅", "健保", "國民年金", "手續費", "規費"],
+  },
+  {
+    id: "salary",
+    label: "薪資",
+    keywords: ["薪資", "薪轉", "薪資轉帳"],
+  },
+  {
+    id: "interest_income",
+    label: "利息",
+    keywords: ["利息"],
+  },
+  {
+    id: "refund",
+    label: "退款",
+    keywords: ["退款", "退費", "退刷", "refund"],
+  },
+  {
+    id: "transfer",
+    label: "轉帳",
+    keywords: ["轉帳", "匯款", "atm", "跨行轉", "提領", "自扣"],
   },
   {
     id: "other",
