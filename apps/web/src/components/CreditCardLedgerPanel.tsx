@@ -12,6 +12,7 @@ import {
 
 const CATEGORY_LABELS = transactionCategories.map((category) => category.label);
 const PAGE_SIZE = 40;
+const BANK_SOURCE_PREFIX = "gmail_bank_";
 
 const GMAIL_SOURCE_LABELS: Record<string, string> = {
   gmail_pdf_sinopac: "永豐",
@@ -41,8 +42,19 @@ function resolveTransactionLabel(transaction: TransactionRecord, accountName: st
   return accountName ?? "未知";
 }
 
-function isCreditCardTransaction(transaction: TransactionRecord) {
-  return Boolean(transaction.source && transaction.source in GMAIL_SOURCE_LABELS);
+function isCreditCardTransaction(
+  transaction: TransactionRecord,
+  accountTypeById: Map<string, string>,
+) {
+  if (transaction.source?.startsWith(BANK_SOURCE_PREFIX)) {
+    return false;
+  }
+
+  if (transaction.source && transaction.source in GMAIL_SOURCE_LABELS) {
+    return true;
+  }
+
+  return accountTypeById.get(transaction.account_id) === "cash_credit";
 }
 
 function formatMonthLabel(month: string) {
@@ -79,9 +91,10 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
   const [clearing, setClearing] = useState(false);
 
   const creditAccounts = accounts.filter((account) => account.type === "cash_credit");
+  const accountTypeById = new Map(accounts.map((account) => [account.id, account.type]));
   const accountNameMap = new Map(creditAccounts.map((account) => [account.id, account.name]));
   const creditTransactions = transactions
-    .filter((transaction) => isCreditCardTransaction(transaction))
+    .filter((transaction) => isCreditCardTransaction(transaction, accountTypeById))
     .sort((left, right) => right.date.localeCompare(left.date) || Math.abs(right.amount) - Math.abs(left.amount));
 
   const availableMonths = [...new Set(creditTransactions.map((transaction) => transaction.date.slice(0, 7)))]
@@ -283,7 +296,7 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
         break;
       }
     }
-    setTransactions((current) => current.filter((transaction) => !isCreditCardTransaction(transaction)));
+    setTransactions((current) => current.filter((transaction) => !isCreditCardTransaction(transaction, accountTypeById)));
     setClearing(false);
   }
 
