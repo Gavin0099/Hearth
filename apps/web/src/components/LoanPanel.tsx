@@ -143,7 +143,7 @@ export function LoanPanel({ session }: { session: Session | null }) {
   }
 
   return (
-    <article className="panel detail-panel">
+    <article className="panel detail-panel ledger-panel">
       <h2>貸款明細</h2>
       <p className="detail-panel-intro">按銀行與對帳單月份整理貸款快照，方便快速比對每月餘額、繳款與本金攤還。</p>
 

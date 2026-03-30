@@ -173,7 +173,7 @@ export function InsurancePanel({ session }: { session: Session | null }) {
   }
 
   return (
-    <article className="panel detail-panel">
+    <article className="panel detail-panel ledger-panel">
       <h2>保險明細</h2>
       <p className="detail-panel-intro">把匯入或手動補登的保單快照集中呈現，方便核對保單期間、保費與累計投入。</p>
 

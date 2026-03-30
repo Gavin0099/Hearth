@@ -659,6 +659,7 @@ tr:hover .ledger-delete-btn {
   font-size: 1rem;
   color: #2b211c;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .loan-card .ledger-delete-btn,
