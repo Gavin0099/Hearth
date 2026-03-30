@@ -473,6 +473,37 @@ test("parseEsunLoanSection handles inline data-date header and spaced masked acc
   ]);
 });
 
+test("parseEsunLoanSection falls back to full-text scan when loan header is fragmented", () => {
+  const text = `
+◎玉山客服中心專線：(02)2182-1313
+存款 資料日期:2026/02/28
+貸 款 資料日期:2026/02/26
+個人擔保貸款 0484165***406 TWD 9,600,000.00
+個人擔保貸款 0484165***417 TWD 543,524.00
+`;
+
+  assert.deepEqual(parseEsunLoanSection(text), [
+    {
+      accountNo: "0484165***406",
+      paymentDate: "2026-02-26",
+      paymentAmount: 0,
+      principal: 0,
+      interest: 0,
+      penalty: 0,
+      remainingBalance: 9600000,
+    },
+    {
+      accountNo: "0484165***417",
+      paymentDate: "2026-02-26",
+      paymentAmount: 0,
+      principal: 0,
+      interest: 0,
+      penalty: 0,
+      remainingBalance: 543524,
+    },
+  ]);
+});
+
 test("parseSinopacInsuranceSection handles inline insurance header and policy rows", () => {
   const text = `
 永豐銀行綜合對帳單

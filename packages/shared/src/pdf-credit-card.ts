@@ -1437,38 +1437,46 @@ export function parseEsunLoanSection(text: string): ParsedLoanRecord[] {
   const deSpaced = collapseInterCharSpaces(text);
   const normalized = normalizeWhitespace(deSpaced);
   const lines = normalized.split('\n').map((l) => l.trim()).filter(Boolean);
-
-  const loanSectionIdx = lines.findIndex((line) => /^貸\s*款$|貸款/.test(line));
-  if (loanSectionIdx === -1) return [];
-
   const sectionEndRe = /^保\s*險$|^保險$|^投\s*資$|^投資$|^外\s*匯$|^外匯$|^說明[:：]?$/;
+  const loanSectionIdx = lines.findIndex((line) => /^貸\s*款$|貸款/.test(line));
   const sectionLines: string[] = [];
-  const headerLine = lines[loanSectionIdx];
-  if (headerLine) {
-    sectionLines.push(headerLine);
+
+  if (loanSectionIdx !== -1) {
+    const headerLine = lines[loanSectionIdx];
+    if (headerLine) {
+      sectionLines.push(headerLine);
+    }
+
+    for (let i = loanSectionIdx + 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (sectionEndRe.test(line)) break;
+      sectionLines.push(line);
+    }
   }
 
-  for (let i = loanSectionIdx + 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (sectionEndRe.test(line)) break;
-    sectionLines.push(line);
-  }
-
-  const dataDateMatch = sectionLines.join(" ").match(/資料日期[:：]?\s*(\d{4}\/\d{2}\/\d{2})/);
+  const scanLines = sectionLines.length > 0 ? sectionLines : lines;
+  const joinedScanText = scanLines.join(" ");
+  const dataDateMatch = joinedScanText.match(/資料日期[:：]?\s*(\d{4}\/\d{2}\/\d{2})/);
   const paymentDate = dataDateMatch ? parseDateToIso(dataDateMatch[1]) : "";
   const records: ParsedLoanRecord[] = [];
+  const seenAccounts = new Set<string>();
 
-  for (const line of sectionLines) {
-    if (!/[A-Z0-9*]{4,}/.test(line) || !/\d[\d,]*\.\d{2}/.test(line)) {
+  for (let i = 0; i < scanLines.length; i++) {
+    const line = scanLines[i];
+    const candidate = [line, scanLines[i + 1]].filter(Boolean).join(" ");
+
+    if (!/[A-Z0-9*]{4,}/.test(candidate) || !/\d[\d,]*\.\d{2}/.test(candidate)) {
       continue;
     }
 
-    const amountMatches = [...line.matchAll(/\d[\d,]*\.\d{2}/g)].map((match) => parsePlainAmount(match[0]));
+    const amountMatches = [...candidate.matchAll(/\d[\d,]*\.\d{2}/g)].map((match) => parsePlainAmount(match[0]));
     if (amountMatches.length === 0) continue;
 
-    const accountMatch = line.match(/\b(?:\d\s*){6,8}(?:\*\s*){3}(?:\d\s*){3}\b/);
+    const accountMatch = candidate.match(/\b(?:\d\s*){6,8}(?:\*\s*){2,4}(?:\d\s*){3}\b/);
     if (!accountMatch) continue;
     const normalizedAccountNo = accountMatch[0].replace(/\s+/g, "");
+    if (seenAccounts.has(normalizedAccountNo)) continue;
+    seenAccounts.add(normalizedAccountNo);
 
     records.push({
       accountNo: normalizedAccountNo,
