@@ -193,6 +193,22 @@ function buildEmptyExtractionMessage(
   return `${BANK_DISPLAY_NAMES[bank]} PDF 沒有可用文字層，系統也還沒有成功辨識出 OCR 文字。`;
 }
 
+function resolveStatementDate(text: string, emailDateHeader: string) {
+  const statementDateMatch = text.match(/對帳單期間[：:]\s*(\d{4})\/(\d{2})\/\d{2}/);
+  if (statementDateMatch) {
+    return `${statementDateMatch[1]}-${statementDateMatch[2]}-01`;
+  }
+
+  const parsedHeaderDate = emailDateHeader ? new Date(emailDateHeader) : null;
+  if (parsedHeaderDate && !Number.isNaN(parsedHeaderDate.getTime())) {
+    const year = parsedHeaderDate.getFullYear();
+    const month = String(parsedHeaderDate.getMonth() + 1).padStart(2, "0");
+    return `${year}-${month}-01`;
+  }
+
+  return `${new Date().toISOString().slice(0, 7)}-01`;
+}
+
 function buildEsunLoanDebugSuffix(
   bank: BankKey,
   loanRecordsCount: number,
@@ -379,12 +395,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         return;
       }
 
-      const statementDateMatch = text.match(/對帳單期間[：:]\s*(\d{4})\/(\d{2})\/\d{2}/);
-      const statementDate = statementDateMatch
-        ? `${statementDateMatch[1]}-${statementDateMatch[2]}-01`
-        : email.date
-          ? `${email.date.slice(0, 7)}-01`
-          : new Date().toISOString().slice(0, 7) + "-01";
+      const statementDate = resolveStatementDate(text, email.date);
       const loanRecords = LOAN_SECTION_PARSERS[email.bank]?.(text) ?? [];
       const insuranceRecords = email.bank === "sinopac" ? parseSinopacInsuranceSection(text) : [];
       let loanSaveError: string | null = null;
