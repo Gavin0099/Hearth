@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   parseCtbcPdfTransactions,
+  parseEsunBankPdfTransactions,
   parseEsunPdfTransactions,
   parseMegaPdfTransactions,
   parseSinopacInsuranceSection,
@@ -392,6 +393,29 @@ test("parseCtbcPdfTransactions recovers transaction rows from noisy token stream
       date: "2026-04-09",
       description: "國外交易手續費",
       amount: -10,
+      currency: "TWD",
+    },
+  ]);
+});
+
+test("parseEsunBankPdfTransactions handles ROC-date account statement rows", () => {
+  const text = `
+存款 資料日期:2026/02/28
+115/02/05 ＡＴＭ跨行轉 20,000.00 永*銀行 807 0000700400***005 20,747.00
+115/02/07 薪資轉帳 35,000.00 公司薪資 55,747.00
+`;
+
+  assert.deepEqual(parseEsunBankPdfTransactions(text), [
+    {
+      date: "2026-02-05",
+      description: "ＡＴＭ跨行轉 永*銀行",
+      amount: -20000,
+      currency: "TWD",
+    },
+    {
+      date: "2026-02-07",
+      description: "薪資轉帳 公司薪資",
+      amount: 35000,
       currency: "TWD",
     },
   ]);

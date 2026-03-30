@@ -1119,8 +1119,8 @@ function parseSinopacBankPdfText(text: string): ParsedPdfTransaction[] {
       }
     }
 
-    // Transaction row: starts with YYYY/MM/DD
-    const rowMatch = trimmed.match(/^(?<date>\d{4}\/\d{2}\/\d{2})\s+(?<rest>.+)$/u);
+    // Transaction row: starts with YYYY/MM/DD or ROC YYY/MM/DD
+    const rowMatch = trimmed.match(/^(?<date>(?:\d{3}|\d{4})\/\d{2}\/\d{2})\s+(?<rest>.+)$/u);
     if (!rowMatch?.groups) continue;
 
     const tokens = rowMatch.groups.rest.split(/\s+/).filter(Boolean);
@@ -1147,7 +1147,7 @@ function parseSinopacBankPdfText(text: string): ParsedPdfTransaction[] {
     if (!description) continue;
 
     section.rows.push({
-      date: rowMatch.groups.date.replace(/\//g, "-"),
+      date: normalizeDate(rowMatch.groups.date) ?? rowMatch.groups.date.replace(/\//g, "-"),
       description,
       amount,
       balance,
