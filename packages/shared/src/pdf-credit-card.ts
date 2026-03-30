@@ -1461,7 +1461,7 @@ export function parseEsunLoanSection(text: string): ParsedLoanRecord[] {
     const amountMatches = [...line.matchAll(/\d[\d,]*\.\d{2}/g)].map((match) => parsePlainAmount(match[0]));
     if (amountMatches.length === 0) continue;
 
-    const accountMatch = line.match(/\b\d{6}\*{3}\d{3}\b/);
+    const accountMatch = line.match(/\b\d{6,8}\*{3}\d{3}\b/);
     if (!accountMatch) continue;
 
     records.push({
