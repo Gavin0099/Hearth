@@ -296,6 +296,35 @@ function scoreOcrText(bank: PdfBankHint | undefined, text: string) {
   return text.length;
 }
 
+function buildPageTextFromOcrCandidates(
+  bank: PdfBankHint | undefined,
+  scoredResults: Array<{ tag: string; text: string; score: number }>,
+) {
+  const ranked = scoredResults
+    .slice()
+    .sort((left, right) => right.score - left.score || right.text.length - left.text.length);
+
+  const best = ranked[0]?.text ?? "";
+  if (bank !== "esun" || ranked.length <= 1) {
+    return best;
+  }
+
+  const extraSections = ranked
+    .filter((candidate) => candidate.text !== best)
+    .filter((candidate) => /貸款|保險|個人擔保貸款|\d{6,8}\*{3}\d{3}|保單|被保險人/.test(candidate.text))
+    .map((candidate) => candidate.text);
+
+  const uniqueSections: string[] = [];
+  for (const section of [best, ...extraSections]) {
+    const normalized = section.replace(/\s+/g, " ").trim();
+    if (!normalized) continue;
+    if (uniqueSections.some((existing) => existing.replace(/\s+/g, " ").trim() === normalized)) continue;
+    uniqueSections.push(section);
+  }
+
+  return uniqueSections.join("\n").trim();
+}
+
 function buildOcrCandidatesForBank(canvas: HTMLCanvasElement, bank?: PdfBankHint) {
   const candidates: OcrCandidate[] = [
     { canvas, tag: "full_raw" },
@@ -400,9 +429,7 @@ async function extractTextFromPdfByOcr(pdf: pdfjsLib.PDFDocumentProxy, bank?: Pd
       }))
       .filter((result) => result.text);
 
-    const bestPageText = scoredResults
-      .sort((left, right) => right.score - left.score || right.text.length - left.text.length)[0]
-      ?.text ?? "";
+    const bestPageText = buildPageTextFromOcrCandidates(bank, scoredResults);
 
     const topCandidates = scoredResults
       .slice()
@@ -490,7 +517,7 @@ export async function extractPdfText(
       const scoredResults = results
         .map((r) => ({ ...r, score: scoreOcrText(bank, r.text) }))
         .filter((r) => r.text);
-      const best = scoredResults.sort((a, b) => b.score - a.score || b.text.length - a.text.length)[0];
+      const best = buildPageTextFromOcrCandidates(bank, scoredResults);
       debugCandidates.ocrCandidates?.push(
         ...scoredResults.slice(0, 3).map((r) => ({
           page: i,
@@ -499,7 +526,7 @@ export async function extractPdfText(
           tag: r.tag,
         })),
       );
-      if (best?.text) pageTexts.push(best.text);
+      if (best) pageTexts.push(best);
     }
 
     const combined = pageTexts.filter(Boolean).join("\n").trim();
