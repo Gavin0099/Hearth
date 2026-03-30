@@ -26,6 +26,7 @@ const OCR_LANG_PATH = "https://tessdata.projectnaptha.com/4.0.0";
 const OCR_LANGS = ["eng", "chi_tra"];
 const OCR_RENDER_SCALE = 3;
 const CTBC_COVER_MARKERS = ["0800-024365", "0800-899-399", "7.7", "300,000", "i APP"];
+const ESUN_COVER_MARKERS = ["綜合對帳單", "資料參考日", "對帳單期間", "客服中心專線", "本人致電客服中心", "循環信用利率", "預借現金手續費"];
 
 export type PdfBankHint = "sinopac" | "esun" | "cathay" | "taishin" | "ctbc" | "mega";
 
@@ -187,6 +188,32 @@ function buildHighContrastCanvas(source: HTMLCanvasElement) {
   return canvas;
 }
 
+function buildBinaryThresholdCanvas(source: HTMLCanvasElement) {
+  const canvas = document.createElement("canvas");
+  canvas.width = source.width;
+  canvas.height = source.height;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("OCR fallback failed: unable to create threshold canvas context.");
+  }
+
+  context.drawImage(source, 0, 0);
+  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+  const { data } = imageData;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const grayscale = Math.round((data[i] * 0.299) + (data[i + 1] * 0.587) + (data[i + 2] * 0.114));
+    const binary = grayscale >= 170 ? 255 : 0;
+    data[i] = binary;
+    data[i + 1] = binary;
+    data[i + 2] = binary;
+  }
+
+  context.putImageData(imageData, 0, 0);
+  return canvas;
+}
+
 function cropCanvas(source: HTMLCanvasElement, region: CropRegion) {
   const canvas = document.createElement("canvas");
   const sx = Math.max(0, Math.floor(source.width * region.left));
@@ -234,9 +261,62 @@ function scoreCtbcOcrText(text: string) {
   );
 }
 
+function scoreEsunOcrText(text: string) {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized) return Number.NEGATIVE_INFINITY;
+
+  const condensed = normalized.replace(/\s+/g, "");
+  const fullDateCount = (normalized.match(/\b\d{4}\/\d{2}\/\d{2}\b/g) ?? []).length;
+  const shortDateCount = (normalized.match(/\b\d{2}\/\d{2}\b/g) ?? []).length;
+  const amountCount = (normalized.match(/\b-?\d{1,3}(?:,\d{3})+(?:\.\d+)?\b/g) ?? []).length;
+  const detailHeaderCount = (condensed.match(/本期費用明細|本期消費明細|存款交易明細|交易明細|期初餘額|前期結餘|上期結餘/g) ?? []).length;
+  const currencyCount = (normalized.match(/\bTWD\b|\bUSD\b|\bJPY\b|新臺幣|美元|日圓|日幣/g) ?? []).length;
+  const transactionRowCount =
+    (normalized.match(/\b\d{4}\/\d{2}\/\d{2}\b.{0,100}\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\b/g) ?? []).length;
+  const coverPenalty = ESUN_COVER_MARKERS.filter((marker) => condensed.includes(marker)).length * 8;
+
+  return (
+    (detailHeaderCount * 12) +
+    (transactionRowCount * 10) +
+    (fullDateCount * 4) +
+    (shortDateCount * 2) +
+    amountCount +
+    (currencyCount * 3) -
+    coverPenalty -
+    Math.max(0, 10 - normalized.length / 50)
+  );
+}
+
+function scoreOcrText(bank: PdfBankHint | undefined, text: string) {
+  if (bank === "ctbc") return scoreCtbcOcrText(text);
+  if (bank === "esun") return scoreEsunOcrText(text);
+  return text.length;
+}
+
 function buildOcrCandidatesForBank(canvas: HTMLCanvasElement, bank?: PdfBankHint) {
-  const full = buildHighContrastCanvas(canvas);
-  const candidates: OcrCandidate[] = [{ canvas: full, tag: "full_enhanced" }];
+  const candidates: OcrCandidate[] = [
+    { canvas, tag: "full_raw" },
+    { canvas: buildHighContrastCanvas(canvas), tag: "full_enhanced" },
+    { canvas: buildBinaryThresholdCanvas(canvas), tag: "full_thresholded" },
+  ];
+
+  if (bank === "esun") {
+    const esunRegions: CropRegion[] = [
+      { left: 0.04, top: 0.20, width: 0.92, height: 0.74 },
+      { left: 0.05, top: 0.28, width: 0.90, height: 0.62 },
+      { left: 0.06, top: 0.36, width: 0.88, height: 0.52 },
+      { left: 0.05, top: 0.46, width: 0.90, height: 0.42 },
+    ];
+
+    esunRegions.forEach((region, index) => {
+      const cropped = cropCanvas(canvas, region);
+      candidates.push({ canvas: cropped, tag: `esun_crop_${index + 1}` });
+      candidates.push({ canvas: buildHighContrastCanvas(cropped), tag: `esun_crop_${index + 1}_enhanced` });
+      candidates.push({ canvas: buildBinaryThresholdCanvas(cropped), tag: `esun_crop_${index + 1}_thresholded` });
+    });
+
+    return candidates;
+  }
 
   if (bank !== "ctbc") {
     return candidates;
@@ -313,7 +393,7 @@ async function extractTextFromPdfByOcr(pdf: pdfjsLib.PDFDocumentProxy, bank?: Pd
     const scoredResults = results
       .map((result) => ({
         ...result,
-        score: bank === "ctbc" ? scoreCtbcOcrText(result.text) : result.text.length,
+        score: scoreOcrText(bank, result.text),
       }))
       .filter((result) => result.text);
 
