@@ -337,11 +337,20 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         return;
       }
 
+      const statementDateMatch = text.match(/對帳單期間[：:]\s*(\d{4})\/(\d{2})\/\d{2}/);
+      const statementDate = statementDateMatch
+        ? `${statementDateMatch[1]}-${statementDateMatch[2]}-01`
+        : email.date
+          ? `${email.date.slice(0, 7)}-01`
+          : new Date().toISOString().slice(0, 7) + "-01";
+      const loanRecords = LOAN_SECTION_PARSERS[email.bank]?.(text) ?? [];
+      const insuranceRecords = email.bank === "sinopac" ? parseSinopacInsuranceSection(text) : [];
+
       const parsed = isBankStatement
         ? BANK_STATEMENT_PARSERS[email.bank](text)
         : BANK_PARSERS[email.bank](text);
 
-      if (parsed.length === 0) {
+      if (parsed.length === 0 && loanRecords.length === 0 && insuranceRecords.length === 0) {
         setState({
           status: "error",
           message:
@@ -405,16 +414,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         let savedLoanCount = 0;
         let savedInsuranceCount = 0;
 
-        // Parse and save loan/insurance snapshots from the same PDF text
-        const statementDateMatch = text.match(/對帳單期間[：:]\s*(\d{4})\/(\d{2})\/\d{2}/);
-        const statementDate = statementDateMatch
-          ? `${statementDateMatch[1]}-${statementDateMatch[2]}-01`
-          : email.date
-            ? `${email.date.slice(0, 7)}-01`
-            : new Date().toISOString().slice(0, 7) + '-01';
-
         try {
-          const loanRecords = LOAN_SECTION_PARSERS[email.bank]?.(text) ?? [];
           if (loanRecords.length > 0) {
             await saveBankSnapshot(email.bank, 'loan', statementDate, loanRecords);
             savedLoanCount = loanRecords.length;
@@ -424,7 +424,6 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         }
 
         try {
-          const insuranceRecords = parseSinopacInsuranceSection(text);
           if (insuranceRecords.length > 0) {
             await saveBankSnapshot(email.bank, 'insurance', statementDate, insuranceRecords);
             savedInsuranceCount = insuranceRecords.length;
@@ -443,7 +442,36 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
           message: `匯入完成，新增 ${totalImported} 筆，略過 ${totalSkipped} 筆。${warnStr}${snapshotSummary}`,
         });
       } else {
+        if (loanRecords.length > 0) {
+          try {
+            await saveBankSnapshot(email.bank, "loan", statementDate, loanRecords);
+          } catch {
+            // non-fatal: keep transaction import path working
+          }
+        }
+
+        if (insuranceRecords.length > 0) {
+          try {
+            await saveBankSnapshot(email.bank, "insurance", statementDate, insuranceRecords);
+          } catch {
+            // non-fatal: keep transaction import path working
+          }
+        }
+
         // Credit card: single account import
+        if (parsed.length === 0) {
+          const snapshotParts: string[] = [];
+          if (loanRecords.length > 0) snapshotParts.push(`貸款快照 ${loanRecords.length} 筆`);
+          if (insuranceRecords.length > 0) snapshotParts.push(`保險快照 ${insuranceRecords.length} 筆`);
+
+          setState({
+            status: "done",
+            message: `這封帳單沒有匯入交易，但已更新${snapshotParts.join("、")}。`,
+          });
+          onImported();
+          return;
+        }
+
         const accountId = resolveImportAccountId(email.bank, freshAccounts);
         if (!accountId) {
           setState({ status: "error", message: "找不到對應帳戶。" });
@@ -473,7 +501,11 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
 
         setState({
           status: "done",
-          message: `匯入完成，新增 ${result.imported} 筆，略過 ${result.skipped} 筆。`,
+          message: `匯入完成，新增 ${result.imported} 筆，略過 ${result.skipped} 筆。${
+            loanRecords.length > 0 ? ` 並更新貸款快照 ${loanRecords.length} 筆。` : ""
+          }${
+            insuranceRecords.length > 0 ? ` 並更新保險快照 ${insuranceRecords.length} 筆。` : ""
+          }`,
         });
       }
 

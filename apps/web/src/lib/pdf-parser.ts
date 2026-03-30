@@ -30,6 +30,7 @@ const OCR_LANGS = ["eng", "chi_tra"];
 const OCR_RENDER_SCALE = 3;
 const CTBC_COVER_MARKERS = ["0800-024365", "0800-899-399", "7.7", "300,000", "i APP"];
 const ESUN_COVER_MARKERS = ["綜合對帳單", "資料參考日", "對帳單期間", "客服中心專線", "本人致電客服中心", "循環信用利率", "預借現金手續費"];
+const ESUN_ASSET_SECTION_MARKERS = /貸款|保險|個人擔保貸款|\d{6,8}\*{3}\d{3}|保單|被保險人/;
 
 export type PdfBankHint = "sinopac" | "esun" | "cathay" | "taishin" | "ctbc" | "mega";
 
@@ -492,7 +493,8 @@ export async function extractPdfText(
           const condensed = layerText.replace(/\s+/g, "");
           const hasTransactionHeader = /本期費用明細|本期消費明細|存款交易明細|交易明細|期初餘額|前期結餘|上期結餘/.test(condensed);
           const txRowCount = (layerText.match(/\b\d{4}\/\d{2}\/\d{2}\b[^\n]+\d{1,3}(?:,\d{3})+/gm) ?? []).length;
-          if (!hasTransactionHeader && txRowCount === 0) {
+          const hasAssetSection = ESUN_ASSET_SECTION_MARKERS.test(condensed);
+          if (!hasTransactionHeader && txRowCount === 0 && !hasAssetSection) {
             continue;
           }
         }
