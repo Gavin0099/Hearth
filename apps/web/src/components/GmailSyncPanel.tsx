@@ -14,6 +14,7 @@ import {
   parseCathayPdfText,
   parseCtbcPdfText,
   parseEsunBankPdfText,
+  parseEsunLoanSection,
   type PdfTextExtractionSource,
   parseEsunPdfText,
   parseMegaPdfText,
@@ -74,6 +75,11 @@ const BANK_STATEMENT_PARSERS: Record<BankKey, (text: string) => ParsedTransactio
   taishin: parseSinopacBankPdfText,
   ctbc: parseSinopacBankPdfText,
   mega: parseSinopacBankPdfText,
+};
+
+const LOAN_SECTION_PARSERS: Partial<Record<BankKey, (text: string) => ReturnType<typeof parseSinopacLoanSection>>> = {
+  sinopac: parseSinopacLoanSection,
+  esun: parseEsunLoanSection,
 };
 
 function resolveImportAccountId(
@@ -406,7 +412,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
             : new Date().toISOString().slice(0, 7) + '-01';
 
         try {
-          const loanRecords = parseSinopacLoanSection(text);
+          const loanRecords = LOAN_SECTION_PARSERS[email.bank]?.(text) ?? [];
           if (loanRecords.length > 0) {
             await saveBankSnapshot(email.bank, 'loan', statementDate, loanRecords);
           }

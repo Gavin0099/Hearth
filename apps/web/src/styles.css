@@ -500,6 +500,107 @@ tr:hover .ledger-delete-btn {
   opacity: 0.5;
 }
 
+.detail-card-list {
+  display: grid;
+  gap: 14px;
+}
+
+.detail-card {
+  border: 1px solid rgba(91, 66, 44, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 253, 249, 0.9);
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(76, 58, 41, 0.06);
+}
+
+.detail-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.detail-card-title {
+  font-size: 0.78rem;
+  color: #9b8070;
+  margin-bottom: 4px;
+}
+
+.detail-card-emphasis {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #2b211c;
+  word-break: break-word;
+}
+
+.detail-card-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: #efe1cf;
+  color: #5c3b22;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.detail-metric-grid,
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+
+.detail-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(140, 77, 34, 0.05);
+}
+
+.detail-metric .label,
+.insurance-row .label {
+  font-size: 0.78rem;
+  color: #8c735f;
+}
+
+.detail-metric strong {
+  font-size: 1rem;
+  color: #2b211c;
+  font-variant-numeric: tabular-nums;
+}
+
+.loan-card .ledger-delete-btn,
+.insurance-card .ledger-delete-btn {
+  flex-shrink: 0;
+}
+
+.loan-account-number {
+  letter-spacing: 0.02em;
+}
+
+.insurance-card-body {
+  display: grid;
+  gap: 10px 16px;
+}
+
+.insurance-row {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(140, 77, 34, 0.05);
+}
+
+.detail-long-text {
+  line-height: 1.7;
+  word-break: break-word;
+}
+
 /* ──────────────────────────────────────────────────────────────────── */
 
 @media (max-width: 820px) {
@@ -512,5 +613,16 @@ tr:hover .ledger-delete-btn {
   .app-shell {
     width: min(100vw - 24px, 1120px);
     padding-top: 28px;
+  }
+
+  .detail-metric-grid,
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .snapshot-header,
+  .detail-card-header {
+    align-items: stretch;
+    flex-direction: column;
   }
 }

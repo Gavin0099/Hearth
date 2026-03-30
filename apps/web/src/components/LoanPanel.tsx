@@ -23,6 +23,10 @@ function formatDate(dateStr: string): string {
   return dateStr.replace(/-/g, "/");
 }
 
+function formatOptionalAmount(n: number): string {
+  return n > 0 ? formatAmount(n) : "—";
+}
+
 type LoanSnapshotItem = BankSnapshot & { data: ParsedLoanRecord[] };
 
 function buildLoanRecordKey(record: ParsedLoanRecord): string {
@@ -239,43 +243,51 @@ export function LoanPanel({ session }: { session: Session | null }) {
                     刪除此月
                   </button>
                 </div>
-                <div className="ledger-table-wrapper">
-                  <table className="ledger-table">
-                    <thead>
-                      <tr>
-                        <th>帳號</th>
-                        <th>繳款日</th>
-                        <th className="ledger-th-amount">繳款金額</th>
-                        <th className="ledger-th-amount">攤還本金</th>
-                        <th className="ledger-th-amount">繳息金額</th>
-                        <th className="ledger-th-amount">違約金</th>
-                        <th className="ledger-th-amount">本金餘額</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {records.map((rec, idx) => (
-                        <tr key={buildLoanRecordKey(rec)}>
-                          <td className="ledger-desc">{rec.accountNo}</td>
-                          <td className="ledger-date">{formatDate(rec.paymentDate)}</td>
-                          <td className="ledger-amount">{formatAmount(rec.paymentAmount)}</td>
-                          <td className="ledger-amount">{formatAmount(rec.principal)}</td>
-                          <td className="ledger-amount negative">{formatAmount(rec.interest)}</td>
-                          <td className="ledger-amount">{formatAmount(rec.penalty)}</td>
-                          <td className="ledger-amount positive">{formatAmount(rec.remainingBalance)}</td>
-                          <td>
-                            <button
-                              className="ledger-delete-btn always-visible"
-                              disabled={deletingIds.has(`${snap.id}-${idx}`)}
-                              onClick={() => void handleDeleteRecord(snap, idx)}
-                              type="button"
-                              aria-label="刪除"
-                            >×</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="detail-card-list">
+                  {records.map((rec, idx) => (
+                    <section key={buildLoanRecordKey(rec)} className="detail-card loan-card">
+                      <div className="detail-card-header">
+                        <div>
+                          <div className="detail-card-title">帳號</div>
+                          <div className="detail-card-emphasis loan-account-number">{rec.accountNo}</div>
+                        </div>
+                        <button
+                          className="ledger-delete-btn always-visible"
+                          disabled={deletingIds.has(`${snap.id}-${idx}`)}
+                          onClick={() => void handleDeleteRecord(snap, idx)}
+                          type="button"
+                          aria-label="刪除"
+                        >×</button>
+                      </div>
+
+                      <div className="detail-metric-grid">
+                        <div className="detail-metric">
+                          <span className="label">資料日 / 繳款日</span>
+                          <strong>{formatDate(rec.paymentDate)}</strong>
+                        </div>
+                        <div className="detail-metric">
+                          <span className="label">本金餘額</span>
+                          <strong className="positive">TWD {formatAmount(rec.remainingBalance)}</strong>
+                        </div>
+                        <div className="detail-metric">
+                          <span className="label">繳款金額</span>
+                          <strong>{formatOptionalAmount(rec.paymentAmount)}</strong>
+                        </div>
+                        <div className="detail-metric">
+                          <span className="label">攤還本金</span>
+                          <strong>{formatOptionalAmount(rec.principal)}</strong>
+                        </div>
+                        <div className="detail-metric">
+                          <span className="label">繳息金額</span>
+                          <strong className={rec.interest > 0 ? "negative" : undefined}>{formatOptionalAmount(rec.interest)}</strong>
+                        </div>
+                        <div className="detail-metric">
+                          <span className="label">違約金</span>
+                          <strong>{formatOptionalAmount(rec.penalty)}</strong>
+                        </div>
+                      </div>
+                    </section>
+                  ))}
                 </div>
               </div>
             );

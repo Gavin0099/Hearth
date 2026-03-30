@@ -309,12 +309,15 @@ export function InsurancePanel({ session }: { session: Session | null }) {
                     刪除此月
                   </button>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div className="detail-card-list">
                   {records.map((rec, idx) => (
-                    <div key={buildInsuranceRecordKey(rec)} className="insurance-card">
-                      <div className="insurance-card-header">
-                        <span style={{ fontWeight: 600 }}>{rec.policyNo}</span>
-                        <span style={{ fontSize: "0.8rem", color: "var(--text-muted, #888)" }}>
+                    <section key={buildInsuranceRecordKey(rec)} className="detail-card insurance-card">
+                      <div className="detail-card-header insurance-card-header">
+                        <div>
+                          <div className="detail-card-title">保單號碼</div>
+                          <div className="detail-card-emphasis">{rec.policyNo}</div>
+                        </div>
+                        <span className="detail-card-badge">
                           {rec.insuranceType === "investment" ? "投資型" : "非投資型"}
                         </span>
                         <button
@@ -326,14 +329,14 @@ export function InsurancePanel({ session }: { session: Session | null }) {
                           style={{ marginLeft: "auto" }}
                         >×</button>
                       </div>
-                      <div className="insurance-card-body">
+                      <div className="insurance-card-body detail-grid">
                         <div className="insurance-row">
                           <span className="label">保險公司</span>
                           <span>{rec.company || "—"}</span>
                         </div>
                         <div className="insurance-row">
                           <span className="label">商品名稱</span>
-                          <span>{rec.productName || "—"}</span>
+                          <span className="detail-long-text">{rec.productName || "—"}</span>
                         </div>
                         <div className="insurance-row">
                           <span className="label">被保險人</span>
@@ -363,7 +366,7 @@ export function InsurancePanel({ session }: { session: Session | null }) {
                           <span>{rec.accumulatedPremium > 0 ? formatAmount(rec.accumulatedPremium) : "—"}</span>
                         </div>
                       </div>
-                    </div>
+                    </section>
                   ))}
                 </div>
               </div>

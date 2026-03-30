@@ -1433,6 +1433,51 @@ export function parseSinopacBankPdfTransactions(text: string) {
   return parseSinopacBankPdfText(text);
 }
 
+export function parseEsunLoanSection(text: string): ParsedLoanRecord[] {
+  const deSpaced = collapseInterCharSpaces(text);
+  const normalized = normalizeWhitespace(deSpaced);
+  const lines = normalized.split('\n').map((l) => l.trim()).filter(Boolean);
+
+  const loanSectionIdx = lines.findIndex((line) => /^貸\s*款$|貸款/.test(line));
+  if (loanSectionIdx === -1) return [];
+
+  const sectionEndRe = /^保\s*險$|^保險$|^投\s*資$|^投資$|^外\s*匯$|^外匯$|^說明[:：]?$/;
+  const sectionLines: string[] = [];
+  for (let i = loanSectionIdx + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (sectionEndRe.test(line)) break;
+    sectionLines.push(line);
+  }
+
+  const dataDateMatch = sectionLines.join(" ").match(/資料日期[:：]?\s*(\d{4}\/\d{2}\/\d{2})/);
+  const paymentDate = dataDateMatch ? parseDateToIso(dataDateMatch[1]) : "";
+  const records: ParsedLoanRecord[] = [];
+
+  for (const line of sectionLines) {
+    if (!/[A-Z0-9*]{4,}/.test(line) || !/\d[\d,]*\.\d{2}/.test(line)) {
+      continue;
+    }
+
+    const amountMatches = [...line.matchAll(/\d[\d,]*\.\d{2}/g)].map((match) => parsePlainAmount(match[0]));
+    if (amountMatches.length === 0) continue;
+
+    const accountMatch = line.match(/\b\d{6}\*{3}\d{3}\b/);
+    if (!accountMatch) continue;
+
+    records.push({
+      accountNo: accountMatch[0],
+      paymentDate,
+      paymentAmount: 0,
+      principal: 0,
+      interest: 0,
+      penalty: 0,
+      remainingBalance: amountMatches[amountMatches.length - 1],
+    });
+  }
+
+  return records;
+}
+
 export function parseEsunBankPdfTransactions(text: string) {
   return parseEsunBankPdfText(text);
 }

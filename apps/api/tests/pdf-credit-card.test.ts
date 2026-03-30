@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   parseCtbcPdfTransactions,
   parseEsunBankPdfTransactions,
+  parseEsunLoanSection,
   parseEsunPdfTransactions,
   parseMegaPdfTransactions,
   parseSinopacInsuranceSection,
@@ -417,6 +418,37 @@ test("parseEsunBankPdfTransactions handles ROC-date account statement rows", () 
       description: "薪資轉帳 公司薪資",
       amount: 35000,
       currency: "TWD",
+    },
+  ]);
+});
+
+test("parseEsunLoanSection extracts masked loan accounts and balances", () => {
+  const text = `
+貸款
+資料日期:2026/02/26
+個人擔保貸款 0484165***406 TWD 9,600,000.00
+個人擔保貸款 0484165***417 TWD 543,524.00
+說明：
+`;
+
+  assert.deepEqual(parseEsunLoanSection(text), [
+    {
+      accountNo: "0484165***406",
+      paymentDate: "2026-02-26",
+      paymentAmount: 0,
+      principal: 0,
+      interest: 0,
+      penalty: 0,
+      remainingBalance: 9600000,
+    },
+    {
+      accountNo: "0484165***417",
+      paymentDate: "2026-02-26",
+      paymentAmount: 0,
+      principal: 0,
+      interest: 0,
+      penalty: 0,
+      remainingBalance: 543524,
     },
   ]);
 });

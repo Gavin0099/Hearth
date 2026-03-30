@@ -6,6 +6,7 @@ import {
   parseCathayPdfTransactions,
   parseCtbcPdfTransactions,
   parseEsunBankPdfTransactions,
+  parseEsunLoanSection as parseEsunLoanSectionShared,
   parseEsunPdfTransactions,
   parseMegaPdfTransactions,
   parseSinopacBankPdfTransactions,
@@ -17,6 +18,7 @@ import {
 } from "@hearth/shared";
 
 export { parseSinopacLoanSection, parseSinopacInsuranceSection };
+export const parseEsunLoanSection = parseEsunLoanSectionShared;
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
