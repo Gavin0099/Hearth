@@ -115,6 +115,11 @@ export const transactionCategories: TransactionCategory[] = [
     keywords: ["退款", "退費", "退刷", "refund"],
   },
   {
+    id: "allowance",
+    label: "折讓款",
+    keywords: ["折讓款", "折讓", "折抵", "帳單折抵", "回饋折抵", "折讓金"],
+  },
+  {
     id: "transfer",
     label: "轉帳",
     keywords: ["轉帳", "匯款", "atm", "跨行轉", "提領", "自扣"],
