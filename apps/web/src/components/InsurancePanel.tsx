@@ -85,6 +85,7 @@ export function InsurancePanel({ session }: { session: Session | null }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState("");
 
   async function loadSnapshots() {
     setLoadError(null);
@@ -99,6 +100,13 @@ export function InsurancePanel({ session }: { session: Session | null }) {
       .then(() => setLoading(false))
       .catch((err: Error) => { setLoadError(err.message); setLoading(false); });
   }, [session]);
+
+  useEffect(() => {
+    const months = [...new Set(snapshots.map((snap) => snap.statement_date.slice(0, 7)))].sort().reverse().slice(0, 4);
+    if (months.length > 0 && !months.includes(selectedMonth)) {
+      setSelectedMonth(months[0]);
+    }
+  }, [selectedMonth, snapshots]);
 
   async function handleDeleteSnapshot(id: string) {
     setDeletingIds((prev) => new Set([...prev, id]));
@@ -166,16 +174,71 @@ export function InsurancePanel({ session }: { session: Session | null }) {
 
   if (!session) return null;
 
+  const availableMonths = [...new Set(snapshots.map((snap) => snap.statement_date.slice(0, 7)))]
+    .sort()
+    .reverse()
+    .slice(0, 4);
+
+  const monthSnapshots = selectedMonth
+    ? snapshots.filter((snap) => snap.statement_date.startsWith(selectedMonth))
+    : snapshots;
+
   const byBank = new Map<string, InsuranceSnapshotItem[]>();
-  for (const snap of snapshots) {
+  for (const snap of monthSnapshots) {
     if (!byBank.has(snap.bank)) byBank.set(snap.bank, []);
     byBank.get(snap.bank)!.push(snap);
   }
 
+  const monthRecords = monthSnapshots.flatMap((snap) => (Array.isArray(snap.data) ? snap.data : []));
+  const policyCount = monthRecords.length;
+  const investmentCount = monthRecords.filter((record) => record.insuranceType === "investment").length;
+  const nonInvestmentCount = monthRecords.filter((record) => record.insuranceType === "non-investment").length;
+  const nextPremiumTotal = monthRecords.reduce((sum, record) => sum + record.nextPremium, 0);
+  const accumulatedPremiumTotal = monthRecords.reduce((sum, record) => sum + record.accumulatedPremium, 0);
+
   return (
-    <article className="panel detail-panel ledger-panel">
-      <h2>保險明細</h2>
-      <p className="detail-panel-intro">把匯入或手動補登的保單快照集中呈現，方便核對保單期間、保費與累計投入。</p>
+    <article className="panel detail-panel ledger-panel review-panel">
+      <div className="review-header">
+        <div>
+          <h2>保險明細</h2>
+          <p className="detail-panel-intro">把每月匯入的保單快照集中整理，方便確認保障型 / 投資型比例與後續保費負擔。</p>
+        </div>
+        <div className="review-month-tabs" role="tablist" aria-label="保險月份">
+          {availableMonths.map((month) => (
+            <button
+              key={month}
+              className={`review-month-tab${selectedMonth === month ? " active" : ""}`}
+              onClick={() => setSelectedMonth(month)}
+              type="button"
+            >
+              {month.replace("-", " / ")}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="review-summary-grid">
+        <section className="review-summary-card">
+          <p>保單筆數</p>
+          <strong>{policyCount} 筆</strong>
+          <span>{selectedMonth ? `${selectedMonth.replace("-", " / ")} 保單快照` : "尚無資料"}</span>
+        </section>
+        <section className="review-summary-card">
+          <p>保單型態</p>
+          <strong>{`${nonInvestmentCount} / ${investmentCount}`}</strong>
+          <span>非投資型 / 投資型</span>
+        </section>
+        <section className="review-summary-card">
+          <p>下期保費合計</p>
+          <strong>{`NT$ ${formatAmount(nextPremiumTotal)}`}</strong>
+          <span>依目前可讀到的保單資料</span>
+        </section>
+        <section className="review-summary-card">
+          <p>累計已繳保費</p>
+          <strong>{`NT$ ${formatAmount(accumulatedPremiumTotal)}`}</strong>
+          <span>僅統計本頁當前月份</span>
+        </section>
+      </div>
 
       <div className="detail-panel-actions">
         <button
@@ -379,6 +442,10 @@ export function InsurancePanel({ session }: { session: Session | null }) {
           })}
         </section>
       ))}
+
+      {!loading && snapshots.length > 0 && monthSnapshots.length === 0 && (
+        <p>這個月份目前沒有保險資料。</p>
+      )}
     </article>
   );
 }

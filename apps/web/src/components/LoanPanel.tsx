@@ -65,6 +65,7 @@ export function LoanPanel({ session }: { session: Session | null }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState("");
 
   async function loadSnapshots() {
     setLoadError(null);
@@ -79,6 +80,13 @@ export function LoanPanel({ session }: { session: Session | null }) {
       .then(() => setLoading(false))
       .catch((err: Error) => { setLoadError(err.message); setLoading(false); });
   }, [session]);
+
+  useEffect(() => {
+    const months = [...new Set(snapshots.map((snap) => snap.statement_date.slice(0, 7)))].sort().reverse().slice(0, 4);
+    if (months.length > 0 && !months.includes(selectedMonth)) {
+      setSelectedMonth(months[0]);
+    }
+  }, [selectedMonth, snapshots]);
 
   async function handleDeleteSnapshot(id: string) {
     setDeletingIds((prev) => new Set([...prev, id]));
@@ -140,16 +148,75 @@ export function LoanPanel({ session }: { session: Session | null }) {
 
   if (!session) return null;
 
+  const availableMonths = [...new Set(snapshots.map((snap) => snap.statement_date.slice(0, 7)))]
+    .sort()
+    .reverse()
+    .slice(0, 4);
+
+  const monthSnapshots = selectedMonth
+    ? snapshots.filter((snap) => snap.statement_date.startsWith(selectedMonth))
+    : snapshots;
+
   const byBank = new Map<string, LoanSnapshotItem[]>();
-  for (const snap of snapshots) {
+  for (const snap of monthSnapshots) {
     if (!byBank.has(snap.bank)) byBank.set(snap.bank, []);
     byBank.get(snap.bank)!.push(snap);
   }
 
+  const monthRecords = monthSnapshots.flatMap((snap) => (Array.isArray(snap.data) ? snap.data : []));
+  const totalRemainingBalance = monthRecords.reduce((sum, record) => sum + record.remainingBalance, 0);
+  const snapshotCount = monthRecords.length;
+  const bankCount = byBank.size;
+  const largestSnapshot = monthRecords.reduce<ParsedLoanRecord | null>((largest, record) => {
+    if (!largest || record.remainingBalance > largest.remainingBalance) {
+      return record;
+    }
+    return largest;
+  }, null);
+
   return (
-    <article className="panel detail-panel ledger-panel">
-      <h2>貸款明細</h2>
-      <p className="detail-panel-intro">按銀行與對帳單月份整理貸款快照，方便快速比對每月餘額、繳款與本金攤還。</p>
+    <article className="panel detail-panel ledger-panel review-panel">
+      <div className="review-header">
+        <div>
+          <h2>貸款明細</h2>
+          <p className="detail-panel-intro">按月份整理貸款餘額快照與還款明細，先確認每家銀行本月貸款狀態是否合理。</p>
+        </div>
+        <div className="review-month-tabs" role="tablist" aria-label="貸款月份">
+          {availableMonths.map((month) => (
+            <button
+              key={month}
+              className={`review-month-tab${selectedMonth === month ? " active" : ""}`}
+              onClick={() => setSelectedMonth(month)}
+              type="button"
+            >
+              {month.replace("-", " / ")}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="review-summary-grid">
+        <section className="review-summary-card">
+          <p>貸款筆數</p>
+          <strong>{snapshotCount} 筆</strong>
+          <span>{selectedMonth ? `${selectedMonth.replace("-", " / ")} 已匯入快照` : "尚無資料"}</span>
+        </section>
+        <section className="review-summary-card">
+          <p>覆蓋銀行</p>
+          <strong>{bankCount} 家</strong>
+          <span>{bankCount > 0 ? "本月有貸款資料的銀行" : "尚未匯入"}</span>
+        </section>
+        <section className="review-summary-card">
+          <p>本金餘額總計</p>
+          <strong>{`NT$ ${formatAmount(totalRemainingBalance)}`}</strong>
+          <span>僅統計目前顯示月份</span>
+        </section>
+        <section className="review-summary-card">
+          <p>最大單筆餘額</p>
+          <strong>{largestSnapshot ? `NT$ ${formatAmount(largestSnapshot.remainingBalance)}` : "NT$ 0"}</strong>
+          <span>{largestSnapshot?.accountNo ?? "尚無資料"}</span>
+        </section>
+      </div>
 
       <div className="detail-panel-actions">
         <button
@@ -323,6 +390,10 @@ export function LoanPanel({ session }: { session: Session | null }) {
           })}
         </section>
       ))}
+
+      {!loading && snapshots.length > 0 && monthSnapshots.length === 0 && (
+        <p>這個月份目前沒有貸款資料。</p>
+      )}
     </article>
   );
 }
