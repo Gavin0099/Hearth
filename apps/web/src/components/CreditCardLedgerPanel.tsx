@@ -1,8 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import type { AccountRecord, TransactionRecord } from "@hearth/shared";
 import { transactionCategories } from "@hearth/shared";
 import { fetchAccounts } from "../lib/accounts";
+import {
+  findMatchingCategoryRule,
+  loadLearnedCategoryRules,
+  rememberCategoryRule,
+  type LearnedCategoryRule,
+} from "../lib/category-rules";
 import {
   clearTransactions,
   deleteTransaction,
@@ -112,6 +118,8 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [clearing, setClearing] = useState(false);
+  const [learnedRules, setLearnedRules] = useState<LearnedCategoryRule[]>([]);
+  const autoAppliedRuleKeys = useRef(new Set<string>());
 
   const creditAccounts = accounts.filter((account) => account.type === "cash_credit");
   const accountTypeById = new Map(accounts.map((account) => [account.id, account.type]));
@@ -129,6 +137,11 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
     .reverse()
     .slice(0, 4);
   const availableMonths = recentMonthsDesc.slice().reverse();
+
+  useEffect(() => {
+    setLearnedRules(loadLearnedCategoryRules(session));
+    autoAppliedRuleKeys.current.clear();
+  }, [session]);
 
   useEffect(() => {
     if (!session) return;
@@ -283,6 +296,48 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
   const categorizedExpense = categoryTotals.reduce((sum, item) => sum + item.amount, 0);
   const coverageRatio = monthExpenseTotal > 0 ? categorizedExpense / monthExpenseTotal : 0;
 
+  async function autoApplyLearnedRules() {
+    if (learnedRules.length === 0) {
+      return;
+    }
+
+    const pendingMatches = creditTransactions
+      .filter((transaction) => !transaction.category)
+      .map((transaction) => ({
+        transaction,
+        rule: findMatchingCategoryRule(transaction, learnedRules, "credit"),
+      }))
+      .filter((item): item is { transaction: TransactionRecord; rule: LearnedCategoryRule } => Boolean(item.rule))
+      .filter((item) => !autoAppliedRuleKeys.current.has(`${item.transaction.id}:${item.rule.category}`));
+
+    if (pendingMatches.length === 0) {
+      return;
+    }
+
+    const categoryById = new Map(pendingMatches.map((item) => [item.transaction.id, item.rule.category]));
+    pendingMatches.forEach((item) => autoAppliedRuleKeys.current.add(`${item.transaction.id}:${item.rule.category}`));
+
+    setTransactions((current) =>
+      current.map((item) =>
+        categoryById.has(item.id) ? { ...item, category: categoryById.get(item.id) ?? item.category } : item,
+      ),
+    );
+
+    for (const item of pendingMatches) {
+      const result = await updateTransaction(item.transaction.id, { category: item.rule.category });
+      if (result.status === "error") {
+        setTransactions((current) =>
+          current.map((tx) => (tx.id === item.transaction.id ? { ...tx, category: null } : tx)),
+        );
+        setLoadError(result.error);
+      }
+    }
+  }
+
+  useEffect(() => {
+    void autoApplyLearnedRules();
+  }, [learnedRules, transactions]);
+
   async function assignCategory(transaction: TransactionRecord, category: string | null) {
     const previousCategory = transaction.category;
     setEditingId(null);
@@ -317,6 +372,10 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
           item.id === transaction.id ? { ...item, category: updated.category } : item,
         ),
       );
+    }
+
+    if (category) {
+      setLearnedRules((current) => rememberCategoryRule(session, current, transaction, category, "credit"));
     }
   }
 
@@ -363,7 +422,7 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
       <div className="review-header">
         <div>
           <h2>信用卡消費明細</h2>
-          <p className="review-panel-copy">先處理本月未分類交易，再讓分類結果自然長出支出結構。</p>
+          <p className="review-panel-copy">先處理本月未分類交易，再讓分類結果自然長出支出結構。手動分過的相同敘述，之後會自動套用。</p>
         </div>
         <div className="review-month-tabs" role="tablist" aria-label="信用卡月份">
           {availableMonths.map((month) => (

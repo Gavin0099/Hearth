@@ -1,8 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import type { AccountRecord, TransactionRecord } from "@hearth/shared";
 import { transactionCategories } from "@hearth/shared";
 import { fetchAccounts } from "../lib/accounts";
+import {
+  findMatchingCategoryRule,
+  loadLearnedCategoryRules,
+  rememberCategoryRule,
+  type LearnedCategoryRule,
+} from "../lib/category-rules";
 import {
   deleteTransaction,
   fetchTransactions,
@@ -74,6 +80,8 @@ export function BankLedgerPanel({ session }: { session: Session | null }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const [learnedRules, setLearnedRules] = useState<LearnedCategoryRule[]>([]);
+  const autoAppliedRuleKeys = useRef(new Set<string>());
 
   const bankAccounts = accounts;
   const accountNameMap = new Map(bankAccounts.map((account) => [account.id, account.name]));
@@ -86,6 +94,11 @@ export function BankLedgerPanel({ session }: { session: Session | null }) {
     .reverse()
     .slice(0, 4);
   const availableMonths = recentMonthsDesc.slice().reverse();
+
+  useEffect(() => {
+    setLearnedRules(loadLearnedCategoryRules(session));
+    autoAppliedRuleKeys.current.clear();
+  }, [session]);
 
   useEffect(() => {
     if (!session) return;
@@ -249,6 +262,48 @@ export function BankLedgerPanel({ session }: { session: Session | null }) {
   const categorizedExpense = categoryTotals.reduce((sum, item) => sum + item.amount, 0);
   const coverageRatio = totalExpense > 0 ? categorizedExpense / totalExpense : 0;
 
+  async function autoApplyLearnedRules() {
+    if (learnedRules.length === 0) {
+      return;
+    }
+
+    const pendingMatches = bankTransactions
+      .filter((transaction) => !transaction.category)
+      .map((transaction) => ({
+        transaction,
+        rule: findMatchingCategoryRule(transaction, learnedRules, "bank"),
+      }))
+      .filter((item): item is { transaction: TransactionRecord; rule: LearnedCategoryRule } => Boolean(item.rule))
+      .filter((item) => !autoAppliedRuleKeys.current.has(`${item.transaction.id}:${item.rule.category}`));
+
+    if (pendingMatches.length === 0) {
+      return;
+    }
+
+    const categoryById = new Map(pendingMatches.map((item) => [item.transaction.id, item.rule.category]));
+    pendingMatches.forEach((item) => autoAppliedRuleKeys.current.add(`${item.transaction.id}:${item.rule.category}`));
+
+    setTransactions((current) =>
+      current.map((item) =>
+        categoryById.has(item.id) ? { ...item, category: categoryById.get(item.id) ?? item.category } : item,
+      ),
+    );
+
+    for (const item of pendingMatches) {
+      const result = await updateTransaction(item.transaction.id, { category: item.rule.category });
+      if (result.status === "error") {
+        setTransactions((current) =>
+          current.map((tx) => (tx.id === item.transaction.id ? { ...tx, category: null } : tx)),
+        );
+        setLoadError(result.error);
+      }
+    }
+  }
+
+  useEffect(() => {
+    void autoApplyLearnedRules();
+  }, [learnedRules, transactions]);
+
   async function assignCategory(transaction: TransactionRecord, category: string | null) {
     const previousCategory = transaction.category;
     setEditingId(null);
@@ -284,6 +339,10 @@ export function BankLedgerPanel({ session }: { session: Session | null }) {
         ),
       );
     }
+
+    if (category) {
+      setLearnedRules((current) => rememberCategoryRule(session, current, transaction, category, "bank"));
+    }
   }
 
   async function handleDelete(id: string) {
@@ -308,7 +367,7 @@ export function BankLedgerPanel({ session }: { session: Session | null }) {
       <div className="review-header">
         <div>
           <h2>銀行帳戶明細</h2>
-          <p className="review-panel-copy">把本月未整理的收支、轉帳與扣款先清乾淨，再看完整銀行資金流。</p>
+          <p className="review-panel-copy">把本月未整理的收支、轉帳與扣款先清乾淨，再看完整銀行資金流。手動分過的相同敘述，之後會自動套用。</p>
         </div>
         <div className="review-month-tabs" role="tablist" aria-label="銀行月份">
           {availableMonths.map((month) => (
