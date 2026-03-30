@@ -453,6 +453,63 @@ async function extractTextFromPdfByOcr(pdf: pdfjsLib.PDFDocumentProxy, bank?: Pd
   };
 }
 
+async function extractEsunAssetSupplementFromPage(
+  worker: Awaited<ReturnType<typeof Tesseract.createWorker>>,
+  page: pdfjsLib.PDFPageProxy,
+  existingText: string,
+  debugCandidates: NonNullable<PdfTextExtractionResult["debug"]>,
+  pageNumber: number,
+) {
+  const canvas = await renderPageToCanvas(page);
+  const candidates = buildOcrCandidatesForBank(canvas, "esun");
+  const results = await Promise.all(
+    candidates.map(async (candidate) => ({
+      tag: candidate.tag,
+      text: (await worker.recognize(candidate.canvas)).data.text.trim(),
+    })),
+  );
+
+  const scoredResults = results
+    .map((result) => ({
+      ...result,
+      score: scoreOcrText("esun", result.text),
+    }))
+    .filter((result) => result.text);
+
+  debugCandidates.ocrCandidates?.push(
+    ...scoredResults
+      .slice()
+      .sort((left, right) => right.score - left.score || right.text.length - left.text.length)
+      .slice(0, 3)
+      .map((result) => ({
+        page: pageNumber,
+        preview: result.text.replace(/\s+/g, " ").trim().slice(0, 160),
+        score: result.score,
+        tag: `${result.tag}_asset_probe`,
+      })),
+  );
+
+  const supplementSections = scoredResults
+    .filter((candidate) => ESUN_ASSET_SECTION_MARKERS.test(candidate.text.replace(/\s+/g, "")))
+    .map((candidate) => candidate.text.trim())
+    .filter(Boolean);
+
+  const uniqueSupplements: string[] = [];
+  for (const section of supplementSections) {
+    const normalizedSection = section.replace(/\s+/g, " ").trim();
+    const existsInLayer = existingText.replace(/\s+/g, " ").includes(normalizedSection);
+    const duplicated = uniqueSupplements.some(
+      (existing) => existing.replace(/\s+/g, " ").trim() === normalizedSection,
+    );
+
+    if (!existsInLayer && !duplicated) {
+      uniqueSupplements.push(section);
+    }
+  }
+
+  return uniqueSupplements.join("\n").trim();
+}
+
 export async function extractPdfText(
   data: Uint8Array,
   password?: string,
@@ -502,6 +559,15 @@ export async function extractPdfText(
 
       // Use text layer if it has content
       if (layerText) {
+        if (bank === "esun" && !ESUN_ASSET_SECTION_MARKERS.test(layerText.replace(/\s+/g, ""))) {
+          const supplement = await extractEsunAssetSupplementFromPage(worker, page, layerText, debugCandidates, i);
+          if (supplement) {
+            usedOcr = true;
+            pageTexts.push(`${layerText}\n${supplement}`.trim());
+            continue;
+          }
+        }
+
         pageTexts.push(layerText);
         continue;
       }
