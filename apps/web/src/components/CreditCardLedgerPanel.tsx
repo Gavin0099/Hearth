@@ -13,6 +13,7 @@ import {
 const CATEGORY_LABELS = transactionCategories.map((category) => category.label);
 const PAGE_SIZE = 40;
 const BANK_SOURCE_PREFIX = "gmail_bank_";
+const FUTURE_CARD_DATE_REPAIR_WINDOW_DAYS = 45;
 
 const GMAIL_SOURCE_LABELS: Record<string, string> = {
   gmail_pdf_sinopac: "永豐",
@@ -73,6 +74,28 @@ function formatDateLabel(date: string) {
   return `${date.slice(5, 7)}/${date.slice(8, 10)}`;
 }
 
+function shiftDateBackOneYear(date: string) {
+  const parsed = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return date;
+  }
+
+  parsed.setFullYear(parsed.getFullYear() - 1);
+  return parsed.toISOString().slice(0, 10);
+}
+
+function normalizeCreditCardDisplayDate(date: string) {
+  const parsed = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return date;
+  }
+
+  const futureThreshold = new Date();
+  futureThreshold.setDate(futureThreshold.getDate() + FUTURE_CARD_DATE_REPAIR_WINDOW_DAYS);
+
+  return parsed > futureThreshold ? shiftDateBackOneYear(date) : date;
+}
+
 function getDefaultScope(transactions: TransactionRecord[]) {
   return transactions.some((transaction) => !transaction.category) ? "uncategorized" : "all";
 }
@@ -95,12 +118,17 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
   const accountNameMap = new Map(creditAccounts.map((account) => [account.id, account.name]));
   const creditTransactions = transactions
     .filter((transaction) => isCreditCardTransaction(transaction, accountTypeById))
+    .map((transaction) => ({
+      ...transaction,
+      date: normalizeCreditCardDisplayDate(transaction.date),
+    }))
     .sort((left, right) => right.date.localeCompare(left.date) || Math.abs(right.amount) - Math.abs(left.amount));
 
-  const availableMonths = [...new Set(creditTransactions.map((transaction) => transaction.date.slice(0, 7)))]
+  const recentMonthsDesc = [...new Set(creditTransactions.map((transaction) => transaction.date.slice(0, 7)))]
     .sort()
     .reverse()
     .slice(0, 4);
+  const availableMonths = recentMonthsDesc.slice().reverse();
 
   useEffect(() => {
     if (!session) return;
@@ -143,20 +171,20 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
   }, [session]);
 
   useEffect(() => {
-    if (availableMonths.length === 0) {
+    if (recentMonthsDesc.length === 0) {
       setSelectedMonth("");
       setActiveScope("all");
       return;
     }
 
-    if (!availableMonths.includes(selectedMonth)) {
-      const nextMonth = availableMonths[0];
+    if (!recentMonthsDesc.includes(selectedMonth)) {
+      const nextMonth = recentMonthsDesc[0];
       const nextMonthTransactions = creditTransactions.filter((transaction) => transaction.date.startsWith(nextMonth));
       setSelectedMonth(nextMonth);
       setActiveScope(getDefaultScope(nextMonthTransactions));
       setVisibleCount(PAGE_SIZE);
     }
-  }, [availableMonths, creditTransactions, selectedMonth]);
+  }, [recentMonthsDesc, creditTransactions, selectedMonth]);
 
   if (!session) return null;
 

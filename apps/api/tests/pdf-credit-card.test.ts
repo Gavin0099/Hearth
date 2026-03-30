@@ -205,6 +205,30 @@ test("parseTaishinPdfTransactions handles ROC full-date rows with trailing count
   ]);
 });
 
+test("parseTaishinPdfTransactions applies previous-year heuristic for MM/DD rows in early-year statements", () => {
+  const text = `
+2026/02/28 台新銀行信用卡電子帳單
+消費日 入帳起息日消費明細
+12/27 01/02 連加*連加*統一-超商TAIPEI 198 TW
+02/14 02/24 迪加-全家便利TAIPEI 119 TW
+`;
+
+  assert.deepEqual(parseTaishinPdfTransactions(text), [
+    {
+      date: "2025-12-27",
+      description: "連加*連加*統一-超商TAIPEI",
+      amount: -198,
+      currency: "TWD",
+    },
+    {
+      date: "2026-02-14",
+      description: "迪加-全家便利TAIPEI",
+      amount: -119,
+      currency: "TWD",
+    },
+  ]);
+});
+
 test("parseCtbcPdfTransactions handles ROC full-date rows with amount before card suffix", () => {
   const text = `
 115/01/12 台幣消費明細
@@ -285,6 +309,30 @@ test("parseCtbcPdfTransactions handles ROC full-date rows with amount before car
     },
     {
       date: "2026-01-09",
+      description: "統一-超商-央和",
+      amount: -297,
+      currency: "TWD",
+    },
+  ]);
+});
+
+test("parseCtbcPdfTransactions applies previous-year heuristic for MM/DD rows in early-year statements", () => {
+  const text = `
+2026/02/12 台幣消費明細
+消費日 入帳起息日 消費暨收費摘要表 台幣金額 卡號末四碼 消費地 幣別 消費地金額
+12/20 12/23 STEAM PURCHASE 326 6155 DE TWD 326.00
+02/09 02/12 統一-超商-央和 297 6155 TW
+`;
+
+  assert.deepEqual(parseCtbcPdfTransactions(text), [
+    {
+      date: "2025-12-20",
+      description: "STEAM PURCHASE",
+      amount: -326,
+      currency: "TWD",
+    },
+    {
+      date: "2026-02-09",
       description: "統一-超商-央和",
       amount: -297,
       currency: "TWD",

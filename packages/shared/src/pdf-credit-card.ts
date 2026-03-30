@@ -619,6 +619,7 @@ function extractTaishinDetail(line: string) {
 function parseTaishinPdfText(text: string) {
   const normalizedText = normalizeWhitespace(text);
   const statementYear = inferStatementYear(normalizedText);
+  const statementMonth = inferStatementMonth(normalizedText);
   const transactions: ParsedPdfTransaction[] = [];
   let activeSection: "none" | "spend" = "none";
 
@@ -660,6 +661,7 @@ function parseTaishinPdfText(text: string) {
       description,
       detail.amountToken,
       detail.currencyToken,
+      statementMonth,
     );
     if (transaction) transactions.push(transaction);
   });
@@ -672,7 +674,7 @@ function parseTaishinPdfText(text: string) {
 // Row shape: MM/DD MM/DD [卡末四] 說明 金額 [尾欄]
 // ─────────────────────────────────────────────────────────────
 
-function parseCtbcLine(line: string, statementYear?: number) {
+function parseCtbcLine(line: string, statementYear?: number, statementMonth?: number) {
   const datePattern = String.raw`(?:\d{2}\/\d{2}|\d{3,4}\/\d{2}\/\d{2})`;
   const match = line.match(
     new RegExp(
@@ -697,7 +699,7 @@ function parseCtbcLine(line: string, statementYear?: number) {
   if (/^(TWD|NTD|USD|JPY)\b/.test(description)) return null;
   if (containsAdjacentDateTokens(description)) return null;
 
-  return buildTransaction(statementYear, detail.dateToken, description, detail.amountToken);
+  return buildTransaction(statementYear, detail.dateToken, description, detail.amountToken, undefined, statementMonth);
 }
 
 function isCtbcDateToken(token: string) {
@@ -708,7 +710,7 @@ function isCtbcAmountToken(token: string) {
   return /^-?\d[\d,]*(?:\.\d+)?$/.test(token);
 }
 
-function parseCtbcTokenStream(text: string, statementYear?: number) {
+function parseCtbcTokenStream(text: string, statementYear?: number, statementMonth?: number) {
   const tokens = text.split(/\s+/).filter(Boolean);
   const transactions: ParsedPdfTransaction[] = [];
 
@@ -755,6 +757,7 @@ function parseCtbcTokenStream(text: string, statementYear?: number) {
           ...windowTokens.slice(relativeCardIndex + 1),
         ].join(" "),
         statementYear,
+        statementMonth,
       );
 
       if (parsed) {
@@ -771,10 +774,11 @@ function parseCtbcTokenStream(text: string, statementYear?: number) {
 function parseCtbcPdfText(text: string) {
   const normalizedText = normalizeWhitespace(text);
   const statementYear = inferStatementYear(normalizedText);
+  const statementMonth = inferStatementMonth(normalizedText);
   const transactions: ParsedPdfTransaction[] = [];
 
   normalizedText.split("\n").forEach((line) => {
-    const parsed = parseCtbcLine(line.trim(), statementYear);
+    const parsed = parseCtbcLine(line.trim(), statementYear, statementMonth);
     if (parsed) transactions.push(parsed);
   });
 
@@ -782,7 +786,7 @@ function parseCtbcPdfText(text: string) {
     return transactions;
   }
 
-  const tokenStreamTransactions = parseCtbcTokenStream(normalizedText, statementYear);
+  const tokenStreamTransactions = parseCtbcTokenStream(normalizedText, statementYear, statementMonth);
   if (tokenStreamTransactions.length > 0) {
     return tokenStreamTransactions;
   }
@@ -795,6 +799,7 @@ function parseCtbcPdfText(text: string) {
     const parsed = parseCtbcLine(
       `${match.groups.consume} ${match.groups.posted} ${match.groups.description} ${match.groups.amount} ${match.groups.card}${match.groups.country ? ` ${match.groups.country}` : ""}${match.groups.currency && match.groups.foreignAmount ? ` ${match.groups.currency} ${match.groups.foreignAmount}` : ""}`,
       statementYear,
+      statementMonth,
     );
     if (parsed) {
       transactions.push(parsed);
@@ -843,7 +848,7 @@ function parseCtbcPdfText(text: string) {
     }
     if (!description) continue; // skip if no description found nearby
 
-    const tx = buildTransaction(statementYear, m.groups.consume, description, m.groups.amount);
+    const tx = buildTransaction(statementYear, m.groups.consume, description, m.groups.amount, undefined, statementMonth);
     if (tx) transactions.push(tx);
   }
 
@@ -890,7 +895,7 @@ function extractMegaDetail(rest: string) {
   };
 }
 
-function parseMegaLine(line: string, statementYear?: number) {
+function parseMegaLine(line: string, statementYear?: number, statementMonth?: number) {
   const datePattern = String.raw`(?:\d{3}\/\d{2}\/\d{2}|\d{2}\/\d{2})`;
   const match = line.match(
     new RegExp(
@@ -910,7 +915,7 @@ function parseMegaLine(line: string, statementYear?: number) {
   if (/^[A-Z]{3}\d/.test(description)) return null;
   if (containsAdjacentDateTokens(description)) return null;
 
-  return buildTransaction(statementYear, match.groups.consume, description, detail.amountToken);
+  return buildTransaction(statementYear, match.groups.consume, description, detail.amountToken, undefined, statementMonth);
 }
 
 function isMegaDescriptionCandidate(line: string) {
@@ -926,6 +931,7 @@ function isMegaDescriptionCandidate(line: string) {
 function parseMegaPdfText(text: string) {
   const normalizedText = normalizeWhitespace(text);
   const statementYear = inferStatementYear(normalizedText);
+  const statementMonth = inferStatementMonth(normalizedText);
   const transactions: ParsedPdfTransaction[] = [];
   const lines = normalizedText.split("\n");
   const datePattern = String.raw`(?:\d{3}\/\d{2}\/\d{2}|\d{2}\/\d{2})`;
@@ -946,7 +952,7 @@ function parseMegaPdfText(text: string) {
     const line = lines[idx].trim();
 
     // Standard two-date line with description included
-    const parsed = parseMegaLine(line, statementYear);
+    const parsed = parseMegaLine(line, statementYear, statementMonth);
     if (parsed) {
       transactions.push(parsed);
       continue;
@@ -969,7 +975,7 @@ function parseMegaPdfText(text: string) {
         const restTokens = noDescMatch.groups.rest.trim().split(/\s+/).filter(Boolean);
         const amountToken = restTokens[restTokens.length - 1];
         if (amountToken) {
-          const tx = buildTransaction(statementYear, noDescMatch.groups.consume, description, amountToken);
+          const tx = buildTransaction(statementYear, noDescMatch.groups.consume, description, amountToken, undefined, statementMonth);
           if (tx) {
             transactions.push(tx);
             continue;
@@ -991,7 +997,7 @@ function parseMegaPdfText(text: string) {
           !startsWithDateToken(description) &&
           !containsAdjacentDateTokens(description)
         ) {
-          const tx = buildTransaction(statementYear, sdMatch.groups.posted, description, detail.amountToken);
+          const tx = buildTransaction(statementYear, sdMatch.groups.posted, description, detail.amountToken, undefined, statementMonth);
           if (tx) transactions.push(tx);
         }
       } else {
@@ -1009,7 +1015,7 @@ function parseMegaPdfText(text: string) {
             }
           }
           if (description) {
-            const tx = buildTransaction(statementYear, sdMatch.groups.posted, description, amountToken);
+            const tx = buildTransaction(statementYear, sdMatch.groups.posted, description, amountToken, undefined, statementMonth);
             if (tx) transactions.push(tx);
           }
         }
