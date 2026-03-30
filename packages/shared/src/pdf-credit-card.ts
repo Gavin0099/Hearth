@@ -1221,10 +1221,11 @@ export type ParsedInsuranceRecord = {
 // ─────────────────────────────────────────────────────────────
 
 function parseDateToIso(dateToken: string): string {
-  // Handle YYYY/MM/DD or YYYY-MM-DD
-  const m = dateToken.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  // Handle YYYY/MM/DD, YYYY-MM-DD, or ROC YYY/MM/DD
+  const m = dateToken.match(/^(\d{3,4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
   if (!m) return dateToken;
-  return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  const year = m[1].length === 3 ? String(Number(m[1]) + 1911) : m[1];
+  return `${year}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
 }
 
 function parsePlainAmount(s: string): number {
@@ -1456,7 +1457,7 @@ export function parseEsunLoanSection(text: string): ParsedLoanRecord[] {
 
   const scanLines = sectionLines.length > 0 ? sectionLines : lines;
   const joinedScanText = scanLines.join(" ");
-  const dataDateMatch = joinedScanText.match(/資料日期[:：]?\s*(\d{4}\/\d{2}\/\d{2})/);
+  const dataDateMatch = joinedScanText.match(/資料日期[:：]?\s*(\d{3,4}\/\d{2}\/\d{2})/);
   const paymentDate = dataDateMatch ? parseDateToIso(dataDateMatch[1]) : "";
   const records: ParsedLoanRecord[] = [];
   const seenAccounts = new Set<string>();
@@ -1465,11 +1466,11 @@ export function parseEsunLoanSection(text: string): ParsedLoanRecord[] {
     const line = scanLines[i];
     const candidate = [line, scanLines[i + 1]].filter(Boolean).join(" ");
 
-    if (!/[A-Z0-9*]{4,}/.test(candidate) || !/\d[\d,]*\.\d{2}/.test(candidate)) {
+    if (!/[A-Z0-9*]{4,}/.test(candidate) || !/\d[\d,]*(?:\.\d{2})?/.test(candidate)) {
       continue;
     }
 
-    const amountMatches = [...candidate.matchAll(/\d[\d,]*\.\d{2}/g)].map((match) => parsePlainAmount(match[0]));
+    const amountMatches = [...candidate.matchAll(/\d[\d,]*(?:\.\d{2})?/g)].map((match) => parsePlainAmount(match[0]));
     if (amountMatches.length === 0) continue;
 
     const accountMatch = candidate.match(/\b(?:\d\s*){6,8}(?:\*\s*){2,4}(?:\d\s*){3}\b/);
