@@ -1058,6 +1058,53 @@ function collapseInterCharSpaces(text: string): string {
     .join("\n");
 }
 
+function isBankSectionStartLine(line: string) {
+  return /存款交易明細|存款\s*資料日期|期初餘額|前期結餘|上期結餘/.test(line);
+}
+
+function isBankSectionEndLine(line: string) {
+  return /本期費用明細|本期消費明細|刷卡明細|消費明細|信用卡(?:電子)?帳單|消費暨收費摘要表|卡號末四碼|貸款|保險|投資|外匯/.test(line);
+}
+
+function chooseBankAmountTokens(tokens: string[]) {
+  const amountLike = tokens
+    .map((token, index) => {
+      const cleaned = token.replace(/,/g, "");
+      if (!/^\d+(?:\.\d{1,4})?$/.test(cleaned)) {
+        return null;
+      }
+
+      return {
+        index,
+        token,
+        value: Number(cleaned),
+        formatted: /[,.]/.test(token),
+      };
+    })
+    .filter((item): item is { index: number; token: string; value: number; formatted: boolean } =>
+      item !== null && Number.isFinite(item.value) && item.value > 0,
+    );
+
+  const preferred = amountLike.filter((item) => item.formatted);
+  return preferred.length >= 2 ? preferred : amountLike;
+}
+
+function isBankReferenceToken(token: string) {
+  return /^\d{3}$/.test(token) || /^\d{6,}$/.test(token) || /\*{2,}/.test(token);
+}
+
+function inferFirstBankRowSign(description: string) {
+  if (/薪資|利息|退款|回饋|存入|轉入|入帳/.test(description)) {
+    return 1;
+  }
+
+  if (/提款|提領|跨行轉|轉出|扣款|卡費|繳費|本息|消費|購物|代扣/.test(description)) {
+    return -1;
+  }
+
+  return -1;
+}
+
 function parseSinopacBankPdfText(text: string): ParsedPdfTransaction[] {
   // Pre-process: collapse inter-character spaces common in some bank PDF extractions
   const deSpaced = collapseInterCharSpaces(text);
@@ -1087,13 +1134,18 @@ function parseSinopacBankPdfText(text: string): ParsedPdfTransaction[] {
     return sectionRows.get(key)!;
   }
 
-  // Regex to detect comma-formatted amounts (not raw reference IDs)
-  const amountRe = /^\d{1,3}(?:,\d{3})*(?:\.\d{1,4})?$/;
   // Regex to detect account number lines (e.g. "007-00*-**27100-*" or "198-01*-**38042-*")
   const acctNoRe = /\b\d{3}-\d{2}\*?-\*{0,2}(\d{4,6})-?\*?\b/;
+  let insideBankSection = false;
 
   for (const line of lines) {
     const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    if (isBankSectionEndLine(trimmed)) {
+      insideBankSection = false;
+      continue;
+    }
 
     // Currency section detection
     if (trimmed.includes("美元") || /\bUSD\b/.test(trimmed)) {
@@ -1108,6 +1160,11 @@ function parseSinopacBankPdfText(text: string): ParsedPdfTransaction[] {
     const acctMatch = trimmed.match(acctNoRe);
     if (acctMatch) {
       subAccount = acctMatch[1]; // e.g. "27100"
+      insideBankSection = true;
+    }
+
+    if (isBankSectionStartLine(trimmed)) {
+      insideBankSection = true;
     }
 
     // Opening balance line (期初餘額 / 前期結餘) — per sub-account section
@@ -1122,13 +1179,13 @@ function parseSinopacBankPdfText(text: string): ParsedPdfTransaction[] {
     // Transaction row: starts with YYYY/MM/DD or ROC YYY/MM/DD
     const rowMatch = trimmed.match(/^(?<date>(?:\d{3}|\d{4})\/\d{2}\/\d{2})\s+(?<rest>.+)$/u);
     if (!rowMatch?.groups) continue;
+    if (!insideBankSection) continue;
 
     const tokens = rowMatch.groups.rest.split(/\s+/).filter(Boolean);
 
     // Collect comma-formatted amount-like tokens with their positions
-    const amountTokens = tokens
-      .map((t, i) => ({ i, v: amountRe.test(t) ? Number(t.replace(/,/g, "")) : null }))
-      .filter((x): x is { i: number; v: number } => x.v !== null && x.v > 0);
+    const amountTokens = chooseBankAmountTokens(tokens)
+      .map((item) => ({ i: item.index, v: item.value }));
 
     // Need at least 2 amount-like tokens: [transaction_amount, balance]
     if (amountTokens.length < 2) continue;
@@ -1139,11 +1196,14 @@ function parseSinopacBankPdfText(text: string): ParsedPdfTransaction[] {
 
     // Description = tokens before the transaction amount
     const descTokens = tokens.slice(0, firstAmountIdx).filter((t) => !/^\d+$/.test(t));
-    // Remarks = tokens after balance (filter out pure digit reference numbers)
     const balanceIdx = amountTokens[amountTokens.length - 1].i;
-    const remarkTokens = tokens.slice(balanceIdx + 1).filter((t) => !/^\d{6,}$/.test(t));
+    const contextTokens = tokens
+      .slice(firstAmountIdx + 1, balanceIdx)
+      .filter((token) => !isBankReferenceToken(token));
+    // Remarks = tokens after balance (filter out pure digit reference numbers)
+    const remarkTokens = tokens.slice(balanceIdx + 1).filter((t) => !isBankReferenceToken(t));
 
-    const description = [...descTokens, ...remarkTokens].join(" ").trim();
+    const description = [...descTokens, ...contextTokens, ...remarkTokens].join(" ").trim();
     if (!description) continue;
 
     section.rows.push({
@@ -1164,8 +1224,11 @@ function parseSinopacBankPdfText(text: string): ParsedPdfTransaction[] {
       const prevBalance = i === 0
         ? (openingBalance ?? row.balance - row.amount)
         : rows[i - 1].balance;
-      const delta = row.balance - prevBalance;
-      const signedAmount = delta >= 0 ? row.amount : -row.amount;
+      const signedAmount = i === 0 && openingBalance === null
+        ? row.amount * inferFirstBankRowSign(row.description)
+        : (row.balance - prevBalance) >= 0
+          ? row.amount
+          : -row.amount;
 
       transactions.push({
         date: row.date,

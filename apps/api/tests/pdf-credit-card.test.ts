@@ -6,6 +6,7 @@ import {
   parseEsunLoanSection,
   parseEsunPdfTransactions,
   parseMegaPdfTransactions,
+  parseSinopacBankPdfTransactions,
   parseSinopacInsuranceSection,
   parseSinopacPdfTransactions,
   parseTaishinPdfTransactions,
@@ -404,6 +405,64 @@ test("parseEsunBankPdfTransactions handles ROC-date account statement rows", () 
 存款 資料日期:2026/02/28
 115/02/05 ＡＴＭ跨行轉 20,000.00 永*銀行 807 0000700400***005 20,747.00
 115/02/07 薪資轉帳 35,000.00 公司薪資 55,747.00
+`;
+
+  assert.deepEqual(parseEsunBankPdfTransactions(text), [
+    {
+      date: "2026-02-05",
+      description: "ＡＴＭ跨行轉 永*銀行",
+      amount: -20000,
+      currency: "TWD",
+    },
+    {
+      date: "2026-02-07",
+      description: "薪資轉帳 公司薪資",
+      amount: 35000,
+      currency: "TWD",
+    },
+  ]);
+});
+
+test("parseSinopacBankPdfTransactions ignores credit-card detail sections in mixed statements", () => {
+  const text = `
+永豐銀行綜合對帳單
+007-00*-**27100-*
+期初餘額 50,000.00
+2026/02/05 ＡＴＭ跨行轉 20,000.00 30,000.00 永*銀行
+2026/02/07 薪資轉帳 35,000.00 65,000.00 公司薪資
+本期消費明細
+02/10 02/12 OPENAI *CHATGPT SUBSCR 663
+02/11 02/12 CLAUDE.AI SUBSCRIPTION 6,302
+貸款
+`;
+
+  assert.deepEqual(parseSinopacBankPdfTransactions(text), [
+    {
+      date: "2026-02-05",
+      description: "ＡＴＭ跨行轉 永*銀行",
+      amount: -20000,
+      currency: "TWD",
+      subAccount: "27100",
+    },
+    {
+      date: "2026-02-07",
+      description: "薪資轉帳 公司薪資",
+      amount: 35000,
+      currency: "TWD",
+      subAccount: "27100",
+    },
+  ]);
+});
+
+test("parseEsunBankPdfTransactions ignores credit-card detail sections in mixed statements", () => {
+  const text = `
+存款 資料日期:2026/02/28
+115/02/05 ＡＴＭ跨行轉 20,000.00 永*銀行 807 0000700400***005 20,747.00
+115/02/07 薪資轉帳 35,000.00 公司薪資 55,747.00
+本期消費明細：
+02/12 02/23 樂購蝦皮－新加坡商蝦皮數位 TWD 1,369
+02/28 03/04 樂購蝦皮－ s m i l e f i x TWD 259
+貸款 資料日期:2026/02/26
 `;
 
   assert.deepEqual(parseEsunBankPdfTransactions(text), [
