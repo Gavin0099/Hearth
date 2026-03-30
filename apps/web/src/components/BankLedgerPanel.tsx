@@ -374,7 +374,7 @@ export function BankLedgerPanel({ session }: { session: Session | null }) {
                         <article key={transaction.id} className={`review-transaction-row${transaction.category ? "" : " is-uncategorized"}`}>
                           <div className="review-row-date">{formatDateLabel(transaction.date)}</div>
                           <div className="review-row-desc">
-                            <strong>{transaction.description ?? "未命名交易"}</strong>
+                            <strong title={transaction.description ?? "未命名交易"}>{transaction.description ?? "未命名交易"}</strong>
                             <span>{transaction.category ?? "尚未分類"}</span>
                           </div>
                           <div className={`review-row-amount ${transaction.amount < 0 ? "negative" : "positive"}`}>

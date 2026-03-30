@@ -991,9 +991,15 @@ tr:hover .ledger-delete-btn {
 
 .review-row-desc strong {
   color: #2b211c;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  white-space: normal;
   overflow: hidden;
   text-overflow: ellipsis;
+  word-break: break-word;
+  line-height: 1.35;
 }
 
 .review-row-desc span {
