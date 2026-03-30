@@ -13,6 +13,7 @@ import {
   extractPdfText,
   parseCathayPdfText,
   parseCtbcPdfText,
+  parseEsunBankPdfText,
   type PdfTextExtractionSource,
   parseEsunPdfText,
   parseMegaPdfText,
@@ -64,6 +65,15 @@ const BANK_PARSERS: Record<BankKey, (text: string) => ParsedTransaction[]> = {
   taishin: parseTaishinPdfText,
   ctbc: parseCtbcPdfText,
   mega: parseMegaPdfText,
+};
+
+const BANK_STATEMENT_PARSERS: Record<BankKey, (text: string) => ParsedTransaction[]> = {
+  sinopac: parseSinopacBankPdfText,
+  esun: parseEsunBankPdfText,
+  cathay: parseSinopacBankPdfText,
+  taishin: parseSinopacBankPdfText,
+  ctbc: parseSinopacBankPdfText,
+  mega: parseSinopacBankPdfText,
 };
 
 function resolveImportAccountId(
@@ -322,7 +332,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       }
 
       const parsed = isBankStatement
-        ? parseSinopacBankPdfText(text)
+        ? BANK_STATEMENT_PARSERS[email.bank](text)
         : BANK_PARSERS[email.bank](text);
 
       if (parsed.length === 0) {

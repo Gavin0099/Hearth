@@ -1180,6 +1180,12 @@ function parseSinopacBankPdfText(text: string): ParsedPdfTransaction[] {
   return transactions;
 }
 
+function parseEsunBankPdfText(text: string): ParsedPdfTransaction[] {
+  // Current E.SUN bank statements share the same row structure as the Sinopac
+  // bank-statement parser once OCR/text extraction has been normalized.
+  return parseSinopacBankPdfText(text);
+}
+
 // ─────────────────────────────────────────────────────────────
 // Loan & Insurance Types
 // ─────────────────────────────────────────────────────────────
@@ -1425,6 +1431,10 @@ export function parseSinopacPdfTransactions(text: string) {
 
 export function parseSinopacBankPdfTransactions(text: string) {
   return parseSinopacBankPdfText(text);
+}
+
+export function parseEsunBankPdfTransactions(text: string) {
+  return parseEsunBankPdfText(text);
 }
 
 export function parseEsunPdfTransactions(text: string) {

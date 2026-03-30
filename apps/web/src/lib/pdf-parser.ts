@@ -5,6 +5,7 @@ import ocrWorkerPath from "tesseract.js/dist/worker.min.js?url";
 import {
   parseCathayPdfTransactions,
   parseCtbcPdfTransactions,
+  parseEsunBankPdfTransactions,
   parseEsunPdfTransactions,
   parseMegaPdfTransactions,
   parseSinopacBankPdfTransactions,
@@ -434,9 +435,10 @@ export async function extractPdfText(
 
   const pdf = await loadingTask.promise;
 
-  // For CTBC: process per page — skip cover pages, prefer text layer for transaction
-  // pages, fall back to OCR only for pages with no usable text layer.
-  if (bank === "ctbc") {
+  // For CTBC / E.SUN image statements: process per page, skip cover pages when
+  // they only contain summary/customer-service content, and prefer OCR on pages
+  // that look like real transaction tables.
+  if (bank === "ctbc" || bank === "esun") {
     const worker = await getOcrWorker();
     const pageTexts: string[] = [];
     const debugCandidates: PdfTextExtractionResult["debug"] = { ocrCandidates: [] };
@@ -448,11 +450,22 @@ export async function extractPdfText(
 
       // Skip cover/marketing pages: has cover markers, no transaction-table header,
       // and zero rows that look like actual transactions (date + content + card-last-4).
-      if (layerText && CTBC_COVER_MARKERS.some((m) => layerText.includes(m))) {
-        const hasTransactionHeader = /消費日|入帳起息日|消費暨收費摘要表|卡號末四碼/.test(layerText);
-        const txRowCount = (layerText.match(/\b(?:\d{2}\/\d{2}|\d{3}\/\d{2}\/\d{2})\b[^\n]+\s\d{4}\b/gm) ?? []).length;
-        if (!hasTransactionHeader && txRowCount === 0) {
-          continue;
+      if (layerText) {
+        if (bank === "ctbc" && CTBC_COVER_MARKERS.some((marker) => layerText.includes(marker))) {
+          const hasTransactionHeader = /消費日|入帳起息日|消費暨收費摘要表|卡號末四碼/.test(layerText);
+          const txRowCount = (layerText.match(/\b(?:\d{2}\/\d{2}|\d{3}\/\d{2}\/\d{2})\b[^\n]+\s\d{4}\b/gm) ?? []).length;
+          if (!hasTransactionHeader && txRowCount === 0) {
+            continue;
+          }
+        }
+
+        if (bank === "esun" && ESUN_COVER_MARKERS.some((marker) => layerText.includes(marker))) {
+          const condensed = layerText.replace(/\s+/g, "");
+          const hasTransactionHeader = /本期費用明細|本期消費明細|存款交易明細|交易明細|期初餘額|前期結餘|上期結餘/.test(condensed);
+          const txRowCount = (layerText.match(/\b\d{4}\/\d{2}\/\d{2}\b[^\n]+\d{1,3}(?:,\d{3})+/gm) ?? []).length;
+          if (!hasTransactionHeader && txRowCount === 0) {
+            continue;
+          }
         }
       }
 
@@ -473,7 +486,7 @@ export async function extractPdfText(
         })),
       );
       const scoredResults = results
-        .map((r) => ({ ...r, score: scoreCtbcOcrText(r.text) }))
+        .map((r) => ({ ...r, score: scoreOcrText(bank, r.text) }))
         .filter((r) => r.text);
       const best = scoredResults.sort((a, b) => b.score - a.score || b.text.length - a.text.length)[0];
       debugCandidates.ocrCandidates?.push(
@@ -558,4 +571,8 @@ export function parseMegaPdfText(text: string): ParsedTransaction[] {
 
 export function parseSinopacBankPdfText(text: string): ParsedTransaction[] {
   return parseSinopacBankPdfTransactions(text);
+}
+
+export function parseEsunBankPdfText(text: string): ParsedTransaction[] {
+  return parseEsunBankPdfTransactions(text);
 }
