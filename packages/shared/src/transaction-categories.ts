@@ -75,9 +75,24 @@ export const transactionCategories: TransactionCategory[] = [
     keywords: ["保費", "人壽", "保險"],
   },
   {
+    id: "credit_card_payment",
+    label: "信用卡繳款",
+    keywords: ["信用卡款", "卡費", "信用卡繳款", "繳卡費", "信用卡費"],
+  },
+  {
     id: "loan",
     label: "貸款",
     keywords: ["房貸", "信貸", "貸款", "放款本息"],
+  },
+  {
+    id: "pledge_loan_borrow",
+    label: "質借借款",
+    keywords: ["質借借款", "質借撥款", "質借入帳"],
+  },
+  {
+    id: "pledge_loan_repayment",
+    label: "質借還款",
+    keywords: ["質借還款", "質借扣款", "質借償還"],
   },
   {
     id: "tax_fee",
