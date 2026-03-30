@@ -196,18 +196,29 @@ function buildEmptyExtractionMessage(
 function buildEsunLoanDebugSuffix(
   bank: BankKey,
   loanRecordsCount: number,
+  text: string,
+  isBankStatement: boolean,
   candidates?: Array<{ page: number; preview: string; score: number; tag: string }>,
 ) {
-  if (bank !== "esun" || loanRecordsCount > 0 || !candidates?.length) {
+  if (bank !== "esun" || loanRecordsCount > 0) {
     return "";
   }
 
-  const assetCandidates = candidates.filter((candidate) =>
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const rawHints = lines.filter((line) =>
+    /貸款|保險|資料日期|\*{3}|個人擔保貸款|保單|被保險人/.test(line),
+  );
+  const rawPreview = rawHints.slice(0, 3).join(" | ").slice(0, 220);
+
+  const assetCandidates = (candidates ?? []).filter((candidate) =>
     candidate.tag.includes("asset_probe") ||
     /貸款|保險|個人擔保貸款|\*{3}/.test(candidate.preview),
   );
   if (assetCandidates.length === 0) {
-    return " 玉山貸款偵測：目前 OCR 沒有抓到明顯的貸款關鍵字。";
+    return ` 玉山貸款偵測：0 筆。bankStatement=${isBankStatement ? "yes" : "no"}；原文線索=${rawPreview || "無"}；OCR線索=無。`;
   }
 
   const preview = assetCandidates
@@ -216,7 +227,7 @@ function buildEsunLoanDebugSuffix(
     .join(" | ")
     .slice(0, 280);
 
-  return ` 玉山貸款偵測預覽：${preview}`;
+  return ` 玉山貸款偵測：0 筆。bankStatement=${isBankStatement ? "yes" : "no"}；原文線索=${rawPreview || "無"}；OCR線索=${preview}`;
 }
 
 export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
@@ -465,6 +476,8 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         const esunLoanDebug = buildEsunLoanDebugSuffix(
           email.bank,
           loanRecords.length,
+          text,
+          isBankStatement,
           extraction.debug?.ocrCandidates,
         );
 
@@ -536,7 +549,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
             loanRecords.length > 0 ? ` 並更新貸款快照 ${loanRecords.length} 筆。` : ""
           }${
             insuranceRecords.length > 0 ? ` 並更新保險快照 ${insuranceRecords.length} 筆。` : ""
-          }${buildEsunLoanDebugSuffix(email.bank, loanRecords.length, extraction.debug?.ocrCandidates)}`,
+          }${buildEsunLoanDebugSuffix(email.bank, loanRecords.length, text, isBankStatement, extraction.debug?.ocrCandidates)}`,
         });
       }
 
