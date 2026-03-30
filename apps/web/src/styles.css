@@ -671,6 +671,14 @@ tr:hover .ledger-delete-btn {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.loan-snapshot-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.loan-balance-metric {
+  background: rgba(140, 77, 34, 0.09);
+}
+
 .loan-account-number {
   letter-spacing: 0.02em;
 }

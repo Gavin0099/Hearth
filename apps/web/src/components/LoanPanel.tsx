@@ -27,6 +27,10 @@ function formatOptionalAmount(n: number): string {
   return n > 0 ? formatAmount(n) : "—";
 }
 
+function isBalanceSnapshot(record: ParsedLoanRecord): boolean {
+  return record.paymentAmount <= 0 && record.principal <= 0 && record.interest <= 0 && record.penalty <= 0;
+}
+
 type LoanSnapshotItem = BankSnapshot & { data: ParsedLoanRecord[] };
 
 function buildLoanRecordKey(record: ParsedLoanRecord): string {
@@ -256,6 +260,9 @@ export function LoanPanel({ session }: { session: Session | null }) {
                           <div className="detail-card-title">帳號</div>
                           <div className="detail-card-emphasis loan-account-number">{rec.accountNo}</div>
                         </div>
+                        {isBalanceSnapshot(rec) && (
+                          <span className="detail-card-badge">餘額快照</span>
+                        )}
                         <button
                           className="ledger-delete-btn always-visible"
                           disabled={deletingIds.has(`${snap.id}-${idx}`)}
@@ -265,32 +272,49 @@ export function LoanPanel({ session }: { session: Session | null }) {
                         >×</button>
                       </div>
 
-                      <div className="detail-metric-grid">
-                        <div className="detail-metric">
-                          <span className="label">資料日 / 繳款日</span>
-                          <strong>{formatDate(rec.paymentDate)}</strong>
+                      {isBalanceSnapshot(rec) ? (
+                        <div className="detail-metric-grid loan-snapshot-grid">
+                          <div className="detail-metric">
+                            <span className="label">資料日期</span>
+                            <strong>{formatDate(rec.paymentDate)}</strong>
+                          </div>
+                          <div className="detail-metric">
+                            <span className="label">對帳單月份</span>
+                            <strong>{formatDate(snap.statement_date)}</strong>
+                          </div>
+                          <div className="detail-metric loan-balance-metric">
+                            <span className="label">本金餘額</span>
+                            <strong className="positive">TWD {formatAmount(rec.remainingBalance)}</strong>
+                          </div>
                         </div>
-                        <div className="detail-metric">
-                          <span className="label">本金餘額</span>
-                          <strong className="positive">TWD {formatAmount(rec.remainingBalance)}</strong>
+                      ) : (
+                        <div className="detail-metric-grid">
+                          <div className="detail-metric">
+                            <span className="label">資料日 / 繳款日</span>
+                            <strong>{formatDate(rec.paymentDate)}</strong>
+                          </div>
+                          <div className="detail-metric">
+                            <span className="label">本金餘額</span>
+                            <strong className="positive">TWD {formatAmount(rec.remainingBalance)}</strong>
+                          </div>
+                          <div className="detail-metric">
+                            <span className="label">繳款金額</span>
+                            <strong>{formatOptionalAmount(rec.paymentAmount)}</strong>
+                          </div>
+                          <div className="detail-metric">
+                            <span className="label">攤還本金</span>
+                            <strong>{formatOptionalAmount(rec.principal)}</strong>
+                          </div>
+                          <div className="detail-metric">
+                            <span className="label">繳息金額</span>
+                            <strong className={rec.interest > 0 ? "negative" : undefined}>{formatOptionalAmount(rec.interest)}</strong>
+                          </div>
+                          <div className="detail-metric">
+                            <span className="label">違約金</span>
+                            <strong>{formatOptionalAmount(rec.penalty)}</strong>
+                          </div>
                         </div>
-                        <div className="detail-metric">
-                          <span className="label">繳款金額</span>
-                          <strong>{formatOptionalAmount(rec.paymentAmount)}</strong>
-                        </div>
-                        <div className="detail-metric">
-                          <span className="label">攤還本金</span>
-                          <strong>{formatOptionalAmount(rec.principal)}</strong>
-                        </div>
-                        <div className="detail-metric">
-                          <span className="label">繳息金額</span>
-                          <strong className={rec.interest > 0 ? "negative" : undefined}>{formatOptionalAmount(rec.interest)}</strong>
-                        </div>
-                        <div className="detail-metric">
-                          <span className="label">違約金</span>
-                          <strong>{formatOptionalAmount(rec.penalty)}</strong>
-                        </div>
-                      </div>
+                      )}
                     </section>
                   ))}
                 </div>
