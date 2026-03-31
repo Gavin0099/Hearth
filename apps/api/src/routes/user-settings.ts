@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { decryptSecretValue, encryptSecretValue, getUserSettingsSecret } from "../lib/secrets";
 import type { ApiEnv } from "../types";
 
 export const userSettingsRoutes = new Hono<ApiEnv>();
@@ -71,14 +72,30 @@ userSettingsRoutes.get("/pdf-passwords", async (c) => {
     return c.json({ error: error.message, status: "error" }, 500);
   }
 
+  try {
+    getUserSettingsSecret(c.env);
+  } catch (error) {
+    return c.json(
+      { error: error instanceof Error ? error.message : "Secret key unavailable.", status: "error" },
+      500,
+    );
+  }
+
   noStore(c);
   return c.json({
-    settings: data ?? {
-      default_pdf_password: null,
-      sinopac_pdf_password: null,
-      esun_pdf_password: null,
-      taishin_pdf_password: null,
-    },
+    settings: data
+      ? {
+          default_pdf_password: await decryptSecretValue(data.default_pdf_password, c.env),
+          sinopac_pdf_password: await decryptSecretValue(data.sinopac_pdf_password, c.env),
+          esun_pdf_password: await decryptSecretValue(data.esun_pdf_password, c.env),
+          taishin_pdf_password: await decryptSecretValue(data.taishin_pdf_password, c.env),
+        }
+      : {
+          default_pdf_password: null,
+          sinopac_pdf_password: null,
+          esun_pdf_password: null,
+          taishin_pdf_password: null,
+        },
     status: "ok",
   });
 });
@@ -109,26 +126,52 @@ userSettingsRoutes.put("/", async (c) => {
     updated_at: new Date().toISOString(),
   };
 
+  const wantsPasswordWrite = [
+    body.default_pdf_password,
+    body.sinopac_pdf_password,
+    body.esun_pdf_password,
+    body.taishin_pdf_password,
+  ].some((value) => value !== undefined);
+
+  if (wantsPasswordWrite) {
+    try {
+      getUserSettingsSecret(c.env);
+    } catch (error) {
+      return c.json(
+        { error: error instanceof Error ? error.message : "Secret key unavailable.", status: "error" },
+        500,
+      );
+    }
+  }
+
   if (body.default_pdf_password !== undefined) {
-    payload.default_pdf_password = body.default_pdf_password;
+    payload.default_pdf_password = body.default_pdf_password === null
+      ? null
+      : await encryptSecretValue(body.default_pdf_password, c.env);
   } else if (body.clear_default_pdf_password) {
     payload.default_pdf_password = null;
   }
 
   if (body.sinopac_pdf_password !== undefined) {
-    payload.sinopac_pdf_password = body.sinopac_pdf_password;
+    payload.sinopac_pdf_password = body.sinopac_pdf_password === null
+      ? null
+      : await encryptSecretValue(body.sinopac_pdf_password, c.env);
   } else if (body.clear_sinopac_pdf_password) {
     payload.sinopac_pdf_password = null;
   }
 
   if (body.esun_pdf_password !== undefined) {
-    payload.esun_pdf_password = body.esun_pdf_password;
+    payload.esun_pdf_password = body.esun_pdf_password === null
+      ? null
+      : await encryptSecretValue(body.esun_pdf_password, c.env);
   } else if (body.clear_esun_pdf_password) {
     payload.esun_pdf_password = null;
   }
 
   if (body.taishin_pdf_password !== undefined) {
-    payload.taishin_pdf_password = body.taishin_pdf_password;
+    payload.taishin_pdf_password = body.taishin_pdf_password === null
+      ? null
+      : await encryptSecretValue(body.taishin_pdf_password, c.env);
   } else if (body.clear_taishin_pdf_password) {
     payload.taishin_pdf_password = null;
   }

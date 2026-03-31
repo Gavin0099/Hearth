@@ -9,6 +9,8 @@
   "vars": {
     "APP_ENV": "development"
   },
+  // Required secret:
+  // wrangler secret put USER_SETTINGS_SECRET_KEY
   "observability": {
     "enabled": true
   },

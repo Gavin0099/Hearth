@@ -10,6 +10,7 @@ const env: WorkerBindings = {
   SUPABASE_URL: "https://example.supabase.co",
   SUPABASE_ANON_KEY: "anon",
   SUPABASE_SERVICE_ROLE_KEY: "service",
+  USER_SETTINGS_SECRET_KEY: "test-user-settings-secret",
 };
 
 function createExcelMonthlyFile(rows: unknown[][]) {
@@ -545,6 +546,7 @@ test("GET /api/user-settings returns secret presence flags instead of raw PDF pa
 });
 
 test("GET /api/user-settings/pdf-passwords returns raw PDF passwords only on explicit secret fetch", async () => {
+  let savedRows: Array<Record<string, unknown>> = [];
   const app = createApp({
     resolveAuthenticatedUser: async () => ({
       id: "user-1",
@@ -557,16 +559,15 @@ test("GET /api/user-settings/pdf-passwords returns raw PDF passwords only on exp
             select: () => ({
               eq: () => ({
                 maybeSingle: async () => ({
-                  data: {
-                    default_pdf_password: "secret-default",
-                    sinopac_pdf_password: "secret-sinopac",
-                    esun_pdf_password: null,
-                    taishin_pdf_password: "secret-taishin",
-                  },
+                  data: savedRows[0] ?? null,
                   error: null,
                 }),
               }),
             }),
+            upsert: async (value: Record<string, unknown>) => {
+              savedRows = [value];
+              return { error: null };
+            },
           };
         }
 
@@ -574,6 +575,27 @@ test("GET /api/user-settings/pdf-passwords returns raw PDF passwords only on exp
       },
     }),
   });
+
+  const putResponse = await app.request(
+    "/api/user-settings",
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        default_pdf_password: "secret-default",
+        sinopac_pdf_password: "secret-sinopac",
+        taishin_pdf_password: "secret-taishin",
+      }),
+      headers: {
+        "content-type": "application/json",
+      },
+    },
+    env,
+  );
+
+  assert.equal(putResponse.status, 200);
+  assert.equal(typeof savedRows[0]?.default_pdf_password, "string");
+  assert.notEqual(savedRows[0]?.default_pdf_password, "secret-default");
+  assert.match(String(savedRows[0]?.default_pdf_password), /^v1\./);
 
   const response = await app.request("/api/user-settings/pdf-passwords", {}, env);
   assert.equal(response.status, 200);
@@ -586,6 +608,92 @@ test("GET /api/user-settings/pdf-passwords returns raw PDF passwords only on exp
       taishin_pdf_password: "secret-taishin",
     },
     status: "ok",
+  });
+});
+
+test("GET /api/user-settings/pdf-passwords fails when secret key is unavailable", async () => {
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "user_settings") {
+          return {
+            select: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({
+                  data: null,
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/user-settings/pdf-passwords", {}, {
+    ...env,
+    USER_SETTINGS_SECRET_KEY: undefined,
+  });
+
+  assert.equal(response.status, 500);
+  assert.deepEqual(await response.json(), {
+    error: "USER_SETTINGS_SECRET_KEY is not configured.",
+    status: "error",
+  });
+});
+
+test("PUT /api/user-settings fails cleanly when secret key is unavailable", async () => {
+  let upsertCalled = false;
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "user_settings") {
+          return {
+            upsert: async () => {
+              upsertCalled = true;
+              return { error: null };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request(
+    "/api/user-settings",
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        default_pdf_password: "secret-default",
+      }),
+      headers: {
+        "content-type": "application/json",
+      },
+    },
+    {
+      ...env,
+      USER_SETTINGS_SECRET_KEY: undefined,
+    },
+  );
+
+  assert.equal(response.status, 500);
+  assert.equal(upsertCalled, false);
+  assert.deepEqual(await response.json(), {
+    error: "USER_SETTINGS_SECRET_KEY is not configured.",
+    status: "error",
   });
 });
 

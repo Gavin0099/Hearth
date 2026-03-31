@@ -180,6 +180,8 @@
 - `Hearth-plan.md` 保留產品原始規劃；`PLAN.md` 作為活的實作計畫
 - 現階段 `P0` 先補 `security / correctness / schema discipline`，不優先擴新功能
 - `user_settings` 的秘密資料目前只先收斂成 write-only + explicit secret fetch；欄位加密與金鑰管理仍是未完成風險
+- `user_settings` 的 PDF 密碼目前已改成 Worker 端應用層加密寫入，需配置 `USER_SETTINGS_SECRET_KEY`
+- 既有 plaintext 列仍以 backward-compatible fallback 讀取；完整重加密 / 輪替 / 刪除策略仍未完成
 
 ---
 
@@ -250,3 +252,4 @@
 | 2026-03-31 | 串接配息摘要、複委託匯入與 API 測試修復 | net-worth 增加配息摘要、ImportPanel 新增複委託 CSV、@hearth/api tests 全綠 |
 | 2026-03-31 | 補強 correctness 測試證據 | 新增 monthly report 月份邊界/跨帳戶聚合測試與 dividends-csv 去重測試，避免真實財務資料悄悄漂移 |
 | 2026-03-31 | 收斂 user_settings 秘密暴露面 | 一般 settings API 改回 presence flags，明文密碼只在顯式 secret endpoint 取用，並加上 no-store |
+| 2026-03-31 | 補上 user_settings 應用層加密寫入 | PDF 密碼改為 Worker 端 AES-GCM 寫入；缺少 `USER_SETTINGS_SECRET_KEY` 時讀寫都明確失敗，舊 plaintext 仍可 fallback 讀取 |
