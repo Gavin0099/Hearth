@@ -421,6 +421,80 @@ test("GET /api/portfolio/holdings returns owned holdings", async () => {
   });
 });
 
+test("GET /api/portfolio/dividends returns owned dividends ordered newest first", async () => {
+  const dividends = [
+    {
+      id: "div-2",
+      account_id: "account-1",
+      ticker: "0056",
+      pay_date: "2026-03-15",
+      gross_amount: 1200,
+      tax_withheld: 120,
+      net_amount: 1080,
+      currency: "TWD",
+      created_at: "2026-03-16T00:00:00Z",
+    },
+    {
+      id: "div-1",
+      account_id: "account-1",
+      ticker: "00919",
+      pay_date: "2026-02-20",
+      gross_amount: 900,
+      tax_withheld: 0,
+      net_amount: 900,
+      currency: "TWD",
+      created_at: "2026-02-21T00:00:00Z",
+    },
+  ];
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "dividends") {
+          return {
+            select: () => ({
+              in: () => ({
+                order: () => ({
+                  order: async () => ({
+                    data: dividends,
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/portfolio/dividends", {}, env);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    items: dividends,
+    count: 2,
+    provider: "supabase",
+    status: "ok",
+  });
+});
+
 test("POST /api/transactions creates a manual transaction for an owned account", async () => {
   const createdTransaction = {
     id: "txn-9",

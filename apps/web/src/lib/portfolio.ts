@@ -1,4 +1,9 @@
-import type { FxRatesResponse, NetWorthResponse, PortfolioHoldingsResponse } from "@hearth/shared";
+import type {
+  FxRatesResponse,
+  NetWorthResponse,
+  PortfolioDividendsResponse,
+  PortfolioHoldingsResponse,
+} from "@hearth/shared";
 import { apiFetch } from "./api";
 
 export async function fetchPortfolioHoldings() {
@@ -9,6 +14,11 @@ export async function fetchPortfolioHoldings() {
 export async function fetchNetWorth() {
   const response = await apiFetch("/api/portfolio/net-worth");
   return (await response.json()) as NetWorthResponse;
+}
+
+export async function fetchPortfolioDividends() {
+  const response = await apiFetch("/api/portfolio/dividends");
+  return (await response.json()) as PortfolioDividendsResponse;
 }
 
 export async function fetchFxRates() {

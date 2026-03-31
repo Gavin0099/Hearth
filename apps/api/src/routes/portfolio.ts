@@ -1,5 +1,12 @@
 import { Hono } from "hono";
-import type { FxRatesResponse, HoldingRecord, NetWorthResponse, PortfolioHoldingsResponse } from "@hearth/shared";
+import type {
+  DividendRecord,
+  FxRatesResponse,
+  HoldingRecord,
+  NetWorthResponse,
+  PortfolioDividendsResponse,
+  PortfolioHoldingsResponse,
+} from "@hearth/shared";
 import type { ApiEnv } from "../types";
 
 export const portfolioRoutes = new Hono<ApiEnv>();
@@ -228,6 +235,75 @@ portfolioRoutes.get("/holdings", async (c) => {
 
   return c.json<PortfolioHoldingsResponse>({
     items: (data ?? []) as HoldingRecord[],
+    count: data?.length ?? 0,
+    provider: "supabase",
+    status: "ok",
+  });
+});
+
+portfolioRoutes.get("/dividends", async (c) => {
+  const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
+  const user = await resolveAuthenticatedUser(c.req.raw, c.env);
+  if (!user) {
+    return c.json<PortfolioDividendsResponse>(
+      {
+        code: "unauthorized",
+        error: "Missing or invalid Supabase bearer token.",
+        status: "error",
+      },
+      401,
+    );
+  }
+
+  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
+  const supabase = createSupabaseAdminClient(c.env);
+
+  const { data: ownedAccounts, error: accountsError } = await supabase
+    .from("accounts")
+    .select("id")
+    .eq("user_id", user.id);
+
+  if (accountsError) {
+    return c.json<PortfolioDividendsResponse>(
+      {
+        code: "database_error",
+        error: accountsError.message,
+        status: "error",
+      },
+      500,
+    );
+  }
+
+  const accountIds = (ownedAccounts ?? []).map((account: { id: string }) => account.id);
+  if (accountIds.length === 0) {
+    return c.json<PortfolioDividendsResponse>({
+      items: [],
+      count: 0,
+      provider: "supabase",
+      status: "ok",
+    });
+  }
+
+  const { data, error } = await supabase
+    .from("dividends")
+    .select("id, account_id, ticker, pay_date, gross_amount, tax_withheld, net_amount, currency, created_at")
+    .in("account_id", accountIds)
+    .order("pay_date", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return c.json<PortfolioDividendsResponse>(
+      {
+        code: "database_error",
+        error: error.message,
+        status: "error",
+      },
+      500,
+    );
+  }
+
+  return c.json<PortfolioDividendsResponse>({
+    items: (data ?? []) as DividendRecord[],
     count: data?.length ?? 0,
     provider: "supabase",
     status: "ok",

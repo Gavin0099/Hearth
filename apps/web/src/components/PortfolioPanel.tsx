@@ -1,7 +1,19 @@
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import type { FxRateRecord, NetWorthResponse, PortfolioHoldingsResponse } from "@hearth/shared";
-import { fetchFxRates, fetchNetWorth, fetchPortfolioHoldings, saveFxRates, savePriceSnapshots } from "../lib/portfolio";
+import type {
+  FxRateRecord,
+  NetWorthResponse,
+  PortfolioDividendsResponse,
+  PortfolioHoldingsResponse,
+} from "@hearth/shared";
+import {
+  fetchFxRates,
+  fetchNetWorth,
+  fetchPortfolioDividends,
+  fetchPortfolioHoldings,
+  saveFxRates,
+  savePriceSnapshots,
+} from "../lib/portfolio";
 
 type PortfolioPanelProps = {
   session: Session | null;
@@ -11,11 +23,12 @@ type PortfolioPanelProps = {
 type LoadState =
   | { status: "idle" | "loading" }
   | { status: "error"; message: string }
-  | {
-      status: "success";
-      holdings: Extract<PortfolioHoldingsResponse, { status: "ok" }>;
-      netWorth: Extract<NetWorthResponse, { status: "ok" }>;
-    };
+    | {
+        status: "success";
+        holdings: Extract<PortfolioHoldingsResponse, { status: "ok" }>;
+        netWorth: Extract<NetWorthResponse, { status: "ok" }>;
+        dividends: Extract<PortfolioDividendsResponse, { status: "ok" }>;
+      };
 
 function formatTwd(value: number) {
   return new Intl.NumberFormat("zh-TW", {
@@ -23,6 +36,15 @@ function formatTwd(value: number) {
     currency: "TWD",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatAmount(value: number, currency: string) {
+  return new Intl.NumberFormat("zh-TW", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
   }).format(value);
 }
 
@@ -52,9 +74,10 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
     let cancelled = false;
     async function load() {
       setState({ status: "loading" });
-      const [holdingsResult, netWorthResult, fxResult] = await Promise.all([
+      const [holdingsResult, netWorthResult, dividendsResult, fxResult] = await Promise.all([
         fetchPortfolioHoldings(),
         fetchNetWorth(),
+        fetchPortfolioDividends(),
         fetchFxRates(),
       ]);
       if (cancelled) return;
@@ -67,9 +90,18 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
         setState({ status: "error", message: netWorthResult.error });
         return;
       }
+      if (dividendsResult.status === "error") {
+        setState({ status: "error", message: dividendsResult.error });
+        return;
+      }
 
       if (fxResult.status === "ok") setFxRates(fxResult.rates);
-      setState({ status: "success", holdings: holdingsResult, netWorth: netWorthResult });
+      setState({
+        status: "success",
+        holdings: holdingsResult,
+        netWorth: netWorthResult,
+        dividends: dividendsResult,
+      });
     }
 
     void load();
@@ -326,6 +358,26 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
                 {fxSaving ? "儲存中..." : "儲存匯率"}
               </button>
               {fxMessage ? <p>{fxMessage}</p> : null}
+            </section>
+          ) : null}
+
+          {state.dividends.items.length > 0 ? (
+            <section className="holdings-list">
+              <h3>最近配息</h3>
+              <ul>
+                {state.dividends.items.slice(0, 8).map((item) => (
+                  <li key={item.id}>
+                    <span className="ticker">{item.ticker}</span>
+                    <span className="name">{item.pay_date}</span>
+                    <span className="shares">{formatAmount(Number(item.net_amount), item.currency)}</span>
+                    <span className="cost">
+                      {item.gross_amount !== null
+                        ? `毛額 ${formatAmount(Number(item.gross_amount), item.currency)} / 稅 ${formatAmount(Number(item.tax_withheld), item.currency)}`
+                        : `稅 ${formatAmount(Number(item.tax_withheld), item.currency)}`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </section>
           ) : null}
         </>

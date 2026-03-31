@@ -24,6 +24,18 @@ export type HoldingRecord = {
   updated_at: string;
 };
 
+export type DividendRecord = {
+  id: string;
+  account_id: string;
+  ticker: string;
+  pay_date: string;
+  gross_amount: number | null;
+  tax_withheld: number;
+  net_amount: number;
+  currency: string;
+  created_at: string;
+};
+
 export type FxRateRecord = {
   from_currency: string;
   to_currency: string;
@@ -38,6 +50,19 @@ export type FxRatesResponse =
 export type PortfolioHoldingsResponse =
   | {
       items: HoldingRecord[];
+      count: number;
+      provider: "supabase";
+      status: "ok";
+    }
+  | {
+      code: "unauthorized" | "database_error";
+      error: string;
+      status: "error";
+    };
+
+export type PortfolioDividendsResponse =
+  | {
+      items: DividendRecord[];
       count: number;
       provider: "supabase";
       status: "ok";
