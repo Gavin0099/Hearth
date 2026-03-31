@@ -95,7 +95,7 @@
 ### 接下來
 
 1. [x] Phase E — PWA 安裝體驗（manifest + sw.js + icon SVG）已完成
-2. 考慮 Cloudflare Cron 排程（定時報價更新）
+2. [x] Cloudflare Cron 排程（TWSE + FX 定時報價更新）
 
 ---
 
@@ -165,7 +165,7 @@
 **目標**: 進入持續使用與行動端體驗
 
 **任務清單**:
-- [ ] Cloudflare Cron 排程
+- [x] Cloudflare Cron 排程（TWSE + FX 定時報價更新）
 - [x] PWA 安裝體驗（manifest.json + sw.js + SVG icons）
 - [ ] 週期支出範本
 - [ ] 配息與複委託資料
