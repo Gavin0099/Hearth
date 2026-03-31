@@ -178,6 +178,8 @@
 - 使用 Cloudflare Pages + Workers 作為交付與 API 執行層
 - 先完成 `accounts` 與 auth，再進匯入與報表
 - `Hearth-plan.md` 保留產品原始規劃；`PLAN.md` 作為活的實作計畫
+- 現階段 `P0` 先補 `security / correctness / schema discipline`，不優先擴新功能
+- `user_settings` 的秘密資料目前只先收斂成 write-only + explicit secret fetch；欄位加密與金鑰管理仍是未完成風險
 
 ---
 
@@ -247,3 +249,4 @@
 | 2026-03-31 | 新增配息 CSV 匯入 | POST /api/import/dividends-csv，ImportPanel 新增配息模式，依 source_hash dedup |
 | 2026-03-31 | 串接配息摘要、複委託匯入與 API 測試修復 | net-worth 增加配息摘要、ImportPanel 新增複委託 CSV、@hearth/api tests 全綠 |
 | 2026-03-31 | 補強 correctness 測試證據 | 新增 monthly report 月份邊界/跨帳戶聚合測試與 dividends-csv 去重測試，避免真實財務資料悄悄漂移 |
+| 2026-03-31 | 收斂 user_settings 秘密暴露面 | 一般 settings API 改回 presence flags，明文密碼只在顯式 secret endpoint 取用，並加上 no-store |

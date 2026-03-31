@@ -495,6 +495,100 @@ test("GET /api/portfolio/dividends returns owned dividends ordered newest first"
   });
 });
 
+test("GET /api/user-settings returns secret presence flags instead of raw PDF passwords", async () => {
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "user_settings") {
+          return {
+            select: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({
+                  data: {
+                    default_pdf_password: "secret-default",
+                    sinopac_pdf_password: null,
+                    esun_pdf_password: "secret-esun",
+                    taishin_pdf_password: "secret-taishin",
+                    gmail_connected: true,
+                    gmail_last_sync_at: "2026-03-31T12:00:00Z",
+                  },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/user-settings", {}, env);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.deepEqual(await response.json(), {
+    settings: {
+      has_default_pdf_password: true,
+      has_sinopac_pdf_password: false,
+      has_esun_pdf_password: true,
+      has_taishin_pdf_password: true,
+      gmail_connected: true,
+      gmail_last_sync_at: "2026-03-31T12:00:00Z",
+    },
+    status: "ok",
+  });
+});
+
+test("GET /api/user-settings/pdf-passwords returns raw PDF passwords only on explicit secret fetch", async () => {
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "user_settings") {
+          return {
+            select: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({
+                  data: {
+                    default_pdf_password: "secret-default",
+                    sinopac_pdf_password: "secret-sinopac",
+                    esun_pdf_password: null,
+                    taishin_pdf_password: "secret-taishin",
+                  },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/user-settings/pdf-passwords", {}, env);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.deepEqual(await response.json(), {
+    settings: {
+      default_pdf_password: "secret-default",
+      sinopac_pdf_password: "secret-sinopac",
+      esun_pdf_password: null,
+      taishin_pdf_password: "secret-taishin",
+    },
+    status: "ok",
+  });
+});
+
 test("GET /api/report/monthly excludes out-of-month rows and aggregates same-day totals across accounts", async () => {
   const transactions = [
     {

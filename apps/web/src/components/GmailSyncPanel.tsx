@@ -25,7 +25,7 @@ import {
   parseTaishinPdfText,
   type ParsedTransaction,
 } from "../lib/pdf-parser";
-import { fetchUserSettings } from "../lib/user-settings";
+import { fetchUserSettingsSecrets } from "../lib/user-settings";
 import { saveBankSnapshot } from "../lib/bank-snapshots";
 
 type GmailSyncPanelProps = {
@@ -344,7 +344,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
     setState({ status: "loading", message: `下載 ${email.subject} 中...` });
 
     try {
-      const settings = await fetchUserSettings();
+      const settings = await fetchUserSettingsSecrets();
       const defaultPw = settings.default_pdf_password ?? "";
       const password =
         email.bank === "sinopac"
