@@ -25,3 +25,21 @@ export type TransactionCsvImportResponse =
       error: string;
       status: "error";
     };
+
+export type StockTradeImportResponse =
+  | {
+      source: "sinopac-stock";
+      imported: number;
+      skipped: number;
+      failed: number;
+      holdingsRecalculated: number;
+      runtime: "cloudflare-worker";
+      persistence: "supabase";
+      status: "ok";
+      errors: string[];
+    }
+  | {
+      code: "unauthorized" | "validation_error" | "database_error";
+      error: string;
+      status: "error";
+    };

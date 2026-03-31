@@ -1,3 +1,18 @@
+export type NetWorthResponse =
+  | {
+      cashBankTwd: number;
+      cashCreditTwd: number;
+      investmentsTwd: number;
+      totalNetWorthTwd: number;
+      priceAsOf: string | null;
+      status: "ok";
+    }
+  | {
+      code: "unauthorized" | "database_error";
+      error: string;
+      status: "error";
+    };
+
 export type HoldingRecord = {
   id: string;
   account_id: string;
@@ -8,6 +23,17 @@ export type HoldingRecord = {
   currency: string;
   updated_at: string;
 };
+
+export type FxRateRecord = {
+  from_currency: string;
+  to_currency: string;
+  rate_date: string;
+  rate: number;
+};
+
+export type FxRatesResponse =
+  | { rates: FxRateRecord[]; status: "ok" }
+  | { code: "unauthorized" | "database_error"; error: string; status: "error" };
 
 export type PortfolioHoldingsResponse =
   | {

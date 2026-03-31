@@ -115,6 +115,25 @@ create table if not exists user_settings (
 alter table user_settings
   add column if not exists taishin_pdf_password text;
 
+create table if not exists categorization_rules (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users,
+  scope text not null,
+  direction text not null,
+  normalized_description text not null,
+  raw_description text not null,
+  category text not null,
+  updated_at timestamptz not null default now(),
+  unique(user_id, scope, direction, normalized_description)
+);
+
+alter table categorization_rules enable row level security;
+
+create policy "Users can manage their own categorization rules"
+  on categorization_rules for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
 create table if not exists bank_snapshots (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users,

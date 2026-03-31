@@ -139,8 +139,16 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
   const availableMonths = recentMonthsDesc.slice().reverse();
 
   useEffect(() => {
-    setLearnedRules(loadLearnedCategoryRules(session));
-    autoAppliedRuleKeys.current.clear();
+    let cancelled = false;
+    loadLearnedCategoryRules().then((rules) => {
+      if (!cancelled) {
+        setLearnedRules(rules);
+        autoAppliedRuleKeys.current.clear();
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [session]);
 
   useEffect(() => {
@@ -375,7 +383,7 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
     }
 
     if (category) {
-      setLearnedRules((current) => rememberCategoryRule(session, current, transaction, category, "credit"));
+      rememberCategoryRule(learnedRules, transaction, category, "credit").then(setLearnedRules);
     }
   }
 

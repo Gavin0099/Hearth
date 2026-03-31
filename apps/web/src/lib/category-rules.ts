@@ -1,5 +1,5 @@
-import type { Session } from "@supabase/supabase-js";
 import type { TransactionRecord } from "@hearth/shared";
+import { apiFetch } from "./api";
 
 export type CategoryRuleScope = "bank" | "credit";
 export type CategoryRuleDirection = "expense" | "income";
@@ -12,6 +12,27 @@ export type LearnedCategoryRule = {
   scope: CategoryRuleScope;
   updatedAt: string;
 };
+
+type ApiRuleRow = {
+  id: string;
+  scope: string;
+  direction: string;
+  normalized_description: string;
+  raw_description: string;
+  category: string;
+  updated_at: string;
+};
+
+function toLearnedRule(row: ApiRuleRow): LearnedCategoryRule {
+  return {
+    category: row.category,
+    direction: row.direction as CategoryRuleDirection,
+    normalizedDescription: row.normalized_description,
+    rawDescription: row.raw_description,
+    scope: row.scope as CategoryRuleScope,
+    updatedAt: row.updated_at,
+  };
+}
 
 function normalizeText(text: string) {
   return text
@@ -37,50 +58,49 @@ export function getRuleDirection(amount: number): CategoryRuleDirection {
   return amount < 0 ? "expense" : "income";
 }
 
-function buildRuleStorageKey(session: Session | null) {
-  const userId = session?.user?.id ?? "anonymous";
-  return `hearth.categoryRules.${userId}.v1`;
-}
-
-export function loadLearnedCategoryRules(session: Session | null): LearnedCategoryRule[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
+export async function loadLearnedCategoryRules(): Promise<LearnedCategoryRule[]> {
   try {
-    const raw = window.localStorage.getItem(buildRuleStorageKey(session));
-    if (!raw) {
-      return [];
-    }
-
-    const parsed = JSON.parse(raw) as LearnedCategoryRule[];
-    return Array.isArray(parsed) ? parsed : [];
+    const res = await apiFetch("/api/categorization-rules");
+    if (!res.ok) return [];
+    const json = (await res.json()) as { items: ApiRuleRow[]; status: string };
+    if (json.status !== "ok") return [];
+    return json.items.map(toLearnedRule);
   } catch {
     return [];
   }
 }
 
-export function saveLearnedCategoryRules(session: Session | null, rules: LearnedCategoryRule[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(buildRuleStorageKey(session), JSON.stringify(rules));
-}
-
-export function rememberCategoryRule(
-  session: Session | null,
+export async function rememberCategoryRule(
   existingRules: LearnedCategoryRule[],
   transaction: TransactionRecord,
   category: string,
   scope: CategoryRuleScope,
-) {
+): Promise<LearnedCategoryRule[]> {
   const normalizedDescription = normalizeRuleDescription(transaction.description);
   if (!normalizedDescription) {
     return existingRules;
   }
 
   const direction = getRuleDirection(transaction.amount);
+
+  try {
+    const res = await apiFetch("/api/categorization-rules", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        scope,
+        direction,
+        normalized_description: normalizedDescription,
+        raw_description: transaction.description ?? "",
+        category,
+      }),
+    });
+
+    if (!res.ok) return existingRules;
+  } catch {
+    return existingRules;
+  }
+
   const nextRule: LearnedCategoryRule = {
     category,
     direction,
@@ -90,18 +110,17 @@ export function rememberCategoryRule(
     updatedAt: new Date().toISOString(),
   };
 
-  const nextRules = [
+  return [
     nextRule,
-    ...existingRules.filter((rule) =>
-      !(
-        rule.scope === nextRule.scope &&
-        rule.direction === nextRule.direction &&
-        rule.normalizedDescription === nextRule.normalizedDescription
-      )),
-  ].slice(0, 500);
-
-  saveLearnedCategoryRules(session, nextRules);
-  return nextRules;
+    ...existingRules.filter(
+      (rule) =>
+        !(
+          rule.scope === nextRule.scope &&
+          rule.direction === nextRule.direction &&
+          rule.normalizedDescription === nextRule.normalizedDescription
+        ),
+    ),
+  ];
 }
 
 export function findMatchingCategoryRule(
@@ -115,9 +134,12 @@ export function findMatchingCategoryRule(
   }
 
   const direction = getRuleDirection(transaction.amount);
-  return rules.find((rule) =>
-    rule.scope === scope &&
-    rule.direction === direction &&
-    rule.normalizedDescription === normalizedDescription,
-  ) ?? null;
+  return (
+    rules.find(
+      (rule) =>
+        rule.scope === scope &&
+        rule.direction === direction &&
+        rule.normalizedDescription === normalizedDescription,
+    ) ?? null
+  );
 }

@@ -5,6 +5,7 @@ import { fetchAccounts } from "../lib/accounts";
 import {
   importCreditCardTransactionsCsv,
   importExcelMonthly,
+  importSinopacStockCsv,
   importSinopacTransactionsCsv,
   importTransactionsCsv,
 } from "../lib/imports";
@@ -30,7 +31,7 @@ export function ImportPanel({
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importMode, setImportMode] = useState<
-    "normalized" | "sinopac-tw" | "credit-card-tw" | "excel-monthly"
+    "normalized" | "sinopac-tw" | "credit-card-tw" | "excel-monthly" | "sinopac-stock"
   >("normalized");
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -93,6 +94,8 @@ export function ImportPanel({
           ? await importCreditCardTransactionsCsv(selectedAccountId, selectedFile)
         : importMode === "excel-monthly"
           ? await importExcelMonthly(selectedAccountId, selectedFile)
+        : importMode === "sinopac-stock"
+          ? await importSinopacStockCsv(selectedAccountId, selectedFile)
           : await importTransactionsCsv(selectedAccountId, selectedFile);
     setIsSubmitting(false);
 
@@ -102,15 +105,26 @@ export function ImportPanel({
       return;
     }
 
-    setLatestRecurringCandidates(result.recurringCandidates ?? []);
+    setLatestRecurringCandidates(
+      "recurringCandidates" in result ? (result.recurringCandidates ?? []) : [],
+    );
+
+    const extraInfo =
+      result.source === "sinopac-stock"
+        ? `持倉更新：${result.holdingsRecalculated} 檔。`
+        : [
+            "recurringCandidates" in result && result.recurringCandidates?.length
+              ? `辨識到 ${result.recurringCandidates.length} 筆週期/側欄候選。`
+              : null,
+            "warnings" in result && result.warnings?.length
+              ? `提醒：${result.warnings.join("；")}`
+              : null,
+          ].filter(Boolean).join(" ");
 
     setMessage(
       [
         `匯入完成：成功 ${result.imported} 筆，跳過 ${result.skipped} 筆，失敗 ${result.failed} 筆。`,
-        result.recurringCandidates?.length
-          ? `辨識到 ${result.recurringCandidates.length} 筆週期/側欄候選。`
-          : null,
-        result.warnings?.length ? `提醒：${result.warnings.join("；")}` : null,
+        extraInfo || null,
       ].filter(Boolean).join(" "),
     );
     onImported();
@@ -155,6 +169,8 @@ export function ImportPanel({
                 ? "永豐最小欄位格式：`日期,金額,摘要`，可選 `幣別` 與 `收支別`。"
                 : importMode === "credit-card-tw"
                   ? "信用卡最小欄位格式：`交易日期,金額,摘要`，可選 `幣別` 與 `交易類型`。"
+                : importMode === "sinopac-stock"
+                  ? "永豐台股欄位：`成交日期,股票代號,股票名稱,買賣別,成交股數,成交單價,手續費,交易稅`。匯入後自動重算持倉。"
                 : "Excel 第一版格式：第一列放日期欄，左側欄位使用 `分類` / `項目`，每日金額填在日期欄下方。"}
           </p>
           <form className="account-form" onSubmit={handleSubmit}>
@@ -176,6 +192,7 @@ export function ImportPanel({
                 <option value="sinopac-tw">永豐銀行 CSV</option>
                 <option value="credit-card-tw">信用卡 CSV</option>
                 <option value="excel-monthly">Excel 月帳本</option>
+                <option value="sinopac-stock">永豐台股交易 CSV</option>
               </select>
             </label>
             <label>
@@ -197,14 +214,20 @@ export function ImportPanel({
                 accept={
                   importMode === "excel-monthly"
                     ? ".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-                    : ".csv,text/csv"
+                    : ".csv,text/csv,.txt"
                 }
                 type="file"
                 onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
               />
             </label>
             <button className="action-button" disabled={isSubmitting} type="submit">
-              {isSubmitting ? "匯入中..." : importMode === "excel-monthly" ? "匯入 Excel" : "匯入 CSV"}
+              {isSubmitting
+                ? "匯入中..."
+                : importMode === "excel-monthly"
+                  ? "匯入 Excel"
+                  : importMode === "sinopac-stock"
+                    ? "匯入台股交易"
+                    : "匯入 CSV"}
             </button>
           </form>
           {latestRecurringCandidates.length > 0 ? (

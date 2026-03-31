@@ -3,7 +3,7 @@
 > **專案類型**: 家庭資產管理系統
 > **技術棧**: React / TypeScript / Hono / Supabase / Cloudflare
 > **複雜度**: L1 → L2（依資料安全與匯入邏輯升級）
-> **最後更新**: 2026-03-22
+> **最後更新**: 2026-03-31
 > **Owner**: GavinWu
 > **Freshness**: Sprint (7d)
 
@@ -80,14 +80,22 @@
 - [x] 建立第一版部署後 Smoke Test 指令與清單
 - [x] 對 `Hearth` 正式執行 framework `--adopt-existing` baseline adoption
 - [x] 建立 repo-specific engineering governance baseline
+- [x] 建立信用卡 uncategorized-first review workflow（月份 tabs / inline 分類 / optimistic update）
+- [x] 建立銀行帳本 uncategorized-first review workflow（同上模式）
+- [x] 擴充共用分類表至完整生活類別結構
+- [x] 新增 localStorage-based auto-categorization rules（描述 + 方向 + panel scope）
+- [x] 新增月支出趨勢圖（信用卡）與月資金流趨勢圖（銀行）
+- [x] 擴充 E.SUN PDF OCR 支援（image-only PDF + 貸款 snapshot）
+- [x] 修正多家信用卡跨年日期問題（台新 / 中信 / 兆豐）
+- [x] 強化 bank statement parser 邊界（避免信用卡 section 混入）
+- [x] 修正 Sinopac 保險 parser regression（inline policy 行格式）
+- [x] 改善帳本 description 顯示（2 行 + hover title）
+- [x] 貸款 / 保險明細頁改為 card-based 設計
 
 ### 接下來
 
-1. 擴充下一批銀行 / 信用卡匯入入口（目前已含 sinopac + credit-card v1）
-2. 視需要補前端端到端驗證
-3. 擴充 smoke test 進入 imports / recurring 的自動化 API 驗證（safe validation path）
-4. 補 governance freshness / phase gate automation（第一版已完成）
-5. 推進 Phase D：net-worth 與 holdings valuation 計算
+1. 補強候選：配息匯入、報價快照 CSV 批次匯入
+2. 確認是否推進 Phase E（排程/PWA）
 
 ---
 
@@ -134,20 +142,23 @@
 - [x] first-release readiness commands
 - [x] Cloudflare first deploy script/runbook
 - [x] Cloudflare first real deployment validation
-- [x] 更完整的銀行 / 信用卡匯入入口（sinopac + credit-card v1）
+- [x] 更完整的銀行 / 信用卡匯入入口（sinopac + E.SUN + credit-card 台新/中信/兆豐）
 - [ ] 月帳本 Excel parser recurring template / formula-heavy workbook 擴充
-- [x] 月度收支報表 API 與 dashboard 第一版骨架
+- [x] 月度收支報表 API 與 dashboard（含趨勢圖）
+- [x] 信用卡 / 銀行 review workflow（uncategorized-first triage）
+- [x] Auto-categorization rules（localStorage 第一版）
+- [x] Auto-categorization rules 遷移至 Supabase rule table
 
-### Phase D: 投資匯入與淨值計算
+### Phase D: 投資匯入與淨值計算 (已完成 ✓)
 
 **目標**: 將投資資料與整體淨值做完整
 
 **任務清單**:
-- [ ] 永豐台股 CSV parser
-- [ ] holdings 重算
-- [ ] 報價快照與匯率資料流
+- [x] 永豐台股 CSV parser（ROC 日期、買賣別、費稅）
+- [x] holdings 重算（匯入後加權平均成本自動更新）
+- [x] 報價快照寫入 API + UI（手動更新收盤價）
 - [x] portfolio holdings API 與 dashboard 第一版讀取切片
-- [ ] portfolio net-worth 計算切片
+- [x] portfolio net-worth 計算切片（現金 + 投資市值 + FX 換算）
 
 ### Phase E: 排程、PWA、產品完善
 
@@ -218,3 +229,17 @@
 | 2026-03-22 | 將 governance gate 納入 readiness/deploy 預設流程 | 讓第一版交付檢查同時覆蓋工程可執行性與治理新鮮度，降低 release 遺漏風險 |
 | 2026-03-22 | 建立 portfolio holdings 真實讀取切片 | 讓 Phase D 從 stub 前進到 owner-scoped 持倉讀取與前端顯示 |
 | 2026-03-22 | 修正 production web API base 指向本機 localhost 問題 | 確保 Cloudflare 部署打包時使用正式 Worker URL，避免線上功能看起來失效 |
+| 2026-03-29 | 修正 Sinopac 保險 parser regression | 支援 inline policy/type 行格式，避免遺漏保險快照 |
+| 2026-03-30 | 新增 E.SUN OCR 支援與貸款 snapshot parser | image-only PDF 匯入可行，ROC 日期與整數金額格式也納入 |
+| 2026-03-30 | 建立信用卡 / 銀行 uncategorized-first review workflow | 月份 tabs、inline 分類 assign、optimistic update、live 分布/趨勢面板 |
+| 2026-03-30 | 擴充共用分類表至完整生活類別結構 | 讓手動分類實際可用，為後續 rule-based 自動化打底 |
+| 2026-03-30 | 修正多家信用卡跨年日期問題 | 台新/中信/兆豐 MM/DD 行改為正確帶入 statementMonth，修正未來日期月份 tab |
+| 2026-03-30 | 強化 bank statement parser 邊界 | 避免信用卡 section 行混入銀行帳本，永豐/玉山均受惠 |
+| 2026-03-31 | 新增月支出趨勢圖（信用卡）與月資金流趨勢圖（銀行） | 4 個月堆疊 bar chart，依銀行上色，highlight 當前選取月 |
+| 2026-03-31 | 新增 localStorage auto-categorization rules | 依 description + direction + panel scope 學習並自動套用分類，無需 DB migration |
+| 2026-03-31 | 改善帳本 description 顯示 | 2 行顯示 + hover title，降低長描述資訊損失 |
+| 2026-03-31 | 遷移 auto-categorization rules 至 Supabase | 新增 categorization_rules table + API + 前端改用 apiFetch，規則跨裝置共享 |
+| 2026-03-31 | 實作 net-worth 真實計算 | 現金帳戶 tx 加總 + 持倉市值 + FX 換算，從 stub 升級為完整計算 |
+| 2026-03-31 | 新增永豐台股 CSV parser + holdings 重算 | ROC 日期、買賣別、費稅、加權平均成本自動更新 |
+| 2026-03-31 | 新增報價快照 API + PortfolioPanel 更新 UI | 手動輸入收盤價並儲存，net-worth 改用最新報價計算 |
+| 2026-03-31 | 新增 FX 匯率更新 API + UI | GET/POST /api/portfolio/fx-rates，PortfolioPanel 顯示目前匯率並支援更新 |
