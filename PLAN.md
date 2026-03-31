@@ -246,3 +246,4 @@
 | 2026-03-31 | 新增報價快照 CSV 批次上傳 | PortfolioPanel 報價區增加 CSV 上傳，前端解析後呼叫現有 price-snapshots API |
 | 2026-03-31 | 新增配息 CSV 匯入 | POST /api/import/dividends-csv，ImportPanel 新增配息模式，依 source_hash dedup |
 | 2026-03-31 | 串接配息摘要、複委託匯入與 API 測試修復 | net-worth 增加配息摘要、ImportPanel 新增複委託 CSV、@hearth/api tests 全綠 |
+| 2026-03-31 | 補強 correctness 測試證據 | 新增 monthly report 月份邊界/跨帳戶聚合測試與 dividends-csv 去重測試，避免真實財務資料悄悄漂移 |

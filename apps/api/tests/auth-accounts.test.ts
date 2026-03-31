@@ -495,6 +495,123 @@ test("GET /api/portfolio/dividends returns owned dividends ordered newest first"
   });
 });
 
+test("GET /api/report/monthly excludes out-of-month rows and aggregates same-day totals across accounts", async () => {
+  const transactions = [
+    {
+      id: "txn-a",
+      account_id: "account-1",
+      date: "2026-03-01",
+      amount: -100,
+      currency: "TWD",
+      category: "餐飲",
+      description: "Breakfast",
+      source: "manual",
+      source_hash: null,
+      created_at: "2026-03-21T00:00:00Z",
+    },
+    {
+      id: "txn-b",
+      account_id: "account-2",
+      date: "2026-03-01",
+      amount: -200,
+      currency: "TWD",
+      category: "交通",
+      description: "Taxi",
+      source: "manual",
+      source_hash: null,
+      created_at: "2026-03-21T00:00:00Z",
+    },
+    {
+      id: "txn-c",
+      account_id: "account-2",
+      date: "2026-03-15",
+      amount: 5000,
+      currency: "TWD",
+      category: "薪資",
+      description: "Salary",
+      source: "manual",
+      source_hash: null,
+      created_at: "2026-03-21T00:00:00Z",
+    },
+  ];
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }, { id: "account-2" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "transactions") {
+          return {
+            select: () => ({
+              in: () => ({
+                gte: (_column: string, start: string) => ({
+                  lte: (_lteColumn: string, end: string) => ({
+                    order: async () => ({
+                      data: [
+                        ...transactions,
+                        {
+                          id: "txn-outside",
+                          account_id: "account-1",
+                          date: "2026-04-01",
+                          amount: -999,
+                          currency: "TWD",
+                          category: "餐飲",
+                          description: "Should be excluded",
+                          source: "manual",
+                          source_hash: null,
+                          created_at: "2026-03-21T00:00:00Z",
+                        },
+                      ].filter((item) => item.date >= start && item.date <= end),
+                      error: null,
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/report/monthly?year=2026&month=3", {}, env);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    year: 2026,
+    month: 3,
+    provider: "supabase",
+    status: "ok",
+    summary: {
+      income: 5000,
+      expense: 300,
+      transactionCount: 3,
+      categories: [
+        { category: "交通", amount: 200 },
+        { category: "餐飲", amount: 100 },
+      ],
+      dailySeries: [
+        { date: "2026-03-01", expense: 300, income: 0 },
+        { date: "2026-03-15", expense: 0, income: 5000 },
+      ],
+    },
+  });
+});
+
 test("GET /api/portfolio/net-worth includes FX-adjusted holdings plus dividend summary", async () => {
   const app = createApp({
     resolveAuthenticatedUser: async () => ({
@@ -2169,6 +2286,97 @@ test("POST /api/import/foreign-stock-csv imports foreign brokerage trades and re
     currency: "USD",
     updated_at: upsertedHolding?.updated_at,
   });
+});
+
+test("POST /api/import/dividends-csv skips duplicate dividend rows by source hash", async () => {
+  let insertedDividends: Array<Record<string, unknown>> = [];
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  maybeSingle: async () => ({
+                    data: { id: "account-1" },
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+
+        if (table === "dividends") {
+          return {
+            select: () => ({
+              in: async () => ({
+                data: [{ source_hash: "ZGl2aWRlbmRzfGFjY291bnQtMXwwMDU2fDIwMjYtMDMtMTV8MTA4MA" }],
+                error: null,
+              }),
+            }),
+            insert: async (values: Array<Record<string, unknown>>) => {
+              insertedDividends = values;
+              return { error: null };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set(
+    "file",
+    new File(
+      [
+        "ticker,pay_date,net_amount,gross_amount,tax_withheld,currency\n0056,2026-03-15,1080,1200,120,TWD\n00919,2026-03-20,900,900,0,TWD\n",
+      ],
+      "dividends.csv",
+      { type: "text/csv" },
+    ),
+  );
+
+  const response = await app.request(
+    "/api/import/dividends-csv",
+    {
+      method: "POST",
+      body: formData,
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    source: "dividends-csv",
+    imported: 1,
+    skipped: 1,
+    failed: 0,
+    runtime: "cloudflare-worker",
+    persistence: "supabase",
+    status: "ok",
+    errors: [],
+  });
+  assert.deepEqual(insertedDividends, [
+    {
+      account_id: "account-1",
+      ticker: "00919",
+      pay_date: "2026-03-20",
+      net_amount: 900,
+      gross_amount: 900,
+      tax_withheld: 0,
+      currency: "TWD",
+      source_hash: insertedDividends[0]?.source_hash,
+    },
+  ]);
 });
 
 test("GET /api/recurring-templates returns user-scoped recurring template list", async () => {
