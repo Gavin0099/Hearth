@@ -94,8 +94,7 @@
 
 ### 接下來
 
-1. 補強候選：配息匯入、報價快照 CSV 批次匯入
-2. 確認是否推進 Phase E（排程/PWA）
+1. 確認是否推進 Phase E（排程/PWA）
 
 ---
 
@@ -243,3 +242,5 @@
 | 2026-03-31 | 新增永豐台股 CSV parser + holdings 重算 | ROC 日期、買賣別、費稅、加權平均成本自動更新 |
 | 2026-03-31 | 新增報價快照 API + PortfolioPanel 更新 UI | 手動輸入收盤價並儲存，net-worth 改用最新報價計算 |
 | 2026-03-31 | 新增 FX 匯率更新 API + UI | GET/POST /api/portfolio/fx-rates，PortfolioPanel 顯示目前匯率並支援更新 |
+| 2026-03-31 | 新增報價快照 CSV 批次上傳 | PortfolioPanel 報價區增加 CSV 上傳，前端解析後呼叫現有 price-snapshots API |
+| 2026-03-31 | 新增配息 CSV 匯入 | POST /api/import/dividends-csv，ImportPanel 新增配息模式，依 source_hash dedup |

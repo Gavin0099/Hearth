@@ -26,6 +26,23 @@ export type TransactionCsvImportResponse =
       status: "error";
     };
 
+export type DividendImportResponse =
+  | {
+      source: "dividends-csv";
+      imported: number;
+      skipped: number;
+      failed: number;
+      runtime: "cloudflare-worker";
+      persistence: "supabase";
+      status: "ok";
+      errors: string[];
+    }
+  | {
+      code: "unauthorized" | "validation_error" | "database_error";
+      error: string;
+      status: "error";
+    };
+
 export type StockTradeImportResponse =
   | {
       source: "sinopac-stock";

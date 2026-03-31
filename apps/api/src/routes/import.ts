@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type {
   CreateTransactionInput,
+  DividendImportResponse,
   RecurringImportCandidate,
   StockTradeImportResponse,
   TransactionCsvImportResponse,
@@ -739,6 +740,135 @@ importRoutes.post(
         skipped,
         failed: errors.length,
         holdingsRecalculated,
+        runtime: "cloudflare-worker",
+        persistence: "supabase",
+        status: "ok",
+        errors,
+      });
+    })(),
+);
+
+// POST /dividends-csv — import dividend records from CSV
+// Expected columns: ticker,pay_date,net_amount[,gross_amount][,tax_withheld][,currency]
+importRoutes.post(
+  "/dividends-csv",
+  async (c): Promise<Response> =>
+    (async () => {
+      const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
+      const user = await resolveAuthenticatedUser(c.req.raw, c.env);
+      if (!user) {
+        return c.json<DividendImportResponse>(
+          { code: "unauthorized", error: "Missing or invalid Supabase bearer token.", status: "error" },
+          401,
+        );
+      }
+
+      const formData = await c.req.formData();
+      const accountId = String(formData.get("account_id") ?? "").trim();
+      const file = formData.get("file");
+
+      if (!accountId || !(file instanceof File)) {
+        return c.json<DividendImportResponse>(
+          { code: "validation_error", error: "account_id and file are required.", status: "error" },
+          400,
+        );
+      }
+
+      const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
+      const supabase = createSupabaseAdminClient(c.env);
+
+      // Verify account ownership
+      const { data: account } = await supabase
+        .from("accounts")
+        .select("id")
+        .eq("id", accountId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!account) {
+        return c.json<DividendImportResponse>(
+          { code: "validation_error", error: "Account not found or not owned by user.", status: "error" },
+          400,
+        );
+      }
+
+      const csvText = await file.text();
+      const rows = parseCsv(csvText);
+
+      const errors: string[] = [];
+      const divRows: {
+        account_id: string;
+        ticker: string;
+        pay_date: string;
+        net_amount: number;
+        gross_amount: number | null;
+        tax_withheld: number;
+        currency: string;
+        source_hash: string;
+      }[] = [];
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const line = i + 2;
+
+        // Support both named columns and positional
+        const ticker = (row["ticker"] ?? row["股票代號"] ?? row["代號"] ?? "").trim().toUpperCase();
+        const payDate = (row["pay_date"] ?? row["配息日"] ?? row["發放日"] ?? "").trim();
+        const netAmountRaw = (row["net_amount"] ?? row["實際入帳"] ?? row["淨額"] ?? "").replace(/,/g, "");
+        const grossAmountRaw = (row["gross_amount"] ?? row["配息總額"] ?? row["毛額"] ?? "").replace(/,/g, "");
+        const taxRaw = (row["tax_withheld"] ?? row["扣繳稅額"] ?? row["稅"] ?? "0").replace(/,/g, "");
+        const currency = (row["currency"] ?? row["幣別"] ?? "TWD").trim();
+
+        if (!ticker) { errors.push(`line ${line}: 缺少 ticker`); continue; }
+        if (!payDate || !/^\d{4}-\d{2}-\d{2}$/.test(payDate)) {
+          errors.push(`line ${line}: 無效日期 "${payDate}"（需 YYYY-MM-DD）`); continue;
+        }
+        const net_amount = parseFloat(netAmountRaw);
+        if (isNaN(net_amount) || net_amount < 0) {
+          errors.push(`line ${line}: 無效淨額 "${netAmountRaw}"`); continue;
+        }
+        const gross_amount = grossAmountRaw ? parseFloat(grossAmountRaw) : null;
+        const tax_withheld = parseFloat(taxRaw) || 0;
+
+        const hashKey = `dividends|${accountId}|${ticker}|${payDate}|${net_amount}`;
+        const source_hash = btoa(unescape(encodeURIComponent(hashKey))).replace(/=/g, "").slice(0, 64);
+
+        divRows.push({ account_id: accountId, ticker, pay_date: payDate, net_amount, gross_amount, tax_withheld, currency, source_hash });
+      }
+
+      if (divRows.length === 0) {
+        return c.json<DividendImportResponse>(
+          { code: "validation_error", error: "No valid rows found.", status: "error" },
+          400,
+        );
+      }
+
+      // Dedup: check existing source_hashes
+      const hashes = divRows.map((r) => r.source_hash);
+      const { data: existing } = await supabase
+        .from("dividends")
+        .select("source_hash")
+        .in("source_hash", hashes);
+      const existingSet = new Set((existing ?? []).map((r: { source_hash: string }) => r.source_hash));
+
+      const newRows = divRows.filter((r) => !existingSet.has(r.source_hash));
+      const skipped = divRows.length - newRows.length;
+
+      if (newRows.length > 0) {
+        const { error: insertError } = await supabase.from("dividends").insert(newRows);
+        if (insertError) {
+          return c.json<DividendImportResponse>(
+            { code: "database_error", error: insertError.message, status: "error" },
+            500,
+          );
+        }
+      }
+
+      return c.json<DividendImportResponse>({
+        source: "dividends-csv",
+        imported: newRows.length,
+        skipped,
+        failed: errors.length,
         runtime: "cloudflare-worker",
         persistence: "supabase",
         status: "ok",

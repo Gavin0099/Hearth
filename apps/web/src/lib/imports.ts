@@ -1,4 +1,4 @@
-import type { StockTradeImportResponse, TransactionCsvImportResponse } from "@hearth/shared";
+import type { DividendImportResponse, StockTradeImportResponse, TransactionCsvImportResponse } from "@hearth/shared";
 import { apiFetch } from "./api";
 
 type TransactionsCsvSource =
@@ -48,6 +48,20 @@ export async function importSinopacStockCsv(
     body: formData,
   });
   return (await response.json()) as StockTradeImportResponse;
+}
+
+export async function importDividendsCsv(
+  accountId: string,
+  file: File,
+): Promise<DividendImportResponse> {
+  const formData = new FormData();
+  formData.set("account_id", accountId);
+  formData.set("file", file);
+  const response = await apiFetch("/api/import/dividends-csv", {
+    method: "POST",
+    body: formData,
+  });
+  return (await response.json()) as DividendImportResponse;
 }
 
 async function importCsvToEndpoint(

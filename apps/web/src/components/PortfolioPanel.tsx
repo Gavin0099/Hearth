@@ -107,6 +107,46 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
     }
   }
 
+  async function handlePriceCsvUpload(file: File) {
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
+    const entries: { ticker: string; date: string; close_price: number; currency?: string }[] = [];
+    const errors: string[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const parts = lines[i].split(",").map((p) => p.trim());
+      if (i === 0 && parts[0].toLowerCase() === "ticker") continue; // skip header
+      const [ticker, date, closePriceRaw, currency] = parts;
+      if (!ticker || !date || !closePriceRaw) {
+        errors.push(`第 ${i + 1} 行格式錯誤`);
+        continue;
+      }
+      const close_price = parseFloat(closePriceRaw.replace(/,/g, ""));
+      if (isNaN(close_price) || close_price <= 0) {
+        errors.push(`第 ${i + 1} 行收盤價無效`);
+        continue;
+      }
+      entries.push({ ticker: ticker.toUpperCase(), date, close_price, currency: currency || "TWD" });
+    }
+
+    if (entries.length === 0) {
+      setPriceMessage(errors.length > 0 ? `解析失敗：${errors[0]}` : "CSV 內無有效資料。");
+      return;
+    }
+
+    setPriceSaving(true);
+    setPriceMessage(null);
+    const result = await savePriceSnapshots(entries);
+    setPriceSaving(false);
+
+    const warn = errors.length > 0 ? `（${errors.length} 行略過）` : "";
+    if (result.status === "error") {
+      setPriceMessage(`儲存失敗：${result.error}${warn}`);
+    } else {
+      setPriceMessage(`已從 CSV 儲存 ${result.saved} 筆報價${warn}。`);
+    }
+  }
+
   async function handleSaveFxRates() {
     const entries = Object.entries(fxInputs)
       .filter(([, v]) => v.trim() !== "")
@@ -228,6 +268,19 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
                 >
                   {priceSaving ? "儲存中..." : "儲存報價"}
                 </button>
+                <label className="csv-upload-label">
+                  或上傳 CSV（ticker,date,close_price[,currency]）
+                  <input
+                    type="file"
+                    accept=".csv,text/csv"
+                    disabled={priceSaving}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void handlePriceCsvUpload(file);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
                 {priceMessage ? <p>{priceMessage}</p> : null}
               </section>
             </>
