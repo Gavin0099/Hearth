@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" rx="24" fill="#1a1a2e"/>
+  <!-- house outline -->
+  <polygon points="96,28 24,88 48,88 48,164 144,164 144,88 168,88" fill="none" stroke="#e8b86d" stroke-width="8" stroke-linejoin="round"/>
+  <!-- door -->
+  <rect x="76" y="120" width="40" height="44" rx="4" fill="#e8b86d" opacity="0.9"/>
+  <!-- flame -->
+  <path d="M96 78 C96 78 82 90 82 102 C82 110 88 116 96 116 C104 116 110 110 110 102 C110 90 96 78 96 78 Z" fill="#e8b86d"/>
+  <path d="M96 88 C96 88 88 96 88 104 C88 108 91.5 112 96 112 C100.5 112 104 108 104 104 C104 96 96 88 96 88 Z" fill="#fff4e0"/>
+</svg>

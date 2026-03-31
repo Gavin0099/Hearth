@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- maskable safe zone: content within 80% circle (410px diameter) -->
+  <rect width="512" height="512" fill="#1a1a2e"/>
+  <!-- house outline -->
+  <polygon points="256,72 62,232 128,232 128,440 384,440 384,232 450,232" fill="none" stroke="#e8b86d" stroke-width="20" stroke-linejoin="round"/>
+  <!-- door -->
+  <rect x="200" y="320" width="112" height="120" rx="10" fill="#e8b86d" opacity="0.9"/>
+  <!-- flame -->
+  <path d="M256 200 C256 200 210 240 210 272 C210 296 230 312 256 312 C282 312 302 296 302 272 C302 240 256 200 256 200 Z" fill="#e8b86d"/>
+  <path d="M256 224 C256 224 232 256 232 280 C232 292 242 304 256 304 C270 304 280 292 280 280 C280 256 256 224 256 224 Z" fill="#fff4e0"/>
+</svg>

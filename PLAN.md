@@ -94,7 +94,8 @@
 
 ### 接下來
 
-1. 確認是否推進 Phase E（排程/PWA）
+1. [x] Phase E — PWA 安裝體驗（manifest + sw.js + icon SVG）已完成
+2. 考慮 Cloudflare Cron 排程（定時報價更新）
 
 ---
 
@@ -165,7 +166,7 @@
 
 **任務清單**:
 - [ ] Cloudflare Cron 排程
-- [ ] PWA 安裝體驗
+- [x] PWA 安裝體驗（manifest.json + sw.js + SVG icons）
 - [ ] 週期支出範本
 - [ ] 配息與複委託資料
 
