@@ -168,7 +168,7 @@
 - [x] Cloudflare Cron 排程（TWSE + FX 定時報價更新）
 - [x] PWA 安裝體驗（manifest.json + sw.js + SVG icons）
 - [ ] 週期支出範本
-- [ ] 配息與複委託資料
+- [x] 配息與複委託資料
 
 ---
 
@@ -245,3 +245,4 @@
 | 2026-03-31 | 新增 FX 匯率更新 API + UI | GET/POST /api/portfolio/fx-rates，PortfolioPanel 顯示目前匯率並支援更新 |
 | 2026-03-31 | 新增報價快照 CSV 批次上傳 | PortfolioPanel 報價區增加 CSV 上傳，前端解析後呼叫現有 price-snapshots API |
 | 2026-03-31 | 新增配息 CSV 匯入 | POST /api/import/dividends-csv，ImportPanel 新增配息模式，依 source_hash dedup |
+| 2026-03-31 | 串接配息摘要、複委託匯入與 API 測試修復 | net-worth 增加配息摘要、ImportPanel 新增複委託 CSV、@hearth/api tests 全綠 |

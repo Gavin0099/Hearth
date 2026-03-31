@@ -495,6 +495,122 @@ test("GET /api/portfolio/dividends returns owned dividends ordered newest first"
   });
 });
 
+test("GET /api/portfolio/net-worth includes FX-adjusted holdings plus dividend summary", async () => {
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [
+                  { id: "account-bank", type: "cash_bank", currency: "TWD" },
+                  { id: "account-foreign", type: "investment_foreign", currency: "USD" },
+                ],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "transactions") {
+          return {
+            select: () => ({
+              in: async () => ({
+                data: [
+                  { account_id: "account-bank", amount: 20000 },
+                  { account_id: "account-foreign", amount: 1000 },
+                ],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "holdings") {
+          return {
+            select: () => ({
+              in: () => ({
+                data: [
+                  {
+                    account_id: "account-foreign",
+                    ticker: "NVDA",
+                    total_shares: 2,
+                    avg_cost: 100,
+                    currency: "USD",
+                  },
+                ],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "price_snapshots") {
+          return {
+            select: () => ({
+              in: () => ({
+                order: async () => ({
+                  data: [{ ticker: "NVDA", close_price: 120, snapshot_date: "2026-03-31" }],
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+
+        if (table === "fx_rates") {
+          return {
+            select: () => ({
+              in: () => ({
+                eq: () => ({
+                  order: async () => ({
+                    data: [{ from_currency: "USD", rate: 32.5, rate_date: "2026-03-31" }],
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+
+        if (table === "dividends") {
+          return {
+            select: () => ({
+              in: async () => ({
+                data: [
+                  { pay_date: "2026-03-15", net_amount: 12, currency: "USD" },
+                  { pay_date: "2025-12-20", net_amount: 300, currency: "TWD" },
+                ],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/portfolio/net-worth", {}, env);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    cashBankTwd: 20000,
+    cashCreditTwd: 0,
+    investmentsTwd: 7800,
+    dividendsReceivedTwd: 690,
+    dividendsYearToDateTwd: 390,
+    totalNetWorthTwd: 27800,
+    priceAsOf: "2026-03-31",
+    status: "ok",
+  });
+});
+
 test("POST /api/transactions creates a manual transaction for an owned account", async () => {
   const createdTransaction = {
     id: "txn-9",
@@ -1008,7 +1124,7 @@ test("POST /api/import/transactions-csv imports normalized transaction csv rows"
                 error: null,
               }),
             }),
-            insert: async (values: Array<Record<string, unknown>>) => {
+            upsert: async (values: Array<Record<string, unknown>>) => {
               insertedRows = values;
               return { error: null };
             },
@@ -1108,7 +1224,7 @@ test("POST /api/import/sinopac-tw maps minimal Sinopac csv rows into transaction
                 error: null,
               }),
             }),
-            insert: async (values: Array<Record<string, unknown>>) => {
+            upsert: async (values: Array<Record<string, unknown>>) => {
               insertedRows = values;
               return { error: null };
             },
@@ -1171,7 +1287,7 @@ test("POST /api/import/sinopac-tw maps minimal Sinopac csv rows into transaction
       date: "2026-03-13",
       amount: 1500,
       currency: "TWD",
-      category: "其他",
+      category: "退款",
       description: "退款",
       source: "sinopac_bank",
       source_hash: insertedRows[1]?.source_hash,
@@ -1208,7 +1324,7 @@ test("POST /api/import/credit-card-tw maps minimal credit card csv rows into tra
                 error: null,
               }),
             }),
-            insert: async (values: Array<Record<string, unknown>>) => {
+            upsert: async (values: Array<Record<string, unknown>>) => {
               insertedRows = values;
               return { error: null };
             },
@@ -1271,7 +1387,7 @@ test("POST /api/import/credit-card-tw maps minimal credit card csv rows into tra
       date: "2026-03-21",
       amount: 320,
       currency: "TWD",
-      category: "其他",
+      category: "退款",
       description: "退刷",
       source: "credit_card_tw",
       source_hash: insertedRows[1]?.source_hash,
@@ -1317,7 +1433,7 @@ test("POST /api/import/transactions-csv skips duplicate rows by source hash", as
                 error: null,
               }),
             }),
-            insert: async (values: Array<Record<string, unknown>>) => {
+            upsert: async (values: Array<Record<string, unknown>>) => {
               insertedRows = values;
               return { error: null };
             },
@@ -1393,7 +1509,7 @@ test("POST /api/import/excel-monthly imports simplified calendar workbook rows",
                 error: null,
               }),
             }),
-            insert: async (values: Array<Record<string, unknown>>) => {
+            upsert: async (values: Array<Record<string, unknown>>) => {
               insertedRows = values;
               return { error: null };
             },
@@ -1512,7 +1628,7 @@ test("POST /api/import/excel-monthly imports horizontal calendar workbook with c
                 error: null,
               }),
             }),
-            insert: async (values: Array<Record<string, unknown>>) => {
+            upsert: async (values: Array<Record<string, unknown>>) => {
               insertedRows = values;
               return { error: null };
             },
@@ -1623,7 +1739,7 @@ test("POST /api/import/excel-monthly aggregates parsable rows across multiple mo
                 error: null,
               }),
             }),
-            insert: async (values: Array<Record<string, unknown>>) => {
+            upsert: async (values: Array<Record<string, unknown>>) => {
               insertedRows = values;
               return { error: null };
             },
@@ -1762,7 +1878,7 @@ test("POST /api/import/excel-monthly expands merged header and category cells be
                 error: null,
               }),
             }),
-            insert: async (values: Array<Record<string, unknown>>) => {
+            upsert: async (values: Array<Record<string, unknown>>) => {
               insertedRows = values;
               return { error: null };
             },
@@ -1867,7 +1983,7 @@ test("POST /api/import/excel-monthly infers year and month from sheet name when 
                 error: null,
               }),
             }),
-            insert: async (values: Array<Record<string, unknown>>) => {
+            upsert: async (values: Array<Record<string, unknown>>) => {
               insertedRows = values;
               return { error: null };
             },
@@ -1939,6 +2055,120 @@ test("POST /api/import/excel-monthly infers year and month from sheet name when 
       source_hash: insertedRows[1]?.source_hash,
     },
   ]);
+});
+
+test("POST /api/import/foreign-stock-csv imports foreign brokerage trades and recalculates holdings", async () => {
+  let insertedTrades: Array<Record<string, unknown>> = [];
+  let upsertedHolding: Record<string, unknown> | null = null;
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-foreign" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "investment_trades") {
+          return {
+            select: () => ({
+              in: () => ({
+                data: [],
+                error: null,
+              }),
+              eq: () => ({
+                eq: () => ({
+                  order: async () => ({
+                    data: [
+                      {
+                        action: "buy",
+                        shares: 3,
+                        price_per_share: 25.5,
+                        name: "Vanguard S&P 500 ETF",
+                        currency: "USD",
+                      },
+                    ],
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+            upsert: async (values: Array<Record<string, unknown>>) => {
+              insertedTrades = values;
+              return { error: null };
+            },
+          };
+        }
+
+        if (table === "holdings") {
+          return {
+            upsert: async (value: Record<string, unknown>) => {
+              upsertedHolding = value;
+              return { error: null };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const formData = new FormData();
+  formData.set("account_id", "account-foreign");
+  formData.set(
+    "file",
+    new File(
+      [
+        "date,ticker,name,action,shares,price,fee,tax,currency\n2026-03-28,VOO,Vanguard S&P 500 ETF,buy,3,25.5,1,0,USD\n",
+      ],
+      "foreign-stock.csv",
+      { type: "text/csv" },
+    ),
+  );
+
+  const response = await app.request(
+    "/api/import/foreign-stock-csv",
+    {
+      method: "POST",
+      body: formData,
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    source: "foreign-stock-csv",
+    imported: 1,
+    skipped: 0,
+    failed: 0,
+    holdingsRecalculated: 1,
+    runtime: "cloudflare-worker",
+    persistence: "supabase",
+    status: "ok",
+    errors: [],
+  });
+  assert.equal(insertedTrades[0]?.currency, "USD");
+  assert.equal(insertedTrades[0]?.source, "foreign-stock-csv");
+  assert.deepEqual(upsertedHolding, {
+    account_id: "account-foreign",
+    ticker: "VOO",
+    name: "Vanguard S&P 500 ETF",
+    total_shares: 3,
+    avg_cost: 25.5,
+    currency: "USD",
+    updated_at: upsertedHolding?.updated_at,
+  });
 });
 
 test("GET /api/recurring-templates returns user-scoped recurring template list", async () => {

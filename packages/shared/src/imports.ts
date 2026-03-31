@@ -45,7 +45,7 @@ export type DividendImportResponse =
 
 export type StockTradeImportResponse =
   | {
-      source: "sinopac-stock";
+      source: "sinopac-stock" | "foreign-stock-csv";
       imported: number;
       skipped: number;
       failed: number;

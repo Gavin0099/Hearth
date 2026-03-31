@@ -3,6 +3,8 @@ export type NetWorthResponse =
       cashBankTwd: number;
       cashCreditTwd: number;
       investmentsTwd: number;
+      dividendsReceivedTwd: number;
+      dividendsYearToDateTwd: number;
       totalNetWorthTwd: number;
       priceAsOf: string | null;
       status: "ok";

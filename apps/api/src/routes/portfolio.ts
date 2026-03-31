@@ -43,6 +43,8 @@ portfolioRoutes.get("/net-worth", async (c) => {
       cashBankTwd: 0,
       cashCreditTwd: 0,
       investmentsTwd: 0,
+      dividendsReceivedTwd: 0,
+      dividendsYearToDateTwd: 0,
       totalNetWorthTwd: 0,
       priceAsOf: null,
       status: "ok",
@@ -161,12 +163,38 @@ portfolioRoutes.get("/net-worth", async (c) => {
     investmentsTwd += toTwd(marketValue, holding.currency);
   }
 
+  const { data: dividends, error: dividendsError } = await supabase
+    .from("dividends")
+    .select("pay_date, net_amount, currency")
+    .in("account_id", accountIds);
+
+  if (dividendsError) {
+    return c.json<NetWorthResponse>(
+      { code: "database_error", error: dividendsError.message, status: "error" },
+      500,
+    );
+  }
+
+  const currentYear = new Date().getUTCFullYear();
+  let dividendsReceivedTwd = 0;
+  let dividendsYearToDateTwd = 0;
+
+  for (const dividend of dividends ?? []) {
+    const amountTwd = toTwd(Number(dividend.net_amount), dividend.currency);
+    dividendsReceivedTwd += amountTwd;
+    if (String(dividend.pay_date).startsWith(`${currentYear}-`)) {
+      dividendsYearToDateTwd += amountTwd;
+    }
+  }
+
   const totalNetWorthTwd = cashBankTwd + cashCreditTwd + investmentsTwd;
 
   return c.json<NetWorthResponse>({
     cashBankTwd: Math.round(cashBankTwd),
     cashCreditTwd: Math.round(cashCreditTwd),
     investmentsTwd: Math.round(investmentsTwd),
+    dividendsReceivedTwd: Math.round(dividendsReceivedTwd),
+    dividendsYearToDateTwd: Math.round(dividendsYearToDateTwd),
     totalNetWorthTwd: Math.round(totalNetWorthTwd),
     priceAsOf,
     status: "ok",

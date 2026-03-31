@@ -148,6 +148,7 @@ function resolveTransactionsCsvSource(rawValue: FormDataEntryValue | null) {
   return allowed.includes(value) ? value : "csv_import";
 }
 
+
 importRoutes.post("/transactions-csv", async (c) => {
   const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
   const user = await resolveAuthenticatedUser(c.req.raw, c.env);
@@ -736,6 +737,190 @@ importRoutes.post(
 
       return c.json<StockTradeImportResponse>({
         source: "sinopac-stock",
+        imported: freshTrades.length,
+        skipped,
+        failed: errors.length,
+        holdingsRecalculated,
+        runtime: "cloudflare-worker",
+        persistence: "supabase",
+        status: "ok",
+        errors,
+      });
+    })(),
+);
+
+importRoutes.post(
+  "/foreign-stock-csv",
+  async (c): Promise<Response> =>
+    (async () => {
+      const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
+      const user = await resolveAuthenticatedUser(c.req.raw, c.env);
+      if (!user) {
+        return c.json<StockTradeImportResponse>(
+          { code: "unauthorized", error: "Missing or invalid Supabase bearer token.", status: "error" },
+          401,
+        );
+      }
+
+      const formData = await c.req.formData();
+      const accountId = String(formData.get("account_id") ?? "").trim();
+      const file = formData.get("file");
+
+      if (!accountId) {
+        return c.json<StockTradeImportResponse>(
+          { code: "validation_error", error: "account_id is required.", status: "error" },
+          400,
+        );
+      }
+
+      if (!(file instanceof File)) {
+        return c.json<StockTradeImportResponse>(
+          { code: "validation_error", error: "CSV file is required.", status: "error" },
+          400,
+        );
+      }
+
+      const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
+      const { supabase, ownedAccounts, accountsError } = await resolveOwnedAccountIds(
+        user.id,
+        createSupabaseAdminClient,
+        c.env,
+      );
+
+      if (accountsError) {
+        return c.json<StockTradeImportResponse>(
+          { code: "database_error", error: accountsError.message, status: "error" },
+          500,
+        );
+      }
+
+      const accountIds = new Set((ownedAccounts ?? []).map((a: { id: string }) => a.id));
+      if (!accountIds.has(accountId)) {
+        return c.json<StockTradeImportResponse>(
+          { code: "validation_error", error: "Selected account does not belong to the current user.", status: "error" },
+          400,
+        );
+      }
+
+      const text = await file.text();
+      const { trades, errors } = parseSinopacStockCsv(text, accountId);
+
+      if (trades.length === 0) {
+        return c.json<StockTradeImportResponse>(
+          { code: "validation_error", error: errors[0] ?? "CSV 沒有可匯入的股票交易資料。", status: "error" },
+          400,
+        );
+      }
+
+      const normalizedTrades = trades.map((trade) => ({
+        ...trade,
+        source: "foreign-stock-csv" as const,
+      }));
+
+      const sourceHashes = normalizedTrades.map((t) => t.source_hash);
+      const { data: existingRows, error: existingError } = await supabase
+        .from("investment_trades")
+        .select("source_hash")
+        .in("source_hash", sourceHashes);
+
+      if (existingError) {
+        return c.json<StockTradeImportResponse>(
+          { code: "database_error", error: existingError.message, status: "error" },
+          500,
+        );
+      }
+
+      const existingHashes = new Set(
+        (existingRows ?? []).map((r: { source_hash: string }) => r.source_hash),
+      );
+      const freshTrades = normalizedTrades.filter((t) => !existingHashes.has(t.source_hash));
+      const skipped = normalizedTrades.length - freshTrades.length;
+
+      if (freshTrades.length > 0) {
+        const { error: insertError } = await supabase.from("investment_trades").upsert(
+          freshTrades.map((t) => ({
+            account_id: t.account_id,
+            trade_date: t.trade_date,
+            ticker: t.ticker,
+            name: t.name,
+            action: t.action,
+            shares: t.shares,
+            price_per_share: t.price_per_share,
+            fee: t.fee,
+            tax: t.tax,
+            currency: t.currency,
+            source: t.source,
+            source_hash: t.source_hash,
+          })),
+          { onConflict: "source_hash", ignoreDuplicates: true },
+        );
+
+        if (insertError) {
+          return c.json<StockTradeImportResponse>(
+            { code: "database_error", error: insertError.message, status: "error" },
+            500,
+          );
+        }
+      }
+
+      const affectedTickers = [...new Set(freshTrades.map((t) => t.ticker))];
+      let holdingsRecalculated = 0;
+
+      for (const ticker of affectedTickers) {
+        const { data: allTrades, error: tradesError } = await supabase
+          .from("investment_trades")
+          .select("action, shares, price_per_share, name, currency")
+          .eq("account_id", accountId)
+          .eq("ticker", ticker)
+          .order("trade_date", { ascending: true });
+
+        if (tradesError) continue;
+
+        let totalShares = 0;
+        let weightedCost = 0;
+        let name: string | null = null;
+        let currency = "TWD";
+
+        for (const trade of allTrades ?? []) {
+          const shares = Number(trade.shares);
+          const price = Number(trade.price_per_share);
+          if (!name && trade.name) name = trade.name;
+          currency = trade.currency;
+
+          if (trade.action === "buy") {
+            const newTotal = totalShares + shares;
+            weightedCost = newTotal > 0 ? (weightedCost * totalShares + price * shares) / newTotal : price;
+            totalShares = newTotal;
+          } else {
+            totalShares = Math.max(0, totalShares - shares);
+          }
+        }
+
+        if (totalShares <= 0) {
+          await supabase
+            .from("holdings")
+            .delete()
+            .eq("account_id", accountId)
+            .eq("ticker", ticker);
+        } else {
+          const { error: upsertError } = await supabase.from("holdings").upsert(
+            {
+              account_id: accountId,
+              ticker,
+              name,
+              total_shares: totalShares,
+              avg_cost: weightedCost,
+              currency,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "account_id,ticker" },
+          );
+          if (!upsertError) holdingsRecalculated++;
+        }
+      }
+
+      return c.json<StockTradeImportResponse>({
+        source: "foreign-stock-csv",
         imported: freshTrades.length,
         skipped,
         failed: errors.length,

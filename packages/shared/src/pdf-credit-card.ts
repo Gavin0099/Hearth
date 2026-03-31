@@ -1241,7 +1241,7 @@ function parseSinopacBankPdfText(text: string): ParsedPdfTransaction[] {
         description: row.description,
         amount: signedAmount,
         currency: row.currency,
-        subAccount: row.subAccount || undefined,
+        ...(row.subAccount ? { subAccount: row.subAccount } : {}),
       });
     }
   }
@@ -1508,7 +1508,7 @@ export function parseEsunLoanSection(text: string): ParsedLoanRecord[] {
   const normalized = normalizeWhitespace(deSpaced);
   const lines = normalized.split('\n').map((l) => l.trim()).filter(Boolean);
   const sectionEndRe = /^保\s*險$|^保險$|^投\s*資$|^投資$|^外\s*匯$|^外匯$|^說明[:：]?$/;
-  const loanSectionIdx = lines.findIndex((line) => /^貸\s*款$|貸款/.test(line));
+  const loanSectionIdx = lines.findIndex((line) => /貸\s*款/.test(line));
   const sectionLines: string[] = [];
 
   if (loanSectionIdx !== -1) {
@@ -1527,6 +1527,10 @@ export function parseEsunLoanSection(text: string): ParsedLoanRecord[] {
   const scanLines = sectionLines.length > 0 ? sectionLines : lines;
   const records: ParsedLoanRecord[] = [];
   const seenAccounts = new Set<string>();
+  const sectionDateMatch = scanLines
+    .join(" ")
+    .match(/資料日期[:：]?\s*((?:\d{3}|\d{4})[\/\-]\d{2}[\/\-]\d{2})/);
+  const sectionPaymentDate = sectionDateMatch ? parseDateToIso(sectionDateMatch[1]) : "";
 
   for (let i = 0; i < scanLines.length; i++) {
     const line = scanLines[i];
@@ -1558,9 +1562,15 @@ export function parseEsunLoanSection(text: string): ParsedLoanRecord[] {
     ].map((match) => parsePlainAmount(match[0]));
     if (amountMatches.length === 0) continue;
 
-    const dateSource = [scanLines[i - 2], scanLines[i - 1], line].filter(Boolean).join(" ");
+    const dateSource = [
+      scanLines[i - 4],
+      scanLines[i - 3],
+      scanLines[i - 2],
+      scanLines[i - 1],
+      line,
+    ].filter(Boolean).join(" ");
     const dataDateMatch = dateSource.match(/資料日期[:：]?\s*((?:\d{3}|\d{4})[\/\-]\d{2}[\/\-]\d{2})/);
-    const paymentDate = dataDateMatch ? parseDateToIso(dataDateMatch[1]) : "";
+    const paymentDate = dataDateMatch ? parseDateToIso(dataDateMatch[1]) : sectionPaymentDate;
 
     seenAccounts.add(normalizedAccountNo);
 
@@ -1571,7 +1581,7 @@ export function parseEsunLoanSection(text: string): ParsedLoanRecord[] {
       principal: 0,
       interest: 0,
       penalty: 0,
-      remainingBalance: amountMatches[amountMatches.length - 1],
+      remainingBalance: amountMatches[0],
     });
   }
 

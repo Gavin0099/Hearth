@@ -40,10 +40,25 @@ export async function importSinopacStockCsv(
   accountId: string,
   file: File,
 ): Promise<StockTradeImportResponse> {
+  return importStockTrades("/api/import/sinopac-stock", accountId, file);
+}
+
+export async function importForeignStockCsv(
+  accountId: string,
+  file: File,
+): Promise<StockTradeImportResponse> {
+  return importStockTrades("/api/import/foreign-stock-csv", accountId, file);
+}
+
+async function importStockTrades(
+  endpoint: string,
+  accountId: string,
+  file: File,
+): Promise<StockTradeImportResponse> {
   const formData = new FormData();
   formData.set("account_id", accountId);
   formData.set("file", file);
-  const response = await apiFetch("/api/import/sinopac-stock", {
+  const response = await apiFetch(endpoint, {
     method: "POST",
     body: formData,
   });

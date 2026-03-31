@@ -6,6 +6,7 @@ import {
   importCreditCardTransactionsCsv,
   importDividendsCsv,
   importExcelMonthly,
+  importForeignStockCsv,
   importSinopacStockCsv,
   importSinopacTransactionsCsv,
   importTransactionsCsv,
@@ -32,7 +33,7 @@ export function ImportPanel({
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importMode, setImportMode] = useState<
-    "normalized" | "sinopac-tw" | "credit-card-tw" | "excel-monthly" | "sinopac-stock" | "dividends-csv"
+    "normalized" | "sinopac-tw" | "credit-card-tw" | "excel-monthly" | "sinopac-stock" | "foreign-stock-csv" | "dividends-csv"
   >("normalized");
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -97,6 +98,8 @@ export function ImportPanel({
           ? await importExcelMonthly(selectedAccountId, selectedFile)
         : importMode === "sinopac-stock"
           ? await importSinopacStockCsv(selectedAccountId, selectedFile)
+        : importMode === "foreign-stock-csv"
+          ? await importForeignStockCsv(selectedAccountId, selectedFile)
         : importMode === "dividends-csv"
           ? await importDividendsCsv(selectedAccountId, selectedFile)
           : await importTransactionsCsv(selectedAccountId, selectedFile);
@@ -113,7 +116,7 @@ export function ImportPanel({
     );
 
     const extraInfo =
-      result.source === "sinopac-stock"
+      result.source === "sinopac-stock" || result.source === "foreign-stock-csv"
         ? `持倉更新：${result.holdingsRecalculated} 檔。`
         : result.source === "dividends-csv"
           ? ""
@@ -176,6 +179,8 @@ export function ImportPanel({
                   ? "信用卡最小欄位格式：`交易日期,金額,摘要`，可選 `幣別` 與 `交易類型`。"
                 : importMode === "sinopac-stock"
                   ? "永豐台股欄位：`成交日期,股票代號,股票名稱,買賣別,成交股數,成交單價,手續費,交易稅`。匯入後自動重算持倉。"
+                : importMode === "foreign-stock-csv"
+                  ? "複委託 CSV 欄位：`成交日期,股票代號,股票名稱,買賣別,成交股數,成交單價,手續費,交易稅,currency`。可匯入 USD 等外幣交易，匯入後同樣自動重算持倉。"
                 : importMode === "dividends-csv"
                   ? "配息 CSV 欄位：`ticker,pay_date,net_amount[,gross_amount][,tax_withheld][,currency]`。日期格式 YYYY-MM-DD。"
                 : "Excel 第一版格式：第一列放日期欄，左側欄位使用 `分類` / `項目`，每日金額填在日期欄下方。"}
@@ -193,6 +198,7 @@ export function ImportPanel({
                       | "credit-card-tw"
                       | "excel-monthly"
                       | "sinopac-stock"
+                      | "foreign-stock-csv"
                       | "dividends-csv",
                   )
                 }
@@ -203,6 +209,7 @@ export function ImportPanel({
                 <option value="excel-monthly">Excel 月帳本</option>
                 <option value="sinopac-stock">永豐台股交易 CSV</option>
                 <option value="dividends-csv">配息紀錄 CSV</option>
+                <option value="foreign-stock-csv">複委託交易 CSV</option>
               </select>
             </label>
             <label>
@@ -237,6 +244,8 @@ export function ImportPanel({
                   ? "匯入 Excel"
                   : importMode === "sinopac-stock"
                     ? "匯入台股交易"
+                    : importMode === "foreign-stock-csv"
+                      ? "匯入複委託交易"
                     : importMode === "dividends-csv"
                       ? "匯入配息"
                       : "匯入 CSV"}

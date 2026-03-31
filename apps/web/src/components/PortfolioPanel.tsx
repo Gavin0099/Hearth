@@ -237,6 +237,14 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
                 <span className="label">投資市值</span>
                 <span className="value">{formatTwd(state.netWorth.investmentsTwd)}</span>
               </div>
+              <div>
+                <span className="label">累計配息</span>
+                <span className="value">{formatTwd(state.netWorth.dividendsReceivedTwd)}</span>
+              </div>
+              <div>
+                <span className="label">今年配息</span>
+                <span className="value">{formatTwd(state.netWorth.dividendsYearToDateTwd)}</span>
+              </div>
             </div>
             {state.netWorth.priceAsOf ? (
               <p className="price-as-of">報價日期：{state.netWorth.priceAsOf}</p>
@@ -317,7 +325,7 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
               </section>
             </>
           ) : (
-            <p>目前沒有持倉資料，匯入台股交易後這裡會顯示。</p>
+            <p>目前沒有持倉資料，匯入台股或複委託交易後這裡會顯示。</p>
           )}
 
           {fxRates.length > 0 ? (
