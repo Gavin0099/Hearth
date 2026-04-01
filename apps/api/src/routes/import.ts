@@ -8,7 +8,7 @@ import type {
 } from "@hearth/shared";
 import { parseCsv } from "../lib/csv";
 import { parseCreditCardTransactionsCsv } from "../lib/credit-card";
-import { parseDividendsCsv } from "../lib/dividends";
+import { parseDividendsCsv, prepareDividendImportBatch } from "../lib/dividends";
 import { parseMonthlyExcel } from "../lib/excel-monthly";
 import { rebuildHoldingFromTrades } from "../lib/holdings";
 import { parseSinopacTransactionsCsv } from "../lib/sinopac";
@@ -1065,16 +1065,15 @@ importRoutes.post(
         );
       }
 
-      const dedupedDivRows = dedupeBySourceHash(divRows);
-      const hashes = dedupedDivRows.rows.map((r) => r.source_hash);
+      const hashes = divRows.map((r) => r.source_hash);
       const { data: existing } = await supabase
         .from("dividends")
         .select("source_hash")
         .in("source_hash", hashes);
-      const existingSet = new Set((existing ?? []).map((r: { source_hash: string }) => r.source_hash));
-
-      const newRows = dedupedDivRows.rows.filter((r) => !existingSet.has(r.source_hash));
-      const skipped = dedupedDivRows.duplicateRowsInPayload + (dedupedDivRows.rows.length - newRows.length);
+      const { freshRows: newRows, skipped } = prepareDividendImportBatch(
+        divRows,
+        (existing ?? []).map((r: { source_hash: string }) => r.source_hash),
+      );
 
       if (newRows.length > 0) {
         const { error: insertError } = await supabase.from("dividends").insert(newRows);

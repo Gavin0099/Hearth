@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseDividendsCsv } from "../src/lib/dividends";
+import { parseDividendsCsv, prepareDividendImportBatch } from "../src/lib/dividends";
 import { rebuildHoldingFromTrades } from "../src/lib/holdings";
 import { parseSinopacStockCsv } from "../src/lib/sinopac-stock";
 
@@ -70,6 +70,40 @@ test("dividends csv golden: preserves row-level validation errors while keeping 
   assert.equal(result.rows.length, 1);
   assert.equal(result.rows[0]?.ticker, "00919");
   assert.equal(result.rows[0]?.net_amount, 900);
+});
+
+test("dividend import batch golden: removes payload duplicates and existing hashes", () => {
+  const parsed = parseDividendsCsv(
+    [
+      "ticker,pay_date,net_amount,gross_amount,tax_withheld,currency",
+      "0056,2026-03-15,1080,1200,120,TWD",
+      "0056,2026-03-15,1080,1200,120,TWD",
+      "00919,2026-03-20,900,900,0,TWD",
+    ].join("\n"),
+    "account-1",
+  );
+
+  const result = prepareDividendImportBatch(parsed.rows, [parsed.rows[0]!.source_hash]);
+
+  assert.equal(result.freshRows.length, 1);
+  assert.equal(result.freshRows[0]?.ticker, "00919");
+  assert.equal(result.skipped, 2);
+});
+
+test("dividend import batch golden: keeps all unique rows when no existing hashes match", () => {
+  const parsed = parseDividendsCsv(
+    [
+      "ticker,pay_date,net_amount,gross_amount,tax_withheld,currency",
+      "0056,2026-03-15,1080,1200,120,TWD",
+      "00919,2026-03-20,900,900,0,TWD",
+    ].join("\n"),
+    "account-1",
+  );
+
+  const result = prepareDividendImportBatch(parsed.rows, []);
+
+  assert.equal(result.freshRows.length, 2);
+  assert.equal(result.skipped, 0);
 });
 
 test("sinopac stock csv golden: normalizes roc dates, actions, and currencies", () => {

@@ -16,6 +16,11 @@ export type ParseDividendsCsvResult = {
   errors: string[];
 };
 
+export type PrepareDividendImportBatchResult = {
+  freshRows: DividendImportRow[];
+  skipped: number;
+};
+
 function buildDividendSourceHash(accountId: string, ticker: string, payDate: string, netAmount: number) {
   const hashKey = `dividends|${accountId}|${ticker}|${payDate}|${netAmount}`;
   return btoa(unescape(encodeURIComponent(hashKey))).replace(/=/g, "").slice(0, 64);
@@ -71,5 +76,31 @@ export function parseDividendsCsv(csvText: string, accountId: string): ParseDivi
   return {
     rows: dividendRows,
     errors,
+  };
+}
+
+export function prepareDividendImportBatch(
+  rows: DividendImportRow[],
+  existingSourceHashes: Iterable<string>,
+): PrepareDividendImportBatchResult {
+  const existingSet = new Set(existingSourceHashes);
+  const uniqueRows = new Map<string, DividendImportRow>();
+  let duplicateRowsInPayload = 0;
+
+  for (const row of rows) {
+    if (uniqueRows.has(row.source_hash)) {
+      duplicateRowsInPayload += 1;
+      continue;
+    }
+
+    uniqueRows.set(row.source_hash, row);
+  }
+
+  const dedupedRows = [...uniqueRows.values()];
+  const freshRows = dedupedRows.filter((row) => !existingSet.has(row.source_hash));
+
+  return {
+    freshRows,
+    skipped: duplicateRowsInPayload + (dedupedRows.length - freshRows.length),
   };
 }
