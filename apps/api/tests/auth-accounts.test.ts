@@ -2730,6 +2730,132 @@ test("POST /api/import/foreign-stock-csv dedupes duplicate trade rows within the
   assert.equal(upsertedHolding?.total_shares, 3);
 });
 
+test("POST /api/import/foreign-stock-csv keeps valid trades while surfacing row errors", async () => {
+  let insertedTrades: Array<Record<string, unknown>> = [];
+  let upsertedHolding: Record<string, unknown> | null = null;
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-stock" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "investment_trades") {
+          return {
+            select: () => ({
+              in: async () => ({
+                data: [],
+                error: null,
+              }),
+              eq: (_column: string, _value: string) => ({
+                eq: (_column2: string, _value2: string) => ({
+                  order: async () => ({
+                    data: [
+                      {
+                        account_id: "account-stock",
+                        trade_date: "2026-03-29",
+                        ticker: "QQQ",
+                        name: "Invesco QQQ",
+                        action: "buy",
+                        shares: 5,
+                        price_per_share: 420,
+                        fee: 1,
+                        tax: 0,
+                        currency: "USD",
+                      },
+                    ],
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+            upsert: async (values: Array<Record<string, unknown>>) => {
+              insertedTrades = values;
+              return { error: null };
+            },
+          };
+        }
+
+        if (table === "holdings") {
+          return {
+            upsert: async (value: Record<string, unknown>) => {
+              upsertedHolding = value;
+              return { error: null };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const formData = new FormData();
+  formData.set("account_id", "account-stock");
+  formData.set(
+    "file",
+    new File(
+      [
+        "date,ticker,name,action,shares,price,fee,tax,currency\nbad-date,2330,TSMC,buy,2,610,1,0,TWD\n2026-03-28,,VOO,buy,3,25.5,1,0,USD\n2026-03-29,QQQ,Invesco QQQ,buy,5,420,1,0,USD\n",
+      ],
+      "foreign-stock-validation.csv",
+      { type: "text/csv" },
+    ),
+  );
+
+  const response = await app.request(
+    "/api/import/foreign-stock-csv",
+    {
+      method: "POST",
+      body: formData,
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.source, "foreign-stock-csv");
+  assert.equal(payload.imported, 1);
+  assert.equal(payload.skipped, 0);
+  assert.equal(payload.failed, 2);
+  assert.equal(payload.holdingsRecalculated, 1);
+  assert.equal(payload.runtime, "cloudflare-worker");
+  assert.equal(payload.persistence, "supabase");
+  assert.equal(payload.status, "ok");
+  assert.equal(Array.isArray(payload.errors), true);
+  assert.equal(payload.errors.length, 2);
+  assert.deepEqual(insertedTrades, [
+    {
+      account_id: "account-stock",
+      trade_date: "2026-03-29",
+      ticker: "QQQ",
+      name: "Invesco QQQ",
+      action: "buy",
+      shares: 5,
+      price_per_share: 420,
+      fee: 1,
+      tax: 0,
+      currency: "USD",
+      source: "foreign-stock-csv",
+      source_hash: insertedTrades[0]?.source_hash,
+    },
+  ]);
+  assert.equal(upsertedHolding?.ticker, "QQQ");
+  assert.equal(upsertedHolding?.currency, "USD");
+  assert.equal(upsertedHolding?.total_shares, 5);
+});
+
 test("POST /api/import/dividends-csv skips duplicate dividend rows by source hash", async () => {
   let insertedDividends: Array<Record<string, unknown>> = [];
   const app = createApp({
