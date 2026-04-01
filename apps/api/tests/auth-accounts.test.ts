@@ -1856,6 +1856,85 @@ test("POST /api/import/transactions-csv skips duplicate rows by source hash", as
   assert.deepEqual(insertedRows, []);
 });
 
+test("POST /api/import/transactions-csv dedupes duplicate rows within the same upload batch", async () => {
+  let insertedRows: Array<Record<string, unknown>> = [];
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "transactions") {
+          return {
+            select: () => ({
+              in: async () => ({
+                data: [],
+                error: null,
+              }),
+            }),
+            upsert: async (values: Array<Record<string, unknown>>) => {
+              insertedRows = values;
+              return { error: null };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set(
+    "file",
+    new File(
+      [
+        "date,amount,currency,category,description\n2026-03-01,-120,TWD,擗ㄡ,Lunch\n2026-03-01,-120,TWD,擗ㄡ,Lunch\n2026-03-02,5000,TWD,薪資,Salary\n",
+      ],
+      "duplicate-batch.csv",
+      { type: "text/csv" },
+    ),
+  );
+
+  const response = await app.request(
+    "/api/import/transactions-csv",
+    {
+      method: "POST",
+      body: formData,
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    source: "transactions-csv",
+    imported: 2,
+    skipped: 1,
+    failed: 0,
+    runtime: "cloudflare-worker",
+    persistence: "supabase",
+    status: "ok",
+    errors: [],
+    warnings: [],
+    recurringCandidates: [],
+  });
+  assert.equal(insertedRows.length, 2);
+});
+
 test("POST /api/import/excel-monthly imports simplified calendar workbook rows", async () => {
   let insertedRows: Array<Record<string, unknown>> = [];
 
@@ -2547,6 +2626,110 @@ test("POST /api/import/foreign-stock-csv imports foreign brokerage trades and re
   });
 });
 
+test("POST /api/import/foreign-stock-csv dedupes duplicate trade rows within the same upload batch", async () => {
+  let insertedTrades: Array<Record<string, unknown>> = [];
+  let upsertedHolding: Record<string, unknown> | null = null;
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-foreign" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "investment_trades") {
+          return {
+            select: () => ({
+              in: async () => ({
+                data: [],
+                error: null,
+              }),
+              eq: () => ({
+                eq: () => ({
+                  order: async () => ({
+                    data: [
+                      {
+                        action: "buy",
+                        shares: 3,
+                        price_per_share: 25.5,
+                        name: "Vanguard S&P 500 ETF",
+                        currency: "USD",
+                      },
+                    ],
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+            upsert: async (values: Array<Record<string, unknown>>) => {
+              insertedTrades = values;
+              return { error: null };
+            },
+          };
+        }
+
+        if (table === "holdings") {
+          return {
+            upsert: async (value: Record<string, unknown>) => {
+              upsertedHolding = value;
+              return { error: null };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const formData = new FormData();
+  formData.set("account_id", "account-foreign");
+  formData.set(
+    "file",
+    new File(
+      [
+        "date,ticker,name,action,shares,price,fee,tax,currency\n2026-03-28,VOO,Vanguard S&P 500 ETF,buy,3,25.5,1,0,USD\n2026-03-28,VOO,Vanguard S&P 500 ETF,buy,3,25.5,1,0,USD\n",
+      ],
+      "foreign-stock-duplicates.csv",
+      { type: "text/csv" },
+    ),
+  );
+
+  const response = await app.request(
+    "/api/import/foreign-stock-csv",
+    {
+      method: "POST",
+      body: formData,
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    source: "foreign-stock-csv",
+    imported: 1,
+    skipped: 1,
+    failed: 0,
+    holdingsRecalculated: 1,
+    runtime: "cloudflare-worker",
+    persistence: "supabase",
+    status: "ok",
+    errors: [],
+  });
+  assert.equal(insertedTrades.length, 1);
+  assert.equal(upsertedHolding?.total_shares, 3);
+});
+
 test("POST /api/import/dividends-csv skips duplicate dividend rows by source hash", async () => {
   let insertedDividends: Array<Record<string, unknown>> = [];
   const app = createApp({
@@ -2636,6 +2819,86 @@ test("POST /api/import/dividends-csv skips duplicate dividend rows by source has
       source_hash: insertedDividends[0]?.source_hash,
     },
   ]);
+});
+
+test("POST /api/import/dividends-csv dedupes duplicate rows within the same upload batch", async () => {
+  let insertedDividends: Array<Record<string, unknown>> = [];
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  maybeSingle: async () => ({
+                    data: { id: "account-1" },
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+
+        if (table === "dividends") {
+          return {
+            select: () => ({
+              in: async () => ({
+                data: [],
+                error: null,
+              }),
+            }),
+            insert: async (values: Array<Record<string, unknown>>) => {
+              insertedDividends = values;
+              return { error: null };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set(
+    "file",
+    new File(
+      [
+        "ticker,pay_date,net_amount,gross_amount,tax_withheld,currency\n0056,2026-03-15,1080,1200,120,TWD\n0056,2026-03-15,1080,1200,120,TWD\n00919,2026-03-20,900,900,0,TWD\n",
+      ],
+      "dividends-duplicates.csv",
+      { type: "text/csv" },
+    ),
+  );
+
+  const response = await app.request(
+    "/api/import/dividends-csv",
+    {
+      method: "POST",
+      body: formData,
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    source: "dividends-csv",
+    imported: 2,
+    skipped: 1,
+    failed: 0,
+    runtime: "cloudflare-worker",
+    persistence: "supabase",
+    status: "ok",
+    errors: [],
+  });
+  assert.equal(insertedDividends.length, 2);
 });
 
 test("GET /api/recurring-templates returns user-scoped recurring template list", async () => {

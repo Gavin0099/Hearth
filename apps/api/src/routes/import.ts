@@ -57,8 +57,21 @@ async function importNormalizedRows(
     ...row,
     source_hash: buildTransactionSourceHash(row),
   }));
+  const uniqueRows = new Map<string, (typeof withHashes)[number]>();
+  let duplicateRowsInPayload = 0;
 
-  const sourceHashes = withHashes.map((row) => row.source_hash);
+  withHashes.forEach((row) => {
+    if (uniqueRows.has(row.source_hash)) {
+      duplicateRowsInPayload += 1;
+      return;
+    }
+
+    uniqueRows.set(row.source_hash, row);
+  });
+
+  const dedupedRows = [...uniqueRows.values()];
+
+  const sourceHashes = dedupedRows.map((row) => row.source_hash);
   const { data: existing, error: existingError } = await supabase
     .from("transactions")
     .select("source_hash")
@@ -78,7 +91,7 @@ async function importNormalizedRows(
   const existingHashes = new Set(
     (existing ?? []).map((item: { source_hash: string | null }) => item.source_hash).filter(Boolean),
   );
-  const freshRows = withHashes.filter((row) => !existingHashes.has(row.source_hash));
+  const freshRows = dedupedRows.filter((row) => !existingHashes.has(row.source_hash));
 
   if (freshRows.length > 0) {
     const { error } = await supabase.from("transactions").upsert(
@@ -111,7 +124,7 @@ async function importNormalizedRows(
     response: {
       source,
       imported: freshRows.length,
-      skipped: existingSkipped + (withHashes.length - freshRows.length),
+      skipped: existingSkipped + duplicateRowsInPayload + (dedupedRows.length - freshRows.length),
       failed: existingErrors.length,
       runtime: "cloudflare-worker" as const,
       persistence: "supabase" as const,
@@ -146,6 +159,25 @@ function resolveTransactionsCsvSource(rawValue: FormDataEntryValue | null) {
     "gmail_bank_mega",
   ];
   return allowed.includes(value) ? value : "csv_import";
+}
+
+function dedupeBySourceHash<T extends { source_hash: string }>(rows: T[]) {
+  const uniqueRows = new Map<string, T>();
+  let duplicateRowsInPayload = 0;
+
+  rows.forEach((row) => {
+    if (uniqueRows.has(row.source_hash)) {
+      duplicateRowsInPayload += 1;
+      return;
+    }
+
+    uniqueRows.set(row.source_hash, row);
+  });
+
+  return {
+    rows: [...uniqueRows.values()],
+    duplicateRowsInPayload,
+  };
 }
 
 
@@ -630,8 +662,8 @@ importRoutes.post(
         );
       }
 
-      // Dedup by source_hash
-      const sourceHashes = trades.map((t) => t.source_hash);
+      const dedupedTradeBatch = dedupeBySourceHash(trades);
+      const sourceHashes = dedupedTradeBatch.rows.map((t) => t.source_hash);
       const { data: existingRows, error: existingError } = await supabase
         .from("investment_trades")
         .select("source_hash")
@@ -647,8 +679,8 @@ importRoutes.post(
       const existingHashes = new Set(
         (existingRows ?? []).map((r: { source_hash: string }) => r.source_hash),
       );
-      const freshTrades = trades.filter((t) => !existingHashes.has(t.source_hash));
-      const skipped = trades.length - freshTrades.length;
+      const freshTrades = dedupedTradeBatch.rows.filter((t) => !existingHashes.has(t.source_hash));
+      const skipped = dedupedTradeBatch.duplicateRowsInPayload + (dedupedTradeBatch.rows.length - freshTrades.length);
 
       if (freshTrades.length > 0) {
         const { error: insertError } = await supabase.from("investment_trades").upsert(
@@ -817,7 +849,8 @@ importRoutes.post(
         source: "foreign-stock-csv" as const,
       }));
 
-      const sourceHashes = normalizedTrades.map((t) => t.source_hash);
+      const dedupedTradeBatch = dedupeBySourceHash(normalizedTrades);
+      const sourceHashes = dedupedTradeBatch.rows.map((t) => t.source_hash);
       const { data: existingRows, error: existingError } = await supabase
         .from("investment_trades")
         .select("source_hash")
@@ -833,8 +866,8 @@ importRoutes.post(
       const existingHashes = new Set(
         (existingRows ?? []).map((r: { source_hash: string }) => r.source_hash),
       );
-      const freshTrades = normalizedTrades.filter((t) => !existingHashes.has(t.source_hash));
-      const skipped = normalizedTrades.length - freshTrades.length;
+      const freshTrades = dedupedTradeBatch.rows.filter((t) => !existingHashes.has(t.source_hash));
+      const skipped = dedupedTradeBatch.duplicateRowsInPayload + (dedupedTradeBatch.rows.length - freshTrades.length);
 
       if (freshTrades.length > 0) {
         const { error: insertError } = await supabase.from("investment_trades").upsert(
@@ -1028,16 +1061,16 @@ importRoutes.post(
         );
       }
 
-      // Dedup: check existing source_hashes
-      const hashes = divRows.map((r) => r.source_hash);
+      const dedupedDivRows = dedupeBySourceHash(divRows);
+      const hashes = dedupedDivRows.rows.map((r) => r.source_hash);
       const { data: existing } = await supabase
         .from("dividends")
         .select("source_hash")
         .in("source_hash", hashes);
       const existingSet = new Set((existing ?? []).map((r: { source_hash: string }) => r.source_hash));
 
-      const newRows = divRows.filter((r) => !existingSet.has(r.source_hash));
-      const skipped = divRows.length - newRows.length;
+      const newRows = dedupedDivRows.rows.filter((r) => !existingSet.has(r.source_hash));
+      const skipped = dedupedDivRows.duplicateRowsInPayload + (dedupedDivRows.rows.length - newRows.length);
 
       if (newRows.length > 0) {
         const { error: insertError } = await supabase.from("dividends").insert(newRows);
