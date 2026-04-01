@@ -19,7 +19,7 @@ Workspace behavior remains governed by `AGENTS.md` in repo root.
   - transaction amount/sign/category/date handling
   - source-hash dedupe behavior
   - auth boundary, account ownership scoping, or RLS-sensitive paths
-  - schema changes under `supabase/schema.sql`
+  - schema changes under `supabase/schema.sql` or `supabase/migrations/`
   - recurring apply logic and monthly report aggregation
   - deploy/runtime config that can affect production correctness or data safety
 
@@ -54,3 +54,4 @@ Escalate before proceeding when:
 - Treat ownership checks (`user_id` via auth + account join scoping) as non-optional.
 - Keep import parsers deterministic and repeatable.
 - Do not weaken dedupe rules without explicit migration/backfill plan.
+- Treat `supabase/migrations/` as canonical schema history; `supabase/schema.sql` is the latest bootstrap snapshot.

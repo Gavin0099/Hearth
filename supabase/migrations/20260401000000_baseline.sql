@@ -1,6 +1,3 @@
--- Bootstrap snapshot for fresh projects.
--- Canonical schema history now lives under supabase/migrations/.
-
 create extension if not exists pgcrypto;
 
 create table if not exists accounts (

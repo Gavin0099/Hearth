@@ -183,6 +183,7 @@
 - `user_settings` 的 PDF 密碼目前已改成 Worker 端應用層加密寫入，需配置 `USER_SETTINGS_SECRET_KEY`
 - 既有 plaintext 列仍以 backward-compatible fallback 讀取；完整重加密 / 輪替 / 刪除策略仍未完成
 - `user_settings` 舊 plaintext secrets 會在 `GET /api/user-settings/pdf-passwords` 成功讀取時自動重寫為 ciphertext
+- `supabase/migrations/` 現已作為 schema history；後續 DB 變更需同時維護 migration 與最新 `schema.sql` snapshot
 
 ---
 
@@ -255,3 +256,4 @@
 | 2026-03-31 | 收斂 user_settings 秘密暴露面 | 一般 settings API 改回 presence flags，明文密碼只在顯式 secret endpoint 取用，並加上 no-store |
 | 2026-03-31 | 補上 user_settings 應用層加密寫入 | PDF 密碼改為 Worker 端 AES-GCM 寫入；缺少 `USER_SETTINGS_SECRET_KEY` 時讀寫都明確失敗，舊 plaintext 仍可 fallback 讀取 |
 | 2026-04-01 | 補上 user_settings 舊資料升級路徑 | 顯式 secret fetch 會在讀取 legacy plaintext 後自動回寫 ciphertext，縮小舊資料明文尾巴 |
+| 2026-04-01 | 建立 schema migration discipline baseline | 新增 `supabase/migrations/20260401000000_baseline.sql` 與 repo docs，後續 schema 變更不再只靠覆寫單一 baseline |

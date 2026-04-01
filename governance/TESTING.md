@@ -26,6 +26,7 @@ Version: 1.0
 - L2 domain/security/schema/deploy:
   - readiness strict before release
   - post-deploy smoke after deployment
+  - update `supabase/migrations/` and `supabase/schema.sql` together when schema shape changes
 
 ## Minimum evidence bar
 

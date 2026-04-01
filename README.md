@@ -13,7 +13,8 @@ The deployment architecture is:
 - `apps/web`: React + TypeScript frontend shell
 - `apps/api`: Hono API shell for Cloudflare Workers
 - `packages/shared`: shared domain types and category rules
-- `supabase/schema.sql`: initial database schema from `Hearth-plan.md`
+- `supabase/schema.sql`: latest bootstrap snapshot for a fresh Supabase project
+- `supabase/migrations/`: ordered schema history for database evolution
 - `ai-governance-framework`: governance framework submodule
 - `.env.example`: frontend environment template
 - `apps/api/.dev.vars.example`: Worker secret template
@@ -29,7 +30,7 @@ This repo currently contains the initial implementation foundation:
 - Supabase bearer-token user resolution in the Worker
 - a frontend dashboard shell aligned to the plan
 - shared transaction category rules
-- a Supabase schema baseline
+- a Supabase schema baseline plus migration entrypoint
 - Supabase client helpers for browser and worker runtime boundaries
 
 ## Local development flow
@@ -37,9 +38,10 @@ This repo currently contains the initial implementation foundation:
 1. Install dependencies with `npm install`
 2. Copy `.env.example` to `.env` for the web app
 3. Copy `apps/api/.dev.vars.example` to `apps/api/.dev.vars` for Worker secrets
-4. Create the Supabase project and apply `supabase/schema.sql`
-5. Run `npm run dev:web` and `npm run dev:api`
-6. Run `npm --workspace @hearth/api run test` for the current auth/accounts verification slice
+4. Create the Supabase project and apply `supabase/schema.sql` for a fresh bootstrap
+5. For later DB changes, apply SQL from `supabase/migrations/` in order and keep `supabase/schema.sql` as the latest snapshot
+6. Run `npm run dev:web` and `npm run dev:api`
+7. Run `npm --workspace @hearth/api run test` for the current auth/accounts verification slice
 
 ## First release readiness
 
