@@ -49,6 +49,28 @@ type FxRateUpsertRow = {
   rate: number;
 };
 
+type Logger = Pick<typeof console, "log" | "error">;
+
+export type DailyUpdateSectionReport = {
+  attempted: number;
+  upserted: number;
+  skipped: number;
+  errors: string[];
+};
+
+export type DailyUpdateReport = {
+  priceSnapshots: DailyUpdateSectionReport;
+  fxRates: DailyUpdateSectionReport;
+};
+
+type DailyUpdateDependencies = {
+  supabase?: {
+    from: (table: string) => any;
+  };
+  fetchImpl?: typeof fetch;
+  logger?: Logger;
+};
+
 function normalizeCurrency(value: string | null | undefined): string | null {
   const normalized = value?.trim().toUpperCase();
   return normalized ? normalized : null;
@@ -70,8 +92,8 @@ function toIsoDate(dateText: string | null | undefined): string | null {
   return parsed.toISOString().slice(0, 10);
 }
 
-async function fetchTwsePrices(): Promise<Map<string, { price: number; date: string }>> {
-  const response = await fetch("https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL", {
+async function fetchTwsePrices(fetchImpl: typeof fetch): Promise<Map<string, { price: number; date: string }>> {
+  const response = await fetchImpl("https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL", {
     headers: { Accept: "application/json" },
   });
   if (!response.ok) throw new Error(`TWSE API ${response.status}`);
@@ -95,6 +117,7 @@ async function fetchTwsePrices(): Promise<Map<string, { price: number; date: str
 
 async function fetchFxRates(
   currencies: string[],
+  fetchImpl: typeof fetch,
 ): Promise<{ rateDate: string; rates: Map<string, number> }> {
   const needed = [
     ...new Set(currencies.map(normalizeCurrency).filter((currency): currency is string => Boolean(currency) && currency !== "TWD")),
@@ -107,7 +130,7 @@ async function fetchFxRates(
     };
   }
 
-  const response = await fetch("https://open.er-api.com/v6/latest/TWD");
+  const response = await fetchImpl("https://open.er-api.com/v6/latest/TWD");
   if (!response.ok) throw new Error(`FX API ${response.status}`);
 
   const data = (await response.json()) as ErApiResponse;
@@ -129,16 +152,28 @@ async function fetchFxRates(
   };
 }
 
-export async function runDailyUpdate(env: WorkerBindings): Promise<void> {
-  const supabase = createSupabaseAdminClient(env);
+export async function runDailyUpdate(
+  env: WorkerBindings,
+  dependencies: DailyUpdateDependencies = {},
+): Promise<DailyUpdateReport> {
+  const supabase = dependencies.supabase ?? createSupabaseAdminClient(env);
+  const fetchImpl = dependencies.fetchImpl ?? fetch;
+  const logger = dependencies.logger ?? console;
+  const report: DailyUpdateReport = {
+    priceSnapshots: { attempted: 0, upserted: 0, skipped: 0, errors: [] },
+    fxRates: { attempted: 0, upserted: 0, skipped: 0, errors: [] },
+  };
 
   const { data: holdingsData, error: holdingsError } = await supabase
     .from("holdings")
     .select("ticker, currency");
 
   if (holdingsError) {
-    console.error("[cron] holdings fetch error:", holdingsError.message);
-    return;
+    const message = `[cron] holdings fetch error: ${holdingsError.message}`;
+    logger.error(message);
+    report.priceSnapshots.errors.push(message);
+    report.fxRates.errors.push(message);
+    return report;
   }
 
   const holdings = (holdingsData ?? []) as HoldingCurrencyRow[];
@@ -165,8 +200,9 @@ export async function runDailyUpdate(env: WorkerBindings): Promise<void> {
     .select("currency");
 
   if (accountsError) {
-    console.error("[cron] accounts fetch error:", accountsError.message);
-    return;
+    const message = `[cron] accounts fetch error: ${accountsError.message}`;
+    logger.error(message);
+    report.fxRates.errors.push(message);
   }
 
   const accountCurrencies = ((accountsData ?? []) as AccountCurrencyRow[])
@@ -176,8 +212,9 @@ export async function runDailyUpdate(env: WorkerBindings): Promise<void> {
   const allForeignCurrencies = [...new Set([...holdingCurrencies, ...accountCurrencies])];
 
   if (twdTickers.length > 0) {
+    report.priceSnapshots.attempted = twdTickers.length;
     try {
-      const priceMap = await fetchTwsePrices();
+      const priceMap = await fetchTwsePrices(fetchImpl);
       const snapshots: PriceSnapshotUpsertRow[] = [];
 
       for (const ticker of twdTickers) {
@@ -192,25 +229,33 @@ export async function runDailyUpdate(env: WorkerBindings): Promise<void> {
         });
       }
 
+      report.priceSnapshots.skipped = twdTickers.length - snapshots.length;
+
       if (snapshots.length > 0) {
         const { error } = await supabase
           .from("price_snapshots")
           .upsert(snapshots, { onConflict: "ticker,snapshot_date" });
 
         if (error) {
-          console.error("[cron] price_snapshots upsert error:", error.message);
+          const message = `[cron] price_snapshots upsert error: ${error.message}`;
+          logger.error(message);
+          report.priceSnapshots.errors.push(message);
         } else {
-          console.log(`[cron] upserted ${snapshots.length} price snapshots`);
+          report.priceSnapshots.upserted = snapshots.length;
+          logger.log(`[cron] upserted ${snapshots.length} price snapshots`);
         }
       }
     } catch (error) {
-      console.error("[cron] TWSE fetch failed:", error);
+      const message = `[cron] TWSE fetch failed: ${error instanceof Error ? error.message : String(error)}`;
+      logger.error(message);
+      report.priceSnapshots.errors.push(message);
     }
   }
 
   if (allForeignCurrencies.length > 0) {
+    report.fxRates.attempted = allForeignCurrencies.length;
     try {
-      const { rateDate, rates } = await fetchFxRates(allForeignCurrencies);
+      const { rateDate, rates } = await fetchFxRates(allForeignCurrencies, fetchImpl);
       const rows: FxRateUpsertRow[] = [];
 
       for (const [currency, rate] of rates) {
@@ -222,21 +267,29 @@ export async function runDailyUpdate(env: WorkerBindings): Promise<void> {
         });
       }
 
+      report.fxRates.skipped = allForeignCurrencies.length - rows.length;
+
       if (rows.length > 0) {
         const { error } = await supabase
           .from("fx_rates")
           .upsert(rows, { onConflict: "from_currency,to_currency,rate_date" });
 
         if (error) {
-          console.error("[cron] fx_rates upsert error:", error.message);
+          const message = `[cron] fx_rates upsert error: ${error.message}`;
+          logger.error(message);
+          report.fxRates.errors.push(message);
         } else {
-          console.log(`[cron] upserted ${rows.length} FX rate(s)`);
+          report.fxRates.upserted = rows.length;
+          logger.log(`[cron] upserted ${rows.length} FX rate(s)`);
         }
       }
     } catch (error) {
-      console.error("[cron] FX fetch failed:", error);
+      const message = `[cron] FX fetch failed: ${error instanceof Error ? error.message : String(error)}`;
+      logger.error(message);
+      report.fxRates.errors.push(message);
     }
   }
 
-  console.log("[cron] daily-update complete");
+  logger.log(`[cron] daily-update complete ${JSON.stringify(report)}`);
+  return report;
 }

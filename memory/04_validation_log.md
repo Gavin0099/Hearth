@@ -35,6 +35,7 @@
   - shared stock-import execution helper with route-level regression coverage still green
   - shared import-route preflight helpers for file validation and owned-account resolution
   - promotion of the shared import helper stack into `apps/api/src/lib/import-workflows.ts`
+  - `daily-update` cron execution reporting plus injected-dependency tests (`89/89`)
 
 ## Review Notes
 

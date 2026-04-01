@@ -13,10 +13,11 @@
 - [x] Extracted shared transaction/stock parse-result helpers inside `apps/api/src/routes/import.ts`
 - [x] Extracted dedicated helpers for `transactions-csv` normalization and `dividends-csv` import shaping
 - [x] Moved shared import helper stack into `apps/api/src/lib/import-workflows.ts`
-- [ ] Move to the next `P0 correctness / ops` slice instead of continuing route-only cleanup
+- [x] Added execution reporting and first automated tests for the `daily-update` cron path
+- [ ] Continue on the next `P0 ops` slice after cron observability baseline
 - [ ] Keep structured memory and daily logs in sync going forward
 
 ## Context
-- **Recent achievements**: stock routes now delegate their DB orchestration through `apps/api/src/lib/stock-import.ts`; all import routes share preflight, parse-result, transaction-csv, and dividend import helpers; and that helper stack now lives in `apps/api/src/lib/import-workflows.ts` instead of inside the route file.
+- **Recent achievements**: stock routes now delegate their DB orchestration through `apps/api/src/lib/stock-import.ts`; all import routes share preflight, parse-result, transaction-csv, and dividend import helpers in `apps/api/src/lib/import-workflows.ts`; and the `daily-update` cron now returns a structured execution report with automated coverage.
 - **Validation baseline**: `npm.cmd --workspace @hearth/api run build` and `npm.cmd --workspace @hearth/api run test` both pass after the cleanup.
-- **Next steps**: Stop churning `import.ts` and switch to the next `P0 correctness` or operational slice.
+- **Next steps**: Stay off route-cleanup churn and continue the operational path from cron observability outward.
