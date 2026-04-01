@@ -12,10 +12,11 @@
 - [x] Extracted shared import preflight helpers for auth/form/account ownership checks in `apps/api/src/routes/import.ts`
 - [x] Extracted shared transaction/stock parse-result helpers inside `apps/api/src/routes/import.ts`
 - [x] Extracted dedicated helpers for `transactions-csv` normalization and `dividends-csv` import shaping
-- [ ] Continue thinning `apps/api/src/routes/import.ts` by deciding whether remaining helpers should move out of the route file into import-domain modules
+- [x] Moved shared import helper stack into `apps/api/src/lib/import-workflows.ts`
+- [ ] Move to the next `P0 correctness / ops` slice instead of continuing route-only cleanup
 - [ ] Keep structured memory and daily logs in sync going forward
 
 ## Context
-- **Recent achievements**: stock routes now delegate their DB orchestration through `apps/api/src/lib/stock-import.ts`; all import routes share preflight helpers; repeated parse-result orchestration is collapsed into shared helpers; and the two last bespoke branches (`transactions-csv`, `dividends-csv`) now also have dedicated helper paths.
+- **Recent achievements**: stock routes now delegate their DB orchestration through `apps/api/src/lib/stock-import.ts`; all import routes share preflight, parse-result, transaction-csv, and dividend import helpers; and that helper stack now lives in `apps/api/src/lib/import-workflows.ts` instead of inside the route file.
 - **Validation baseline**: `npm.cmd --workspace @hearth/api run build` and `npm.cmd --workspace @hearth/api run test` both pass after the cleanup.
-- **Next steps**: Decide whether to keep the new helpers inside `import.ts` or promote them into `lib/` modules; after that, move to another `P0 correctness` or operational slice instead of churning the same route forever.
+- **Next steps**: Stop churning `import.ts` and switch to the next `P0 correctness` or operational slice.

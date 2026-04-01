@@ -12,6 +12,7 @@
 - Import-route preflight now also has shared helpers inside `apps/api/src/routes/import.ts` for unauthorized responses, `account_id` / file validation, and owned-account resolution.
 - Transaction and stock import routes now also share route-local parse/result helpers in `apps/api/src/routes/import.ts`, so `sinopac-tw`, `credit-card-tw`, `excel-monthly`, `sinopac-stock`, and `foreign-stock-csv` no longer each carry their own parse-empty-import-response boilerplate.
 - `transactions-csv` normalization and `dividends-csv` import shaping are now also isolated behind dedicated helpers inside `apps/api/src/routes/import.ts`, so the route file is mostly composing helpers rather than carrying inline import logic.
+- The shared import helper stack has now been promoted into `apps/api/src/lib/import-workflows.ts`; `apps/api/src/routes/import.ts` is back to acting mainly as route wiring.
 - `import.ts` still contains other older route-owned branches and some legacy text noise, so continue refactors as focused slices with build/test verification.
 
 ### Web check blocker
