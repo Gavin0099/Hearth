@@ -81,6 +81,15 @@ Smoke runbook: `docs/post-deploy-smoke.md`.
 - bind Worker secrets in Cloudflare
 - connect the route stubs to real queries, imports, and scheduled jobs
 
+## Security maintenance
+
+- User-settings secret rotation/backfill dry-run:
+  - `SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... USER_SETTINGS_SECRET_KEY=... npm --workspace @hearth/api run backfill:user-settings-secrets`
+- Real write mode:
+  - `SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... USER_SETTINGS_SECRET_KEY=... npm --workspace @hearth/api run backfill:user-settings-secrets -- --write`
+
+The backfill script only rewrites legacy plaintext `user_settings` PDF password fields. It leaves already encrypted `v1.*` values unchanged.
+
 ## Current implemented slices
 
 - auth and accounts flow

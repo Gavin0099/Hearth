@@ -5,6 +5,16 @@ const decoder = new TextDecoder();
 const VERSION = "v1";
 const PREFIX = `${VERSION}.`;
 
+export const USER_SETTINGS_SECRET_FIELDS = [
+  "default_pdf_password",
+  "sinopac_pdf_password",
+  "esun_pdf_password",
+  "taishin_pdf_password",
+] as const;
+
+export type UserSettingsSecretField = (typeof USER_SETTINGS_SECRET_FIELDS)[number];
+export type UserSettingsSecretRecord = Partial<Record<UserSettingsSecretField, string | null | undefined>>;
+
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
@@ -98,4 +108,22 @@ export async function decryptSecretValue(
 
 export function isEncryptedSecretValue(value: string | null | undefined): boolean {
   return typeof value === "string" && value.startsWith(PREFIX);
+}
+
+export async function buildUserSettingsSecretUpgradePayload(
+  settings: UserSettingsSecretRecord,
+  env: WorkerBindings,
+): Promise<Partial<Record<UserSettingsSecretField, string>>> {
+  const upgrades: Partial<Record<UserSettingsSecretField, string>> = {};
+
+  for (const field of USER_SETTINGS_SECRET_FIELDS) {
+    const value = settings[field];
+    if (!value || isEncryptedSecretValue(value)) {
+      continue;
+    }
+
+    upgrades[field] = await encryptSecretValue(value, env);
+  }
+
+  return upgrades;
 }

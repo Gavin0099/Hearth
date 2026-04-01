@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "test": "node --test --import tsx tests/**/*.test.ts",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "backfill:user-settings-secrets": "tsx scripts/backfill-user-settings-secrets.ts"
   },
   "dependencies": {
     "@hearth/shared": "0.1.0",

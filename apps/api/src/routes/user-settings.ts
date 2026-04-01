@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import {
+  buildUserSettingsSecretUpgradePayload,
   decryptSecretValue,
   encryptSecretValue,
   getUserSettingsSecret,
-  isEncryptedSecretValue,
 } from "../lib/secrets";
 import type { ApiEnv } from "../types";
 
@@ -28,20 +28,7 @@ async function maybeUpgradePlaintextSecrets(
     return;
   }
 
-  const upgrades: Record<string, string | null> = {};
-  if (settings.default_pdf_password && !isEncryptedSecretValue(settings.default_pdf_password)) {
-    upgrades.default_pdf_password = await encryptSecretValue(settings.default_pdf_password, env);
-  }
-  if (settings.sinopac_pdf_password && !isEncryptedSecretValue(settings.sinopac_pdf_password)) {
-    upgrades.sinopac_pdf_password = await encryptSecretValue(settings.sinopac_pdf_password, env);
-  }
-  if (settings.esun_pdf_password && !isEncryptedSecretValue(settings.esun_pdf_password)) {
-    upgrades.esun_pdf_password = await encryptSecretValue(settings.esun_pdf_password, env);
-  }
-  if (settings.taishin_pdf_password && !isEncryptedSecretValue(settings.taishin_pdf_password)) {
-    upgrades.taishin_pdf_password = await encryptSecretValue(settings.taishin_pdf_password, env);
-  }
-
+  const upgrades = await buildUserSettingsSecretUpgradePayload(settings, env);
   if (Object.keys(upgrades).length === 0) {
     return;
   }
