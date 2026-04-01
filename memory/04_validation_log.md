@@ -39,6 +39,7 @@
   - `job_runs` persistence for cron execution summaries (`89/89`)
   - ops endpoint + smoke extension for latest cron-history inspection (`91/91`)
   - strict ops verdict rules for section-level cron report errors (`93/93`)
+  - recent-window ops summary for cron-history inspection (`94/94`)
 
 ## Review Notes
 

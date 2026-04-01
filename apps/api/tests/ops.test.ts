@@ -187,3 +187,95 @@ test("GET /api/ops/job-runs/latest reports unhealthy when report sections contai
     "latest job run report contains section errors: fxRates",
   );
 });
+
+test("GET /api/ops/job-runs/summary returns recent status and report-error totals", async () => {
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "ops@example.com" }),
+    createSupabaseAdminClient: () =>
+      ({
+        from(table: string) {
+          assert.equal(table, "job_runs");
+          return {
+            select() {
+              return {
+                eq(column: string, value: string) {
+                  assert.equal(column, "job_name");
+                  assert.equal(value, "daily-update");
+                  return {
+                    order(orderColumn: string, options: { ascending: boolean }) {
+                      assert.equal(orderColumn, "run_finished_at");
+                      assert.equal(options.ascending, false);
+                      return {
+                        limit(count: number) {
+                          assert.equal(count, 3);
+                          return Promise.resolve({
+                            data: [
+                              {
+                                id: "run-3",
+                                job_name: "daily-update",
+                                run_started_at: "2026-04-01T06:00:00.000Z",
+                                run_finished_at: "2026-04-01T06:00:05.000Z",
+                                status: "ok",
+                                report: {
+                                  priceSnapshots: { errors: [] },
+                                  fxRates: { errors: [] },
+                                },
+                                created_at: "2026-04-01T06:00:05.000Z",
+                              },
+                              {
+                                id: "run-2",
+                                job_name: "daily-update",
+                                run_started_at: "2026-03-31T06:00:00.000Z",
+                                run_finished_at: "2026-03-31T06:00:05.000Z",
+                                status: "error",
+                                report: {
+                                  priceSnapshots: { errors: ["TWSE API 503"] },
+                                  fxRates: { errors: [] },
+                                },
+                                created_at: "2026-03-31T06:00:05.000Z",
+                              },
+                              {
+                                id: "run-1",
+                                job_name: "daily-update",
+                                run_started_at: "2026-03-30T06:00:00.000Z",
+                                run_finished_at: "2026-03-30T06:00:05.000Z",
+                                status: "ok",
+                                report: {
+                                  priceSnapshots: { errors: [] },
+                                  fxRates: { errors: ["FX API 500"] },
+                                },
+                                created_at: "2026-03-30T06:00:05.000Z",
+                              },
+                            ],
+                            error: null,
+                          });
+                        },
+                      };
+                    },
+                  };
+                },
+              };
+            },
+          };
+        },
+      }) as any,
+  });
+
+  const response = await app.request("/api/ops/job-runs/summary?job_name=daily-update&limit=3", {
+    headers: { Authorization: "Bearer valid-token" },
+  });
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.status, "ok");
+  assert.equal(payload.job_name, "daily-update");
+  assert.equal(payload.limit, 3);
+  assert.equal(payload.latest.id, "run-3");
+  assert.deepEqual(payload.latest.report_error_sections, []);
+  assert.deepEqual(payload.totals, {
+    runs: 3,
+    ok: 2,
+    error: 1,
+    with_report_errors: 2,
+  });
+});

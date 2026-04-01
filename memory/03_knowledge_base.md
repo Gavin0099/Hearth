@@ -17,6 +17,7 @@
 - Scheduled-job execution history now persists to the `job_runs` table with `job_name`, start/finish timestamps, status, and full JSON report payload. This is now the canonical first ops-level trace for the `daily-update` cron.
 - `apps/api/src/routes/ops.ts` now exposes `GET /api/ops/job-runs/latest`, which is bearer-auth protected and intended for internal operational inspection / smoke verification of persisted cron history.
 - `GET /api/ops/job-runs/latest` supports `require_status`, `max_age_minutes`, and `require_zero_errors=true`; the last one inspects the structured `report` and rejects runs with section-level `errors`, which is how Hearth currently distinguishes true success from partial-success degradation.
+- `GET /api/ops/job-runs/summary` complements the latest-run verdict with recent-window counts (`ok`, `error`, `with_report_errors`) so operators can quickly see whether a clean latest run is hiding repeated recent failures.
 - `import.ts` still contains other older route-owned branches and some legacy text noise, so continue refactors as focused slices with build/test verification.
 
 ### Web check blocker

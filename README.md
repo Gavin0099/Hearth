@@ -9,6 +9,7 @@ The deployment architecture is:
 - Cloudflare Workers for the Hono API and scheduled jobs
 
 Scheduled job execution history is stored in `job_runs`, including structured per-run summary payloads for the `daily-update` cron.
+Authenticated ops routes now expose both `GET /api/ops/job-runs/latest` and `GET /api/ops/job-runs/summary` so deployment/runbook checks can inspect latest-run verdicts and recent-window failure density.
 
 ## Workspace layout
 

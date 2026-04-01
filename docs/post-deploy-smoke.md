@@ -87,6 +87,7 @@ powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerTo
 10. When `-RequireOpsZeroReportErrors` is also provided:
    - the smoke run additionally requires the latest persisted cron `report` to have no section-level `errors`
    - this lets deploy validation reject partial-success `daily-update` runs instead of checking freshness alone
+11. For manual ops inspection, `GET /api/ops/job-runs/summary?job_name=daily-update&limit=10` returns recent-window counts for `ok`, `error`, and `with_report_errors`
 
 ## Scope note
 

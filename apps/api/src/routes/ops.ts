@@ -39,16 +39,56 @@ type JobRunLatestResponse =
       status: "error";
     };
 
+type JobRunSummaryResponse =
+  | {
+      job_name: string;
+      limit: number;
+      latest: {
+        id: string;
+        status: string;
+        run_finished_at: string;
+        report_error_sections: string[];
+      } | null;
+      totals: {
+        runs: number;
+        ok: number;
+        error: number;
+        with_report_errors: number;
+      };
+      status: "ok";
+    }
+  | {
+      code: "unauthorized" | "database_error";
+      error: string;
+      status: "error";
+    };
+
 export const opsRoutes = new Hono<ApiEnv>();
 
-opsRoutes.get("/job-runs/latest", async (c) => {
+async function resolveOpsContext(c: any) {
   const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
   const user = await resolveAuthenticatedUser(c.req.raw, c.env);
   if (!user) {
-    return c.json<JobRunLatestResponse>(
-      { code: "unauthorized", error: "Missing or invalid Supabase bearer token.", status: "error" },
-      401,
-    );
+    return {
+      errorResponse: c.json(
+        { code: "unauthorized", error: "Missing or invalid Supabase bearer token.", status: "error" },
+        401,
+      ),
+      supabase: null,
+    };
+  }
+
+  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
+  return {
+    errorResponse: null,
+    supabase: createSupabaseAdminClient(c.env),
+  };
+}
+
+opsRoutes.get("/job-runs/latest", async (c) => {
+  const { errorResponse, supabase } = await resolveOpsContext(c);
+  if (errorResponse || !supabase) {
+    return errorResponse as Response;
   }
 
   const jobName = String(c.req.query("job_name") ?? "daily-update").trim() || "daily-update";
@@ -60,8 +100,6 @@ opsRoutes.get("/job-runs/latest", async (c) => {
     maxAgeMinutesRaw && Number.isFinite(Number(maxAgeMinutesRaw)) && Number(maxAgeMinutesRaw) > 0
       ? Number(maxAgeMinutesRaw)
       : null;
-  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
-  const supabase = createSupabaseAdminClient(c.env);
 
   const { data, error } = await supabase
     .from("job_runs")
@@ -118,6 +156,66 @@ opsRoutes.get("/job-runs/latest", async (c) => {
     healthy,
     reason,
     checked_at: checkedAt,
+    status: "ok",
+  });
+});
+
+opsRoutes.get("/job-runs/summary", async (c) => {
+  const { errorResponse, supabase } = await resolveOpsContext(c);
+  if (errorResponse || !supabase) {
+    return errorResponse as Response;
+  }
+
+  const jobName = String(c.req.query("job_name") ?? "daily-update").trim() || "daily-update";
+  const limitRaw = String(c.req.query("limit") ?? "").trim();
+  const requestedLimit =
+    limitRaw && Number.isFinite(Number(limitRaw)) && Number(limitRaw) > 0 ? Number(limitRaw) : 10;
+  const limit = Math.min(50, Math.max(1, Math.floor(requestedLimit)));
+
+  const { data, error } = await supabase
+    .from("job_runs")
+    .select("id, job_name, run_started_at, run_finished_at, status, report, created_at")
+    .eq("job_name", jobName)
+    .order("run_finished_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    return c.json<JobRunSummaryResponse>(
+      { code: "database_error", error: error.message, status: "error" },
+      500,
+    );
+  }
+
+  const items = (data ?? []) as JobRunRecord[];
+  const latest = items[0] ?? null;
+  const totals = items.reduce(
+    (acc, item) => {
+      acc.runs += 1;
+      if (item.status === "ok") {
+        acc.ok += 1;
+      } else if (item.status === "error") {
+        acc.error += 1;
+      }
+      if (collectReportErrorSections(item.report).length > 0) {
+        acc.with_report_errors += 1;
+      }
+      return acc;
+    },
+    { runs: 0, ok: 0, error: 0, with_report_errors: 0 },
+  );
+
+  return c.json<JobRunSummaryResponse>({
+    job_name: jobName,
+    limit,
+    latest: latest
+      ? {
+          id: latest.id,
+          status: latest.status,
+          run_finished_at: latest.run_finished_at,
+          report_error_sections: collectReportErrorSections(latest.report),
+        }
+      : null,
+    totals,
     status: "ok",
   });
 });

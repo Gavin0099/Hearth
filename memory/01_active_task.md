@@ -17,10 +17,11 @@
 - [x] Persisted cron execution summaries into `job_runs`
 - [x] Added authenticated `job_runs` read path and smoke coverage for cron history
 - [x] Added stricter cron verdict rules so ops checks can reject section-level report errors
-- [ ] Continue on the next `P0 ops` slice after strict cron-verdict baseline
+- [x] Added recent-window cron summary view for repeated failure inspection
+- [ ] Continue on the next `P0 ops` slice after latest+summary inspection baseline
 - [ ] Keep structured memory and daily logs in sync going forward
 
 ## Context
-- **Recent achievements**: stock routes now delegate their DB orchestration through `apps/api/src/lib/stock-import.ts`; all import routes share preflight, parse-result, transaction-csv, and dividend import helpers in `apps/api/src/lib/import-workflows.ts`; the `daily-update` cron now both returns structured execution reports and persists them into `job_runs`; and there is now an authenticated ops endpoint plus smoke hook for reading the latest cron run with status/freshness/report-error verdict rules.
+- **Recent achievements**: stock routes now delegate their DB orchestration through `apps/api/src/lib/stock-import.ts`; all import routes share preflight, parse-result, transaction-csv, and dividend import helpers in `apps/api/src/lib/import-workflows.ts`; the `daily-update` cron now both returns structured execution reports and persists them into `job_runs`; and there are now authenticated ops endpoints for both latest-run verdicts and recent-window cron summaries.
 - **Validation baseline**: `npm.cmd --workspace @hearth/api run build` and `npm.cmd --workspace @hearth/api run test` both pass after the cleanup.
 - **Next steps**: Stay off route-cleanup churn and continue the operational path from cron observability outward.
