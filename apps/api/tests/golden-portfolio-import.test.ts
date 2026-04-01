@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { parseDividendsCsv } from "../src/lib/dividends";
+import { rebuildHoldingFromTrades } from "../src/lib/holdings";
 import { parseSinopacStockCsv } from "../src/lib/sinopac-stock";
 
 test("dividends csv golden: normalizes valid rows and builds stable source hashes", () => {
@@ -144,4 +145,42 @@ test("sinopac stock csv golden: keeps parsing valid rows while surfacing invalid
   assert.equal(result.trades.length, 1);
   assert.equal(result.trades[0]?.ticker, "QQQ");
   assert.equal(result.errors.length, 2);
+});
+
+test("holding rebuild golden: buy trades produce weighted average cost", () => {
+  const result = rebuildHoldingFromTrades([
+    { action: "buy", shares: 2, price_per_share: 600, name: "TSMC", currency: "TWD" },
+    { action: "buy", shares: 3, price_per_share: 650, name: "TSMC", currency: "TWD" },
+  ]);
+
+  assert.deepEqual(result, {
+    name: "TSMC",
+    total_shares: 5,
+    avg_cost: 630,
+    currency: "TWD",
+  });
+});
+
+test("holding rebuild golden: sell trades reduce shares without changing average cost", () => {
+  const result = rebuildHoldingFromTrades([
+    { action: "buy", shares: 4, price_per_share: 100, name: "VOO", currency: "USD" },
+    { action: "buy", shares: 2, price_per_share: 130, name: "VOO", currency: "USD" },
+    { action: "sell", shares: 3, price_per_share: 150, name: "VOO", currency: "USD" },
+  ]);
+
+  assert.deepEqual(result, {
+    name: "VOO",
+    total_shares: 3,
+    avg_cost: 110,
+    currency: "USD",
+  });
+});
+
+test("holding rebuild golden: fully sold positions collapse to null", () => {
+  const result = rebuildHoldingFromTrades([
+    { action: "buy", shares: 1, price_per_share: 420, name: "QQQ", currency: "USD" },
+    { action: "sell", shares: 1, price_per_share: 430, name: "QQQ", currency: "USD" },
+  ]);
+
+  assert.equal(result, null);
 });

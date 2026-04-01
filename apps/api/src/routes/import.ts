@@ -10,6 +10,7 @@ import { parseCsv } from "../lib/csv";
 import { parseCreditCardTransactionsCsv } from "../lib/credit-card";
 import { parseDividendsCsv } from "../lib/dividends";
 import { parseMonthlyExcel } from "../lib/excel-monthly";
+import { rebuildHoldingFromTrades } from "../lib/holdings";
 import { parseSinopacTransactionsCsv } from "../lib/sinopac";
 import { parseSinopacStockCsv } from "../lib/sinopac-stock";
 import { buildTransactionSourceHash } from "../lib/transaction-hash";
@@ -910,27 +911,23 @@ importRoutes.post(
 
         if (tradesError) continue;
 
-        let totalShares = 0;
-        let weightedCost = 0;
-        let name: string | null = null;
-        let currency = "TWD";
+        const holding = rebuildHoldingFromTrades(
+          (allTrades ?? []).map((trade: {
+            action: "buy" | "sell";
+            shares: number | string;
+            price_per_share: number | string;
+            name: string | null;
+            currency: string;
+          }) => ({
+            action: trade.action,
+            shares: Number(trade.shares),
+            price_per_share: Number(trade.price_per_share),
+            name: trade.name,
+            currency: trade.currency,
+          })),
+        );
 
-        for (const trade of allTrades ?? []) {
-          const shares = Number(trade.shares);
-          const price = Number(trade.price_per_share);
-          if (!name && trade.name) name = trade.name;
-          currency = trade.currency;
-
-          if (trade.action === "buy") {
-            const newTotal = totalShares + shares;
-            weightedCost = newTotal > 0 ? (weightedCost * totalShares + price * shares) / newTotal : price;
-            totalShares = newTotal;
-          } else {
-            totalShares = Math.max(0, totalShares - shares);
-          }
-        }
-
-        if (totalShares <= 0) {
+        if (!holding) {
           await supabase
             .from("holdings")
             .delete()
@@ -941,10 +938,10 @@ importRoutes.post(
             {
               account_id: accountId,
               ticker,
-              name,
-              total_shares: totalShares,
-              avg_cost: weightedCost,
-              currency,
+              name: holding.name,
+              total_shares: holding.total_shares,
+              avg_cost: holding.avg_cost,
+              currency: holding.currency,
               updated_at: new Date().toISOString(),
             },
             { onConflict: "account_id,ticker" },
