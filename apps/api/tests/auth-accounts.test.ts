@@ -2901,6 +2901,100 @@ test("POST /api/import/dividends-csv dedupes duplicate rows within the same uplo
   assert.equal(insertedDividends.length, 2);
 });
 
+test("POST /api/import/dividends-csv keeps valid rows while surfacing validation errors", async () => {
+  let insertedDividends: Array<Record<string, unknown>> = [];
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  maybeSingle: async () => ({
+                    data: { id: "account-1" },
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+
+        if (table === "dividends") {
+          return {
+            select: () => ({
+              in: async () => ({
+                data: [],
+                error: null,
+              }),
+            }),
+            insert: async (values: Array<Record<string, unknown>>) => {
+              insertedDividends = values;
+              return { error: null };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set(
+    "file",
+    new File(
+      [
+        "ticker,pay_date,net_amount,gross_amount,tax_withheld,currency\n,2026-03-15,1080,1200,120,TWD\n0056,2026/03/15,1080,1200,120,TWD\n00919,2026-03-20,900,900,0,TWD\n",
+      ],
+      "dividends-validation.csv",
+      { type: "text/csv" },
+    ),
+  );
+
+  const response = await app.request(
+    "/api/import/dividends-csv",
+    {
+      method: "POST",
+      body: formData,
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    source: "dividends-csv",
+    imported: 1,
+    skipped: 0,
+    failed: 2,
+    runtime: "cloudflare-worker",
+    persistence: "supabase",
+    status: "ok",
+    errors: [
+      "line 2: missing ticker",
+      "line 3: invalid pay_date \"2026/03/15\"",
+    ],
+  });
+  assert.deepEqual(insertedDividends, [
+    {
+      account_id: "account-1",
+      ticker: "00919",
+      pay_date: "2026-03-20",
+      net_amount: 900,
+      gross_amount: 900,
+      tax_withheld: 0,
+      currency: "TWD",
+      source_hash: insertedDividends[0]?.source_hash,
+    },
+  ]);
+});
+
 test("GET /api/recurring-templates returns user-scoped recurring template list", async () => {
   const recurringTemplates = [
     {

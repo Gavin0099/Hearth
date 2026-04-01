@@ -8,6 +8,7 @@ import type {
 } from "@hearth/shared";
 import { parseCsv } from "../lib/csv";
 import { parseCreditCardTransactionsCsv } from "../lib/credit-card";
+import { parseDividendsCsv } from "../lib/dividends";
 import { parseMonthlyExcel } from "../lib/excel-monthly";
 import { parseSinopacTransactionsCsv } from "../lib/sinopac";
 import { parseSinopacStockCsv } from "../lib/sinopac-stock";
@@ -1053,6 +1054,12 @@ importRoutes.post(
 
         divRows.push({ account_id: accountId, ticker, pay_date: payDate, net_amount, gross_amount, tax_withheld, currency, source_hash });
       }
+
+      const parsedDividends = parseDividendsCsv(csvText, accountId);
+      errors.length = 0;
+      errors.push(...parsedDividends.errors);
+      divRows.length = 0;
+      divRows.push(...parsedDividends.rows);
 
       if (divRows.length === 0) {
         return c.json<DividendImportResponse>(
