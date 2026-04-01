@@ -642,7 +642,7 @@ importRoutes.post(
 
       if (trades.length === 0) {
         return c.json<StockTradeImportResponse>(
-          { code: "validation_error", error: errors[0] ?? "CSV 沒有可匯入的交易行。", status: "error" },
+          { code: "validation_error", error: errors[0] ?? "CSV rows are invalid.", status: "error" },
           400,
         );
       }
@@ -729,7 +729,7 @@ importRoutes.post(
         }
 
         if (totalShares <= 0) {
-          // Position fully closed — remove holding
+          // Position fully closed; remove holding
           await supabase
             .from("holdings")
             .delete()
@@ -824,7 +824,7 @@ importRoutes.post(
 
       if (trades.length === 0) {
         return c.json<StockTradeImportResponse>(
-          { code: "validation_error", error: errors[0] ?? "CSV 沒有可匯入的股票交易資料。", status: "error" },
+          { code: "validation_error", error: errors[0] ?? "Foreign stock CSV rows are invalid.", status: "error" },
           400,
         );
       }
@@ -945,7 +945,7 @@ importRoutes.post(
     })(),
 );
 
-// POST /dividends-csv — import dividend records from CSV
+// POST /dividends-csv - import dividend records from CSV
 // Expected columns: ticker,pay_date,net_amount[,gross_amount][,tax_withheld][,currency]
 importRoutes.post(
   "/dividends-csv",
@@ -972,72 +972,31 @@ importRoutes.post(
       }
 
       const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
-      const supabase = createSupabaseAdminClient(c.env);
+      const { supabase, ownedAccounts, accountsError } = await resolveOwnedAccountIds(
+        user.id,
+        createSupabaseAdminClient,
+        c.env,
+      );
 
-      // Verify account ownership
-      const { data: account } = await supabase
-        .from("accounts")
-        .select("id")
-        .eq("id", accountId)
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (!account) {
+      if (accountsError) {
         return c.json<DividendImportResponse>(
-          { code: "validation_error", error: "Account not found or not owned by user.", status: "error" },
+          { code: "database_error", error: accountsError.message, status: "error" },
+          500,
+        );
+      }
+
+      const accountIds = new Set((ownedAccounts ?? []).map((account: { id: string }) => account.id));
+      if (!accountIds.has(accountId)) {
+        return c.json<DividendImportResponse>(
+          { code: "validation_error", error: "Selected account does not belong to the current user.", status: "error" },
           400,
         );
       }
 
       const csvText = await file.text();
-      const rows = parseCsv(csvText);
-
-      const errors: string[] = [];
-      const divRows: {
-        account_id: string;
-        ticker: string;
-        pay_date: string;
-        net_amount: number;
-        gross_amount: number | null;
-        tax_withheld: number;
-        currency: string;
-        source_hash: string;
-      }[] = [];
-
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        const line = i + 2;
-
-        // Support both named columns and positional
-        const ticker = (row["ticker"] ?? row["股票代號"] ?? row["代號"] ?? "").trim().toUpperCase();
-        const payDate = (row["pay_date"] ?? row["配息日"] ?? row["發放日"] ?? "").trim();
-        const netAmountRaw = (row["net_amount"] ?? row["實際入帳"] ?? row["淨額"] ?? "").replace(/,/g, "");
-        const grossAmountRaw = (row["gross_amount"] ?? row["配息總額"] ?? row["毛額"] ?? "").replace(/,/g, "");
-        const taxRaw = (row["tax_withheld"] ?? row["扣繳稅額"] ?? row["稅"] ?? "0").replace(/,/g, "");
-        const currency = (row["currency"] ?? row["幣別"] ?? "TWD").trim();
-
-        if (!ticker) { errors.push(`line ${line}: 缺少 ticker`); continue; }
-        if (!payDate || !/^\d{4}-\d{2}-\d{2}$/.test(payDate)) {
-          errors.push(`line ${line}: 無效日期 "${payDate}"（需 YYYY-MM-DD）`); continue;
-        }
-        const net_amount = parseFloat(netAmountRaw);
-        if (isNaN(net_amount) || net_amount < 0) {
-          errors.push(`line ${line}: 無效淨額 "${netAmountRaw}"`); continue;
-        }
-        const gross_amount = grossAmountRaw ? parseFloat(grossAmountRaw) : null;
-        const tax_withheld = parseFloat(taxRaw) || 0;
-
-        const hashKey = `dividends|${accountId}|${ticker}|${payDate}|${net_amount}`;
-        const source_hash = btoa(unescape(encodeURIComponent(hashKey))).replace(/=/g, "").slice(0, 64);
-
-        divRows.push({ account_id: accountId, ticker, pay_date: payDate, net_amount, gross_amount, tax_withheld, currency, source_hash });
-      }
-
       const parsedDividends = parseDividendsCsv(csvText, accountId);
-      errors.length = 0;
-      errors.push(...parsedDividends.errors);
-      divRows.length = 0;
-      divRows.push(...parsedDividends.rows);
+      const errors = [...parsedDividends.errors];
+      const divRows = parsedDividends.rows;
 
       if (divRows.length === 0) {
         return c.json<DividendImportResponse>(

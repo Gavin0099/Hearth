@@ -2868,13 +2868,9 @@ test("POST /api/import/dividends-csv skips duplicate dividend rows by source has
         if (table === "accounts") {
           return {
             select: () => ({
-              eq: () => ({
-                eq: () => ({
-                  maybeSingle: async () => ({
-                    data: { id: "account-1" },
-                    error: null,
-                  }),
-                }),
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
               }),
             }),
           };
@@ -2959,13 +2955,9 @@ test("POST /api/import/dividends-csv dedupes duplicate rows within the same uplo
         if (table === "accounts") {
           return {
             select: () => ({
-              eq: () => ({
-                eq: () => ({
-                  maybeSingle: async () => ({
-                    data: { id: "account-1" },
-                    error: null,
-                  }),
-                }),
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
               }),
             }),
           };
@@ -3039,13 +3031,9 @@ test("POST /api/import/dividends-csv keeps valid rows while surfacing validation
         if (table === "accounts") {
           return {
             select: () => ({
-              eq: () => ({
-                eq: () => ({
-                  maybeSingle: async () => ({
-                    data: { id: "account-1" },
-                    error: null,
-                  }),
-                }),
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
               }),
             }),
           };

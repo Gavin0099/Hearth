@@ -2,11 +2,11 @@
 
 ## Known Gotchas
 
-### Import route encoding debt
+### Import route cleanup boundary
 
-- `apps/api/src/routes/import.ts` still contains an old `dividends-csv` inline parsing block with encoding-corrupted text.
-- Runtime behavior no longer depends on that block because the route now reuses shared helper logic.
-- Treat removal of that dead block as a focused cleanup task; do not casually refactor that area without verifying diff stability.
+- The old `dividends-csv` inline parsing block has been removed from `apps/api/src/routes/import.ts`.
+- `dividends-csv` now follows the tested shared helper path end-to-end: parser normalization plus batch diffing.
+- `import.ts` still contains other older route-owned branches and some legacy text noise, so continue refactors as focused slices with build/test verification.
 
 ### Web check blocker
 

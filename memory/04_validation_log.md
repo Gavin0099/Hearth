@@ -28,6 +28,7 @@
   - import batch dedupe behavior
   - report/import golden matrices
   - dividends / stock / transaction import helper extraction
+  - dividend route dead-code cleanup and ownership-check alignment
 
 ## Review Notes
 
