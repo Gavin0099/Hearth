@@ -14,7 +14,7 @@ function parseYearMonth(value: string | undefined, fallback: number) {
   return Number.isInteger(parsed) ? parsed : fallback;
 }
 
-function summarizeTransactions(transactions: TransactionRecord[]) {
+export function summarizeTransactions(transactions: TransactionRecord[]) {
   let income = 0;
   let expense = 0;
   const categoryTotals = new Map<string, number>();
