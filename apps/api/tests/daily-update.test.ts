@@ -15,10 +15,12 @@ function createSupabaseStub(options?: {
   accountsError?: string;
   priceUpsertError?: string;
   fxUpsertError?: string;
+  jobRunsError?: string;
 }) {
   const state = {
     priceSnapshots: [] as any[],
     fxRates: [] as any[],
+    jobRuns: [] as any[],
   };
 
   const supabase = {
@@ -81,6 +83,19 @@ function createSupabaseStub(options?: {
             return Promise.resolve(
               options?.fxUpsertError
                 ? { error: { message: options.fxUpsertError } }
+                : { error: null },
+            );
+          },
+        };
+      }
+
+      if (table === "job_runs") {
+        return {
+          insert(row: any) {
+            state.jobRuns.push(row);
+            return Promise.resolve(
+              options?.jobRunsError
+                ? { error: { message: options.jobRunsError } }
                 : { error: null },
             );
           },
@@ -156,6 +171,9 @@ test("runDailyUpdate returns execution summary and upserts normalized TWSE + FX 
   ]);
   assert.equal(errors.length, 0);
   assert.equal(logs.some((message) => message.includes("daily-update complete")), true);
+  assert.equal(state.jobRuns.length, 1);
+  assert.equal(state.jobRuns[0].job_name, "daily-update");
+  assert.equal(state.jobRuns[0].status, "ok");
 });
 
 test("runDailyUpdate records partial failures without dropping the whole cron summary", async () => {
@@ -192,5 +210,7 @@ test("runDailyUpdate records partial failures without dropping the whole cron su
     { ticker: "2330", snapshot_date: "2026-04-01", close_price: 912, currency: "TWD" },
   ]);
   assert.deepEqual(state.fxRates, []);
+  assert.equal(state.jobRuns.length, 1);
+  assert.equal(state.jobRuns[0].status, "error");
   assert.equal(errors.some((message) => message.includes("accounts fetch error: accounts down")), true);
 });

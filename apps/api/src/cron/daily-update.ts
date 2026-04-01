@@ -69,6 +69,7 @@ type DailyUpdateDependencies = {
   };
   fetchImpl?: typeof fetch;
   logger?: Logger;
+  now?: () => Date;
 };
 
 function normalizeCurrency(value: string | null | undefined): string | null {
@@ -159,9 +160,29 @@ export async function runDailyUpdate(
   const supabase = dependencies.supabase ?? createSupabaseAdminClient(env);
   const fetchImpl = dependencies.fetchImpl ?? fetch;
   const logger = dependencies.logger ?? console;
+  const now = dependencies.now ?? (() => new Date());
+  const runStartedAt = now().toISOString();
   const report: DailyUpdateReport = {
     priceSnapshots: { attempted: 0, upserted: 0, skipped: 0, errors: [] },
     fxRates: { attempted: 0, upserted: 0, skipped: 0, errors: [] },
+  };
+  const persistRun = async () => {
+    const runFinishedAt = now().toISOString();
+    const status =
+      report.priceSnapshots.errors.length > 0 || report.fxRates.errors.length > 0
+        ? "error"
+        : "ok";
+    const { error } = await supabase.from("job_runs").insert({
+      job_name: "daily-update",
+      run_started_at: runStartedAt,
+      run_finished_at: runFinishedAt,
+      status,
+      report,
+    });
+
+    if (error) {
+      logger.error(`[cron] job_runs insert error: ${error.message}`);
+    }
   };
 
   const { data: holdingsData, error: holdingsError } = await supabase
@@ -173,6 +194,7 @@ export async function runDailyUpdate(
     logger.error(message);
     report.priceSnapshots.errors.push(message);
     report.fxRates.errors.push(message);
+    await persistRun();
     return report;
   }
 
@@ -291,5 +313,6 @@ export async function runDailyUpdate(
   }
 
   logger.log(`[cron] daily-update complete ${JSON.stringify(report)}`);
+  await persistRun();
   return report;
 }

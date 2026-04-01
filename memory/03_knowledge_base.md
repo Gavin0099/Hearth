@@ -14,6 +14,7 @@
 - `transactions-csv` normalization and `dividends-csv` import shaping are now also isolated behind dedicated helpers inside `apps/api/src/routes/import.ts`, so the route file is mostly composing helpers rather than carrying inline import logic.
 - The shared import helper stack has now been promoted into `apps/api/src/lib/import-workflows.ts`; `apps/api/src/routes/import.ts` is back to acting mainly as route wiring.
 - `apps/api/src/cron/daily-update.ts` now returns a structured `DailyUpdateReport` and supports injected `supabase`, `fetch`, and `logger` dependencies, which makes scheduled-job behavior testable without real network calls.
+- Scheduled-job execution history now persists to the `job_runs` table with `job_name`, start/finish timestamps, status, and full JSON report payload. This is now the canonical first ops-level trace for the `daily-update` cron.
 - `import.ts` still contains other older route-owned branches and some legacy text noise, so continue refactors as focused slices with build/test verification.
 
 ### Web check blocker

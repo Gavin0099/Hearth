@@ -8,6 +8,8 @@ The deployment architecture is:
 - Cloudflare Pages for the React frontend
 - Cloudflare Workers for the Hono API and scheduled jobs
 
+Scheduled job execution history is stored in `job_runs`, including structured per-run summary payloads for the `daily-update` cron.
+
 ## Workspace layout
 
 - `apps/web`: React + TypeScript frontend shell
