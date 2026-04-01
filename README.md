@@ -71,6 +71,8 @@ Governance gate checklist: `npm run governance:gate` (docs: `docs/governance-pha
   - with auth + transaction probe + monthly report check: `powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseTransactions -ExerciseReport`
   - with auth + import/recurring route validation checks: `powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseImports -ExerciseRecurring`
   - with auth + ops/cron-history check: `powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseOps`
+  - with auth + required healthy cron-history check: `powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseOps -RequireOpsHealthy -OpsMaxAgeMinutes 1440`
+  - with auth + strict cron-history check: `powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseOps -RequireOpsHealthy -RequireOpsZeroReportErrors -OpsMaxAgeMinutes 1440`
 
 Deployment runbook: `docs/cloudflare-first-deploy.md`.
 Smoke runbook: `docs/post-deploy-smoke.md`.

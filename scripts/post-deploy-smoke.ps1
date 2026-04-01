@@ -8,6 +8,9 @@ param(
   [switch]$ExerciseImports,
   [switch]$ExerciseRecurring,
   [switch]$ExerciseOps,
+  [switch]$RequireOpsHealthy,
+  [switch]$RequireOpsZeroReportErrors,
+  [int]$OpsMaxAgeMinutes = 0,
   [int]$TimeoutSec = 30
 )
 
@@ -305,9 +308,22 @@ if (-not [string]::IsNullOrWhiteSpace($BearerToken)) {
   }
 
   if ($ExerciseOps) {
-    $opsJson = Assert-ApiOk -Name "api latest daily-update job run" -Url "$ApiBaseUrl/api/ops/job-runs/latest?job_name=daily-update" -Headers $headers
+    $opsUrl = "$ApiBaseUrl/api/ops/job-runs/latest?job_name=daily-update"
+    if ($RequireOpsHealthy) {
+      $opsUrl += "&require_status=ok"
+      if ($OpsMaxAgeMinutes -gt 0) {
+        $opsUrl += "&max_age_minutes=$OpsMaxAgeMinutes"
+      }
+    }
+    if ($RequireOpsZeroReportErrors) {
+      $opsUrl += "&require_zero_errors=true"
+    }
+    $opsJson = Assert-ApiOk -Name "api latest daily-update job run" -Url $opsUrl -Headers $headers
     if (-not ($opsJson.PSObject.Properties.Name -contains "item")) {
       throw "[smoke] ops latest job-run response missing item field"
+    }
+    if (($RequireOpsHealthy -or $RequireOpsZeroReportErrors) -and -not $opsJson.healthy) {
+      throw "[smoke] latest daily-update job run is unhealthy: $($opsJson.reason)"
     }
   }
 } else {

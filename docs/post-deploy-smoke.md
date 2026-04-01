@@ -47,6 +47,18 @@ Verify the persisted cron run history surface:
 powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseOps
 ```
 
+Require the latest `daily-update` run to be healthy, and optionally fresh:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseOps -RequireOpsHealthy -OpsMaxAgeMinutes 1440
+```
+
+Require the latest `daily-update` run to be healthy, fresh, and free of section-level report errors:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseOps -RequireOpsHealthy -RequireOpsZeroReportErrors -OpsMaxAgeMinutes 1440
+```
+
 ## What it verifies
 
 1. `GET <api>/health` responds `2xx` and payload has `status: "ok"`
@@ -69,6 +81,12 @@ powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerTo
 8. When `-ExerciseOps` is provided:
    - `GET /api/ops/job-runs/latest?job_name=daily-update` returns `status: "ok"`
    - the response includes an `item` field, which may be `null` if no cron run has been persisted yet
+9. When `-RequireOpsHealthy` is also provided:
+   - the smoke run additionally requires `healthy = true`
+   - `-OpsMaxAgeMinutes` can be used to fail the smoke run when the latest persisted cron run is too old
+10. When `-RequireOpsZeroReportErrors` is also provided:
+   - the smoke run additionally requires the latest persisted cron `report` to have no section-level `errors`
+   - this lets deploy validation reject partial-success `daily-update` runs instead of checking freshness alone
 
 ## Scope note
 

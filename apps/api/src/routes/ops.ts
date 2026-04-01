@@ -11,9 +11,26 @@ type JobRunRecord = {
   created_at: string;
 };
 
+type SectionErrorReport = {
+  errors?: unknown;
+};
+
+function collectReportErrorSections(report: unknown): string[] {
+  if (!report || typeof report !== "object") {
+    return [];
+  }
+
+  return Object.entries(report as Record<string, SectionErrorReport>)
+    .filter(([, value]) => Array.isArray(value?.errors) && value.errors.length > 0)
+    .map(([key]) => key);
+}
+
 type JobRunLatestResponse =
   | {
       item: JobRunRecord | null;
+      healthy: boolean;
+      reason: string;
+      checked_at: string;
       status: "ok";
     }
   | {
@@ -35,6 +52,14 @@ opsRoutes.get("/job-runs/latest", async (c) => {
   }
 
   const jobName = String(c.req.query("job_name") ?? "daily-update").trim() || "daily-update";
+  const requiredStatus = String(c.req.query("require_status") ?? "").trim();
+  const maxAgeMinutesRaw = String(c.req.query("max_age_minutes") ?? "").trim();
+  const requireZeroErrors =
+    String(c.req.query("require_zero_errors") ?? "").trim().toLowerCase() === "true";
+  const maxAgeMinutes =
+    maxAgeMinutesRaw && Number.isFinite(Number(maxAgeMinutesRaw)) && Number(maxAgeMinutesRaw) > 0
+      ? Number(maxAgeMinutesRaw)
+      : null;
   const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
   const supabase = createSupabaseAdminClient(c.env);
 
@@ -52,8 +77,47 @@ opsRoutes.get("/job-runs/latest", async (c) => {
     );
   }
 
+  const item = ((data ?? [])[0] ?? null) as JobRunRecord | null;
+  const checkedAt = new Date().toISOString();
+
+  let healthy = true;
+  let reason = "latest job run is acceptable";
+
+  if (!item) {
+    healthy = false;
+    reason = "no matching job run found";
+  } else {
+    if (requiredStatus && item.status !== requiredStatus) {
+      healthy = false;
+      reason = `latest job run status mismatch. expected=${requiredStatus} actual=${item.status}`;
+    }
+
+    if (healthy && requireZeroErrors) {
+      const errorSections = collectReportErrorSections(item.report);
+      if (errorSections.length > 0) {
+        healthy = false;
+        reason = `latest job run report contains section errors: ${errorSections.join(",")}`;
+      }
+    }
+
+    if (healthy && maxAgeMinutes !== null) {
+      const finishedAt = Date.parse(item.run_finished_at);
+      const ageMs = Date.now() - finishedAt;
+      if (Number.isNaN(finishedAt)) {
+        healthy = false;
+        reason = "latest job run has invalid run_finished_at";
+      } else if (ageMs > maxAgeMinutes * 60 * 1000) {
+        healthy = false;
+        reason = `latest job run is older than ${maxAgeMinutes} minute(s)`;
+      }
+    }
+  }
+
   return c.json<JobRunLatestResponse>({
-    item: ((data ?? [])[0] ?? null) as JobRunRecord | null,
+    item,
+    healthy,
+    reason,
+    checked_at: checkedAt,
     status: "ok",
   });
 });

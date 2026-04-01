@@ -38,6 +38,7 @@
   - `daily-update` cron execution reporting plus injected-dependency tests (`89/89`)
   - `job_runs` persistence for cron execution summaries (`89/89`)
   - ops endpoint + smoke extension for latest cron-history inspection (`91/91`)
+  - strict ops verdict rules for section-level cron report errors (`93/93`)
 
 ## Review Notes
 
