@@ -3,6 +3,7 @@ import type { WorkerBindings } from "../types";
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 const VERSION = "v1";
+const PREFIX = `${VERSION}.`;
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
@@ -93,4 +94,8 @@ export async function decryptSecretValue(
   );
 
   return decoder.decode(plainBuffer);
+}
+
+export function isEncryptedSecretValue(value: string | null | undefined): boolean {
+  return typeof value === "string" && value.startsWith(PREFIX);
 }

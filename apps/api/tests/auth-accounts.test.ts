@@ -611,6 +611,63 @@ test("GET /api/user-settings/pdf-passwords returns raw PDF passwords only on exp
   });
 });
 
+test("GET /api/user-settings/pdf-passwords upgrades legacy plaintext rows after reading them", async () => {
+  const initialRow = {
+    user_id: "user-1",
+    default_pdf_password: "legacy-default",
+    sinopac_pdf_password: null,
+    esun_pdf_password: "legacy-esun",
+    taishin_pdf_password: null,
+  };
+  let storedRow: Record<string, unknown> | null = initialRow;
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "user_settings") {
+          return {
+            select: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({
+                  data: storedRow,
+                  error: null,
+                }),
+              }),
+            }),
+            upsert: async (value: Record<string, unknown>) => {
+              storedRow = { ...storedRow, ...value };
+              return { error: null };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/user-settings/pdf-passwords", {}, env);
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    settings: {
+      default_pdf_password: "legacy-default",
+      sinopac_pdf_password: null,
+      esun_pdf_password: "legacy-esun",
+      taishin_pdf_password: null,
+    },
+    status: "ok",
+  });
+  assert.match(String(storedRow?.default_pdf_password), /^v1\./);
+  assert.match(String(storedRow?.esun_pdf_password), /^v1\./);
+  assert.notEqual(storedRow?.default_pdf_password, "legacy-default");
+  assert.notEqual(storedRow?.esun_pdf_password, "legacy-esun");
+});
+
 test("GET /api/user-settings/pdf-passwords fails when secret key is unavailable", async () => {
   const app = createApp({
     resolveAuthenticatedUser: async () => ({

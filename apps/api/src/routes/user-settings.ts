@@ -1,11 +1,57 @@
 import { Hono } from "hono";
-import { decryptSecretValue, encryptSecretValue, getUserSettingsSecret } from "../lib/secrets";
+import {
+  decryptSecretValue,
+  encryptSecretValue,
+  getUserSettingsSecret,
+  isEncryptedSecretValue,
+} from "../lib/secrets";
 import type { ApiEnv } from "../types";
 
 export const userSettingsRoutes = new Hono<ApiEnv>();
 
 function noStore(c: { header: (name: string, value: string) => void }) {
   c.header("Cache-Control", "no-store");
+}
+
+async function maybeUpgradePlaintextSecrets(
+  settings: {
+    default_pdf_password?: string | null;
+    sinopac_pdf_password?: string | null;
+    esun_pdf_password?: string | null;
+    taishin_pdf_password?: string | null;
+  } | null,
+  userId: string,
+  env: ApiEnv["Bindings"],
+  createSupabaseAdminClient: ApiEnv["Variables"]["createSupabaseAdminClient"],
+) {
+  if (!settings) {
+    return;
+  }
+
+  const upgrades: Record<string, string | null> = {};
+  if (settings.default_pdf_password && !isEncryptedSecretValue(settings.default_pdf_password)) {
+    upgrades.default_pdf_password = await encryptSecretValue(settings.default_pdf_password, env);
+  }
+  if (settings.sinopac_pdf_password && !isEncryptedSecretValue(settings.sinopac_pdf_password)) {
+    upgrades.sinopac_pdf_password = await encryptSecretValue(settings.sinopac_pdf_password, env);
+  }
+  if (settings.esun_pdf_password && !isEncryptedSecretValue(settings.esun_pdf_password)) {
+    upgrades.esun_pdf_password = await encryptSecretValue(settings.esun_pdf_password, env);
+  }
+  if (settings.taishin_pdf_password && !isEncryptedSecretValue(settings.taishin_pdf_password)) {
+    upgrades.taishin_pdf_password = await encryptSecretValue(settings.taishin_pdf_password, env);
+  }
+
+  if (Object.keys(upgrades).length === 0) {
+    return;
+  }
+
+  const supabase = createSupabaseAdminClient(env);
+  await supabase.from("user_settings").upsert({
+    user_id: userId,
+    updated_at: new Date().toISOString(),
+    ...upgrades,
+  }, { onConflict: "user_id" });
 }
 
 userSettingsRoutes.get("/", async (c) => {
@@ -80,6 +126,8 @@ userSettingsRoutes.get("/pdf-passwords", async (c) => {
       500,
     );
   }
+
+  await maybeUpgradePlaintextSecrets(data, user.id, c.env, createSupabaseAdminClient);
 
   noStore(c);
   return c.json({
