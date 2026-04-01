@@ -29,6 +29,7 @@
   - report/import golden matrices
   - dividends / stock / transaction import helper extraction
   - dividend route dead-code cleanup and ownership-check alignment
+  - `sinopac-stock` route refactor onto shared batch + holding helpers
 
 ## Review Notes
 

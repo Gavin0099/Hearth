@@ -146,26 +146,6 @@ function resolveTransactionsCsvSource(rawValue: FormDataEntryValue | null) {
   return allowed.includes(value) ? value : "csv_import";
 }
 
-function dedupeBySourceHash<T extends { source_hash: string }>(rows: T[]) {
-  const uniqueRows = new Map<string, T>();
-  let duplicateRowsInPayload = 0;
-
-  rows.forEach((row) => {
-    if (uniqueRows.has(row.source_hash)) {
-      duplicateRowsInPayload += 1;
-      return;
-    }
-
-    uniqueRows.set(row.source_hash, row);
-  });
-
-  return {
-    rows: [...uniqueRows.values()],
-    duplicateRowsInPayload,
-  };
-}
-
-
 importRoutes.post("/transactions-csv", async (c) => {
   const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
   const user = await resolveAuthenticatedUser(c.req.raw, c.env);
@@ -647,8 +627,7 @@ importRoutes.post(
         );
       }
 
-      const dedupedTradeBatch = dedupeBySourceHash(trades);
-      const sourceHashes = dedupedTradeBatch.rows.map((t) => t.source_hash);
+      const sourceHashes = trades.map((trade) => trade.source_hash);
       const { data: existingRows, error: existingError } = await supabase
         .from("investment_trades")
         .select("source_hash")
@@ -661,11 +640,10 @@ importRoutes.post(
         );
       }
 
-      const existingHashes = new Set(
-        (existingRows ?? []).map((r: { source_hash: string }) => r.source_hash),
+      const { freshTrades, skipped } = prepareStockTradeImportBatch(
+        trades,
+        (existingRows ?? []).map((row: { source_hash: string }) => row.source_hash),
       );
-      const freshTrades = dedupedTradeBatch.rows.filter((t) => !existingHashes.has(t.source_hash));
-      const skipped = dedupedTradeBatch.duplicateRowsInPayload + (dedupedTradeBatch.rows.length - freshTrades.length);
 
       if (freshTrades.length > 0) {
         const { error: insertError } = await supabase.from("investment_trades").upsert(
@@ -708,27 +686,23 @@ importRoutes.post(
 
         if (tradesError) continue;
 
-        let totalShares = 0;
-        let weightedCost = 0;
-        let name: string | null = null;
-        let currency = "TWD";
+        const holding = rebuildHoldingFromTrades(
+          (allTrades ?? []).map((trade: {
+            action: "buy" | "sell";
+            shares: number | string;
+            price_per_share: number | string;
+            name: string | null;
+            currency: string;
+          }) => ({
+            action: trade.action,
+            shares: Number(trade.shares),
+            price_per_share: Number(trade.price_per_share),
+            name: trade.name,
+            currency: trade.currency,
+          })),
+        );
 
-        for (const trade of allTrades ?? []) {
-          const s = Number(trade.shares);
-          const p = Number(trade.price_per_share);
-          if (!name && trade.name) name = trade.name;
-          currency = trade.currency;
-
-          if (trade.action === "buy") {
-            const newTotal = totalShares + s;
-            weightedCost = newTotal > 0 ? (weightedCost * totalShares + p * s) / newTotal : p;
-            totalShares = newTotal;
-          } else {
-            totalShares = Math.max(0, totalShares - s);
-          }
-        }
-
-        if (totalShares <= 0) {
+        if (!holding) {
           // Position fully closed; remove holding
           await supabase
             .from("holdings")
@@ -740,10 +714,10 @@ importRoutes.post(
             {
               account_id: accountId,
               ticker,
-              name,
-              total_shares: totalShares,
-              avg_cost: weightedCost,
-              currency,
+              name: holding.name,
+              total_shares: holding.total_shares,
+              avg_cost: holding.avg_cost,
+              currency: holding.currency,
               updated_at: new Date().toISOString(),
             },
             { onConflict: "account_id,ticker" },
