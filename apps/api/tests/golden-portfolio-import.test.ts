@@ -2,7 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import type { CreateTransactionInput } from "@hearth/shared";
 import { parseDividendsCsv, prepareDividendImportBatch } from "../src/lib/dividends";
-import { rebuildHoldingFromTrades } from "../src/lib/holdings";
+import {
+  normalizeHoldingPersistenceTrades,
+  rebuildHoldingFromTrades,
+  refreshHoldingsForTickers,
+} from "../src/lib/holdings";
 import { parseSinopacStockCsv, prepareStockTradeImportBatch } from "../src/lib/sinopac-stock";
 import { buildTransactionImportRows, prepareTransactionImportBatch } from "../src/lib/transaction-import";
 
@@ -329,4 +333,109 @@ test("holding rebuild golden: fully sold positions collapse to null", () => {
   ]);
 
   assert.equal(result, null);
+});
+
+test("holding persistence normalization golden: coerces string payloads into rebuild trades", () => {
+  const result = normalizeHoldingPersistenceTrades([
+    {
+      action: "buy",
+      shares: "2.5",
+      price_per_share: "610.5",
+      name: "TSMC",
+      currency: "TWD",
+    },
+  ]);
+
+  assert.deepEqual(result, [
+    {
+      action: "buy",
+      shares: 2.5,
+      price_per_share: 610.5,
+      name: "TSMC",
+      currency: "TWD",
+    },
+  ]);
+});
+
+test("holding refresh golden: upserts open position and deletes fully closed one", async () => {
+  const holdingDeletes: Array<{ account_id: string; ticker: string }> = [];
+  const holdingUpserts: Array<Record<string, unknown>> = [];
+  const tradeRowsByTicker = new Map<string, Array<Record<string, unknown>>>([
+    [
+      "TSMC",
+      [
+        { action: "buy", shares: "2", price_per_share: "600", name: "TSMC", currency: "TWD" },
+        { action: "buy", shares: "3", price_per_share: "650", name: "TSMC", currency: "TWD" },
+      ],
+    ],
+    [
+      "QQQ",
+      [
+        { action: "buy", shares: "1", price_per_share: "420", name: "QQQ", currency: "USD" },
+        { action: "sell", shares: "1", price_per_share: "430", name: "QQQ", currency: "USD" },
+      ],
+    ],
+  ]);
+
+  const supabase = {
+    from: (table: string) => {
+      if (table === "investment_trades") {
+        return {
+          select: () => ({
+            eq: (_field: string, accountId: string) => ({
+              eq: (_tickerField: string, ticker: string) => ({
+                order: async () => ({
+                  data: tradeRowsByTicker.get(ticker)?.map((row) => ({ ...row, account_id: accountId })) ?? [],
+                  error: null,
+                }),
+              }),
+            }),
+          }),
+        };
+      }
+
+      if (table === "holdings") {
+        return {
+          delete: () => ({
+            eq: (_field: string, accountId: string) => ({
+              eq: (_tickerField: string, ticker: string) => {
+                holdingDeletes.push({ account_id: accountId, ticker });
+                return Promise.resolve({ error: null });
+              },
+            }),
+          }),
+          upsert: async (value: Record<string, unknown>) => {
+            holdingUpserts.push(value);
+            return { error: null };
+          },
+        };
+      }
+
+      throw new Error(`Unexpected table ${table}`);
+    },
+  };
+
+  const result = await refreshHoldingsForTickers(supabase, "account-1", ["TSMC", "QQQ"]);
+
+  assert.equal(result.holdingsRecalculated, 1);
+  assert.equal(holdingUpserts.length, 1);
+  assert.deepEqual(
+    {
+      account_id: holdingUpserts[0]?.account_id,
+      ticker: holdingUpserts[0]?.ticker,
+      name: holdingUpserts[0]?.name,
+      total_shares: holdingUpserts[0]?.total_shares,
+      avg_cost: holdingUpserts[0]?.avg_cost,
+      currency: holdingUpserts[0]?.currency,
+    },
+    {
+      account_id: "account-1",
+      ticker: "TSMC",
+      name: "TSMC",
+      total_shares: 5,
+      avg_cost: 630,
+      currency: "TWD",
+    },
+  );
+  assert.deepEqual(holdingDeletes, [{ account_id: "account-1", ticker: "QQQ" }]);
 });

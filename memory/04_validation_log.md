@@ -30,6 +30,7 @@
   - dividends / stock / transaction import helper extraction
   - dividend route dead-code cleanup and ownership-check alignment
   - `sinopac-stock` route refactor onto shared batch + holding helpers
+  - shared holdings refresh orchestration plus new helper-level portfolio tests
 
 ## Review Notes
 

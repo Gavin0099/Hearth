@@ -10,7 +10,7 @@ import { parseCsv } from "../lib/csv";
 import { parseCreditCardTransactionsCsv } from "../lib/credit-card";
 import { parseDividendsCsv, prepareDividendImportBatch } from "../lib/dividends";
 import { parseMonthlyExcel } from "../lib/excel-monthly";
-import { rebuildHoldingFromTrades } from "../lib/holdings";
+import { refreshHoldingsForTickers } from "../lib/holdings";
 import { parseSinopacTransactionsCsv } from "../lib/sinopac";
 import { parseSinopacStockCsv, prepareStockTradeImportBatch } from "../lib/sinopac-stock";
 import { buildTransactionImportRows, prepareTransactionImportBatch } from "../lib/transaction-import";
@@ -672,59 +672,8 @@ importRoutes.post(
         }
       }
 
-      // Recalculate holdings for affected tickers
       const affectedTickers = [...new Set(freshTrades.map((t) => t.ticker))];
-      let holdingsRecalculated = 0;
-
-      for (const ticker of affectedTickers) {
-        const { data: allTrades, error: tradesError } = await supabase
-          .from("investment_trades")
-          .select("action, shares, price_per_share, name, currency")
-          .eq("account_id", accountId)
-          .eq("ticker", ticker)
-          .order("trade_date", { ascending: true });
-
-        if (tradesError) continue;
-
-        const holding = rebuildHoldingFromTrades(
-          (allTrades ?? []).map((trade: {
-            action: "buy" | "sell";
-            shares: number | string;
-            price_per_share: number | string;
-            name: string | null;
-            currency: string;
-          }) => ({
-            action: trade.action,
-            shares: Number(trade.shares),
-            price_per_share: Number(trade.price_per_share),
-            name: trade.name,
-            currency: trade.currency,
-          })),
-        );
-
-        if (!holding) {
-          // Position fully closed; remove holding
-          await supabase
-            .from("holdings")
-            .delete()
-            .eq("account_id", accountId)
-            .eq("ticker", ticker);
-        } else {
-          const { error: upsertError } = await supabase.from("holdings").upsert(
-            {
-              account_id: accountId,
-              ticker,
-              name: holding.name,
-              total_shares: holding.total_shares,
-              avg_cost: holding.avg_cost,
-              currency: holding.currency,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "account_id,ticker" },
-          );
-          if (!upsertError) holdingsRecalculated++;
-        }
-      }
+      const { holdingsRecalculated } = await refreshHoldingsForTickers(supabase, accountId, affectedTickers);
 
       return c.json<StockTradeImportResponse>({
         source: "sinopac-stock",
@@ -854,56 +803,7 @@ importRoutes.post(
       }
 
       const affectedTickers = [...new Set(freshTrades.map((t) => t.ticker))];
-      let holdingsRecalculated = 0;
-
-      for (const ticker of affectedTickers) {
-        const { data: allTrades, error: tradesError } = await supabase
-          .from("investment_trades")
-          .select("action, shares, price_per_share, name, currency")
-          .eq("account_id", accountId)
-          .eq("ticker", ticker)
-          .order("trade_date", { ascending: true });
-
-        if (tradesError) continue;
-
-        const holding = rebuildHoldingFromTrades(
-          (allTrades ?? []).map((trade: {
-            action: "buy" | "sell";
-            shares: number | string;
-            price_per_share: number | string;
-            name: string | null;
-            currency: string;
-          }) => ({
-            action: trade.action,
-            shares: Number(trade.shares),
-            price_per_share: Number(trade.price_per_share),
-            name: trade.name,
-            currency: trade.currency,
-          })),
-        );
-
-        if (!holding) {
-          await supabase
-            .from("holdings")
-            .delete()
-            .eq("account_id", accountId)
-            .eq("ticker", ticker);
-        } else {
-          const { error: upsertError } = await supabase.from("holdings").upsert(
-            {
-              account_id: accountId,
-              ticker,
-              name: holding.name,
-              total_shares: holding.total_shares,
-              avg_cost: holding.avg_cost,
-              currency: holding.currency,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "account_id,ticker" },
-          );
-          if (!upsertError) holdingsRecalculated++;
-        }
-      }
+      const { holdingsRecalculated } = await refreshHoldingsForTickers(supabase, accountId, affectedTickers);
 
       return c.json<StockTradeImportResponse>({
         source: "foreign-stock-csv",
