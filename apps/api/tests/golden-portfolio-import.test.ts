@@ -1,8 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import type { CreateTransactionInput } from "@hearth/shared";
 import { parseDividendsCsv, prepareDividendImportBatch } from "../src/lib/dividends";
 import { rebuildHoldingFromTrades } from "../src/lib/holdings";
 import { parseSinopacStockCsv, prepareStockTradeImportBatch } from "../src/lib/sinopac-stock";
+import { buildTransactionImportRows, prepareTransactionImportBatch } from "../src/lib/transaction-import";
 
 test("dividends csv golden: normalizes valid rows and builds stable source hashes", () => {
   const result = parseDividendsCsv(
@@ -221,6 +223,73 @@ test("stock import batch golden: keeps all unique trades when no existing hashes
   const result = prepareStockTradeImportBatch(normalizedTrades, []);
 
   assert.equal(result.freshTrades.length, 2);
+  assert.equal(result.skipped, 0);
+});
+
+test("transaction import batch golden: removes payload duplicates and existing hashes", () => {
+  const rows: CreateTransactionInput[] = [
+    {
+      account_id: "account-1",
+      date: "2026-03-01",
+      amount: -120,
+      currency: "TWD",
+      category: "Food",
+      description: "Lunch",
+      source: "csv_import",
+    },
+    {
+      account_id: "account-1",
+      date: "2026-03-01",
+      amount: -120,
+      currency: "TWD",
+      category: "Food",
+      description: "Lunch",
+      source: "csv_import",
+    },
+    {
+      account_id: "account-1",
+      date: "2026-03-02",
+      amount: 3000,
+      currency: "TWD",
+      category: "Salary",
+      description: "Bonus",
+      source: "csv_import",
+    },
+  ];
+
+  const importRows = buildTransactionImportRows(rows);
+  const result = prepareTransactionImportBatch(importRows, [importRows[0]!.source_hash]);
+
+  assert.equal(result.freshRows.length, 1);
+  assert.equal(result.freshRows[0]?.description, "Bonus");
+  assert.equal(result.skipped, 2);
+});
+
+test("transaction import batch golden: keeps all unique rows when no existing hashes match", () => {
+  const rows: CreateTransactionInput[] = [
+    {
+      account_id: "account-1",
+      date: "2026-03-01",
+      amount: -120,
+      currency: "TWD",
+      category: "Food",
+      description: "Lunch",
+      source: "csv_import",
+    },
+    {
+      account_id: "account-1",
+      date: "2026-03-02",
+      amount: 3000,
+      currency: "TWD",
+      category: "Salary",
+      description: "Bonus",
+      source: "csv_import",
+    },
+  ];
+
+  const result = prepareTransactionImportBatch(buildTransactionImportRows(rows), []);
+
+  assert.equal(result.freshRows.length, 2);
   assert.equal(result.skipped, 0);
 });
 

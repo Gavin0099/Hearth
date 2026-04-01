@@ -13,7 +13,7 @@ import { parseMonthlyExcel } from "../lib/excel-monthly";
 import { rebuildHoldingFromTrades } from "../lib/holdings";
 import { parseSinopacTransactionsCsv } from "../lib/sinopac";
 import { parseSinopacStockCsv, prepareStockTradeImportBatch } from "../lib/sinopac-stock";
-import { buildTransactionSourceHash } from "../lib/transaction-hash";
+import { buildTransactionImportRows, prepareTransactionImportBatch } from "../lib/transaction-import";
 import type { ApiEnv } from "../types";
 
 const createImportStub = (source: string) => ({
@@ -55,25 +55,8 @@ async function importNormalizedRows(
   warnings: string[] = [],
   recurringCandidates: RecurringImportCandidate[] = [],
 ) {
-  const withHashes = rows.map((row) => ({
-    ...row,
-    source_hash: buildTransactionSourceHash(row),
-  }));
-  const uniqueRows = new Map<string, (typeof withHashes)[number]>();
-  let duplicateRowsInPayload = 0;
-
-  withHashes.forEach((row) => {
-    if (uniqueRows.has(row.source_hash)) {
-      duplicateRowsInPayload += 1;
-      return;
-    }
-
-    uniqueRows.set(row.source_hash, row);
-  });
-
-  const dedupedRows = [...uniqueRows.values()];
-
-  const sourceHashes = dedupedRows.map((row) => row.source_hash);
+  const importRows = buildTransactionImportRows(rows);
+  const sourceHashes = importRows.map((row) => row.source_hash);
   const { data: existing, error: existingError } = await supabase
     .from("transactions")
     .select("source_hash")
@@ -90,10 +73,10 @@ async function importNormalizedRows(
     };
   }
 
-  const existingHashes = new Set(
+  const { freshRows, skipped } = prepareTransactionImportBatch(
+    importRows,
     (existing ?? []).map((item: { source_hash: string | null }) => item.source_hash).filter(Boolean),
   );
-  const freshRows = dedupedRows.filter((row) => !existingHashes.has(row.source_hash));
 
   if (freshRows.length > 0) {
     const { error } = await supabase.from("transactions").upsert(
@@ -126,7 +109,7 @@ async function importNormalizedRows(
     response: {
       source,
       imported: freshRows.length,
-      skipped: existingSkipped + duplicateRowsInPayload + (dedupedRows.length - freshRows.length),
+      skipped: existingSkipped + skipped,
       failed: existingErrors.length,
       runtime: "cloudflare-worker" as const,
       persistence: "supabase" as const,
