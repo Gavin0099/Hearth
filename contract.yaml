@@ -6,8 +6,11 @@ domain: household-finance
 documents:
   - AGENTS.base.md
   - PLAN.md
+  - governance/SYSTEM_PROMPT.md
+  - governance/HUMAN-OVERSIGHT.md
   - governance/AGENT.md
   - governance/ARCHITECTURE.md
+  - governance/REVIEW_CRITERIA.md
   - governance/TESTING.md
 ai_behavior_override:
   - AGENTS.base.md

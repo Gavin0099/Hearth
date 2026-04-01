@@ -16,8 +16,13 @@ Before doing substantial work in `Hearth`, read:
 
 1. `AGENTS.md`
 2. `PLAN.md`
-3. `memory/YYYY-MM-DD.md` for today and yesterday when present
-4. `MEMORY.md` for curated long-term project context
+3. structured memory files when present:
+   - `memory/01_active_task.md`
+   - `memory/02_tech_stack.md` or `memory/02_project_facts.md`
+   - `memory/03_knowledge_base.md` / `memory/03_decisions.md`
+   - `memory/04_validation_log.md`
+4. `memory/YYYY-MM-DD.md` for today and yesterday when present
+5. `MEMORY.md` for curated long-term project context
 
 Do not skip the local `Hearth` files just because the framework submodule exists.
 
@@ -27,6 +32,10 @@ Use `Hearth` root files for repo-local operating context:
 
 - `PLAN.md`: current product plan and implementation priorities
 - `MEMORY.md`: curated long-term project memory
+- `memory/01_active_task.md`: concise current-state handoff
+- `memory/02_*`: structured project facts / tech stack baseline
+- `memory/03_*`: knowledge base and durable decisions
+- `memory/04_validation_log.md`: validation and review history
 - `memory/YYYY-MM-DD.md`: daily implementation log
 
 Use `ai-governance-framework/` for framework-level guidance:
@@ -48,19 +57,18 @@ Use those files as the canonical source for repo-level risk classification, exec
 ## Required Habits
 
 - Write down meaningful decisions in `memory/YYYY-MM-DD.md`
+- Keep `memory/01_active_task.md` current at meaningful milestones
+- Promote durable facts / decisions / validation history into the structured `memory/01~04` files
 - Keep `PLAN.md` current when priorities, phases, or delivery order changes
 - Promote durable lessons from daily notes into `MEMORY.md`
 - Do not claim framework adoption is complete unless the local plan/memory workflow is actually being maintained
 
 ## Current Adoption Boundary
 
-As of 2026-03-21, `Hearth` has adopted:
+As of 2026-04-01, `Hearth` has adopted:
 
 - framework submodule import
-- local plan and memory structure
+- local `governance/` runtime entry docs (`SYSTEM_PROMPT`, `HUMAN-OVERSIGHT`, `REVIEW_CRITERIA`, `AGENT`, `ARCHITECTURE`, `TESTING`)
+- structured `memory/01~04` schema plus daily notes
 - explicit repo-level governance entrypoint
-
-Still pending:
-
-- automation around freshness or phase gates
-- reusable runtime hooks from the framework, if they become needed for this product
+- ongoing synchronization between structured memory, daily logs, and plan updates

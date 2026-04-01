@@ -1,23 +1,36 @@
-# MEMORY.md — Hearth Long-Term Memory
+# MEMORY.md - Hearth Long-Term Memory
 
 ## Product Identity
 
-- `Hearth` 是家庭資產管理系統，不是一般型記帳工具
-- 核心價值是把月度現金流與投資淨值放在同一個產品裡
+- `Hearth` is a household-finance and personal-asset management system for real financial workflows, not a throwaway demo.
+- The product scope is: account aggregation, cashflow reporting, imports/parsers, recurring flows, portfolio tracking, and operational readiness.
 
 ## Architecture Decisions
 
-- 資料庫與身份驗證使用 Supabase
-- 前端與 API 部署方向使用 Cloudflare Pages + Workers
-- `ai-governance-framework` 以 submodule 方式導入，作為治理參考與未來能力來源
+- Supabase is the persistence and identity backbone.
+- Cloudflare Pages + Workers host the web and API surfaces.
+- `transactions` remain the source of truth for cashflow reporting.
+- Import flows must stay deterministic through stable source-hash dedupe.
+- `supabase/migrations/` is canonical schema history; `supabase/schema.sql` is the latest bootstrap snapshot.
+
+## Governance Model
+
+- `ai-governance-framework/` is the upstream framework reference and working submodule.
+- Repo-local governance for Hearth is canonical under `governance/`.
+- Hearth now keeps both:
+  - structured framework-compatible memory in `memory/01~04`
+  - append-only execution logs in `memory/YYYY-MM-DD.md`
 
 ## Working Model
 
-- `Hearth-plan.md` 是初始產品藍圖
-- `PLAN.md` 是持續更新的實作計畫與當前優先級
-- `memory/YYYY-MM-DD.md` 記錄每次重要進展
+- `PLAN.md` is the source of truth for active priorities and anti-goals.
+- `memory/01_active_task.md` is the concise restart/resume handoff.
+- `memory/02_*` stores factual project and tech-stack baselines.
+- `memory/03_*` stores reusable gotchas and durable decisions.
+- `memory/04_validation_log.md` stores review/build/test validation history.
+- `memory/YYYY-MM-DD.md` stores detailed daily execution notes.
 
 ## Important Boundary
 
-- 目前只是完成 framework adoption 的第一層：submodule + local plan/memory workflow
-- 尚未完成 repo-specific engineering governance，也尚未把 framework 工具正式接進日常開發流程
+- Framework adoption is only real if local governance docs and local memory are maintained in the Hearth repo itself.
+- Repo-local governance wins over framework examples when product-specific scope or delivery order differs.
