@@ -9,6 +9,7 @@ import { transactionsRoutes } from "./routes/transactions";
 import { userSettingsRoutes } from "./routes/user-settings";
 import { bankSnapshotsRoutes } from "./routes/bank-snapshots";
 import { categorizationRulesRoutes } from "./routes/categorization-rules";
+import { opsRoutes } from "./routes/ops";
 import type { ApiEnv, WorkerBindings } from "./types";
 import {
   getBearerToken,
@@ -139,6 +140,7 @@ export function createApp(dependencies: Partial<AppDependencies> = {}) {
   app.route("/api/user-settings", userSettingsRoutes);
   app.route("/api/bank-snapshots", bankSnapshotsRoutes);
   app.route("/api/categorization-rules", categorizationRulesRoutes);
+  app.route("/api/ops", opsRoutes);
 
   return app;
 }

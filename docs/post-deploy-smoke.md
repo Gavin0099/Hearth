@@ -41,6 +41,12 @@ Verify import and recurring routes (safe validation path, no data writes):
 powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseImports -ExerciseRecurring
 ```
 
+Verify the persisted cron run history surface:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseOps
+```
+
 ## What it verifies
 
 1. `GET <api>/health` responds `2xx` and payload has `status: "ok"`
@@ -60,6 +66,9 @@ powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerTo
 7. When `-ExerciseRecurring` is provided:
    - `GET /api/recurring-templates` returns `status: "ok"`
    - `POST /api/recurring-templates/apply` invalid payload returns expected validation error
+8. When `-ExerciseOps` is provided:
+   - `GET /api/ops/job-runs/latest?job_name=daily-update` returns `status: "ok"`
+   - the response includes an `item` field, which may be `null` if no cron run has been persisted yet
 
 ## Scope note
 

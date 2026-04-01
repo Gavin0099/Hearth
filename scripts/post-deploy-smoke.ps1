@@ -7,6 +7,7 @@ param(
   [switch]$ExerciseReport,
   [switch]$ExerciseImports,
   [switch]$ExerciseRecurring,
+  [switch]$ExerciseOps,
   [int]$TimeoutSec = 30
 )
 
@@ -301,6 +302,13 @@ if (-not [string]::IsNullOrWhiteSpace($BearerToken)) {
       Authorization = "Bearer $BearerToken"
       "content-type" = "application/json"
     } -Body $invalidApplyBody -ExpectedStatusCode 400 -ExpectedCode "validation_error"
+  }
+
+  if ($ExerciseOps) {
+    $opsJson = Assert-ApiOk -Name "api latest daily-update job run" -Url "$ApiBaseUrl/api/ops/job-runs/latest?job_name=daily-update" -Headers $headers
+    if (-not ($opsJson.PSObject.Properties.Name -contains "item")) {
+      throw "[smoke] ops latest job-run response missing item field"
+    }
   }
 } else {
   Write-Host "[smoke] skip authenticated checks (no bearer token provided)"
