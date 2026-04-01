@@ -11,10 +11,11 @@
 - [x] Routes now delegate stock import DB orchestration through `stock-import.ts`
 - [x] Extracted shared import preflight helpers for auth/form/account ownership checks in `apps/api/src/routes/import.ts`
 - [x] Extracted shared transaction/stock parse-result helpers inside `apps/api/src/routes/import.ts`
-- [ ] Continue thinning `apps/api/src/routes/import.ts` where dividends and generic transactions still own bespoke parse/import shaping
+- [x] Extracted dedicated helpers for `transactions-csv` normalization and `dividends-csv` import shaping
+- [ ] Continue thinning `apps/api/src/routes/import.ts` by deciding whether remaining helpers should move out of the route file into import-domain modules
 - [ ] Keep structured memory and daily logs in sync going forward
 
 ## Context
-- **Recent achievements**: stock routes now delegate their DB orchestration through `apps/api/src/lib/stock-import.ts`; all import routes share preflight helpers; and the repeated transaction/stock parse-result orchestration has been collapsed into shared route helpers.
+- **Recent achievements**: stock routes now delegate their DB orchestration through `apps/api/src/lib/stock-import.ts`; all import routes share preflight helpers; repeated parse-result orchestration is collapsed into shared helpers; and the two last bespoke branches (`transactions-csv`, `dividends-csv`) now also have dedicated helper paths.
 - **Validation baseline**: `npm.cmd --workspace @hearth/api run build` and `npm.cmd --workspace @hearth/api run test` both pass after the cleanup.
-- **Next steps**: Continue using helper extraction plus golden tests to shrink `import.ts`, with the next obvious targets being the bespoke `transactions-csv` row-normalization branch and the dividends import branch.
+- **Next steps**: Decide whether to keep the new helpers inside `import.ts` or promote them into `lib/` modules; after that, move to another `P0 correctness` or operational slice instead of churning the same route forever.

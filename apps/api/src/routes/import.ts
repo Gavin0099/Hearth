@@ -294,6 +294,128 @@ async function importParsedStockTrades(
   return importResult;
 }
 
+async function importTransactionsCsvRows(
+  file: File,
+  accountId: string,
+  supabase: any,
+  importSource: string,
+) {
+  const text = await file.text();
+  const rows = parseCsv(text);
+  if (rows.length === 0) {
+    return {
+      response: validationImportResponse("CSV has no data rows."),
+      status: 400 as const,
+    };
+  }
+
+  const normalized: CreateTransactionInput[] = [];
+  const errors: string[] = [];
+
+  rows.forEach((row, index) => {
+    const line = index + 2;
+    const date = String(row.date ?? "").trim();
+    const amount = Number(String(row.amount ?? "").trim());
+    const currency = String(row.currency ?? "TWD").trim().toUpperCase();
+    const category = String(row.category ?? "").trim() || null;
+    const description = String(row.description ?? "").trim() || null;
+
+    if (!date) {
+      errors.push(`line ${line}: date is required`);
+      return;
+    }
+
+    if (!Number.isFinite(amount) || amount === 0) {
+      errors.push(`line ${line}: amount must be a non-zero number`);
+      return;
+    }
+
+    normalized.push({
+      account_id: accountId,
+      date,
+      amount,
+      currency,
+      category,
+      description,
+      source: importSource,
+    });
+  });
+
+  if (normalized.length === 0) {
+    return {
+      response: validationImportResponse(errors[0] ?? "CSV rows are invalid."),
+      status: 400 as const,
+    };
+  }
+
+  return importNormalizedRows(
+    normalized,
+    "transactions-csv",
+    supabase,
+    errors,
+  );
+}
+
+async function importDividendRows(
+  file: File,
+  accountId: string,
+  supabase: any,
+) {
+  const csvText = await file.text();
+  const parsedDividends = parseDividendsCsv(csvText, accountId);
+  const errors = [...parsedDividends.errors];
+  const divRows = parsedDividends.rows;
+
+  if (divRows.length === 0) {
+    return {
+      response: validationImportResponse("No valid rows found."),
+      status: 400 as const,
+    };
+  }
+
+  const hashes = divRows.map((row) => row.source_hash);
+  const { data: existing, error: existingError } = await supabase
+    .from("dividends")
+    .select("source_hash")
+    .in("source_hash", hashes);
+
+  if (existingError) {
+    return {
+      response: databaseImportResponse(existingError.message),
+      status: 500 as const,
+    };
+  }
+
+  const { freshRows, skipped } = prepareDividendImportBatch(
+    divRows,
+    (existing ?? []).map((row: { source_hash: string }) => row.source_hash),
+  );
+
+  if (freshRows.length > 0) {
+    const { error: insertError } = await supabase.from("dividends").insert(freshRows);
+    if (insertError) {
+      return {
+        response: databaseImportResponse(insertError.message),
+        status: 500 as const,
+      };
+    }
+  }
+
+  return {
+    response: {
+      source: "dividends-csv" as const,
+      imported: freshRows.length,
+      skipped,
+      failed: errors.length,
+      runtime: "cloudflare-worker" as const,
+      persistence: "supabase" as const,
+      status: "ok" as const,
+      errors,
+    },
+    status: 200 as const,
+  };
+}
+
 function resolveTransactionsCsvSource(rawValue: FormDataEntryValue | null) {
   const value = String(rawValue ?? "").trim();
   if (!value) {
@@ -339,68 +461,7 @@ importRoutes.post("/transactions-csv", async (c) => {
   }
   const { supabase } = importContext;
 
-  const text = await file.text();
-  const rows = parseCsv(text);
-  if (rows.length === 0) {
-    return c.json<TransactionCsvImportResponse>(
-      {
-        code: "validation_error",
-        error: "CSV has no data rows.",
-        status: "error",
-      },
-      400,
-    );
-  }
-
-  const normalized: CreateTransactionInput[] = [];
-  const errors: string[] = [];
-
-  rows.forEach((row, index) => {
-    const line = index + 2;
-    const date = String(row.date ?? "").trim();
-    const amount = Number(String(row.amount ?? "").trim());
-    const currency = String(row.currency ?? "TWD").trim().toUpperCase();
-    const category = String(row.category ?? "").trim() || null;
-    const description = String(row.description ?? "").trim() || null;
-
-    if (!date) {
-      errors.push(`line ${line}: date is required`);
-      return;
-    }
-
-    if (!Number.isFinite(amount) || amount === 0) {
-      errors.push(`line ${line}: amount must be a non-zero number`);
-      return;
-    }
-
-    normalized.push({
-      account_id: accountId,
-      date,
-      amount,
-      currency,
-      category,
-      description,
-      source: importSource,
-    });
-  });
-
-  if (normalized.length === 0) {
-    return c.json<TransactionCsvImportResponse>(
-      {
-        code: "validation_error",
-        error: errors[0] ?? "CSV rows are invalid.",
-        status: "error",
-      },
-      400,
-    );
-  }
-
-  const result = await importNormalizedRows(
-    normalized,
-    "transactions-csv",
-    supabase,
-    errors,
-  );
+  const result = await importTransactionsCsvRows(file, accountId, supabase, importSource);
   return c.json<TransactionCsvImportResponse>(result.response, result.status as 200 | 500);
 });
 
@@ -585,47 +646,7 @@ importRoutes.post(
       }
       const { supabase } = importContext;
 
-      const csvText = await file.text();
-      const parsedDividends = parseDividendsCsv(csvText, accountId);
-      const errors = [...parsedDividends.errors];
-      const divRows = parsedDividends.rows;
-
-      if (divRows.length === 0) {
-        return c.json<DividendImportResponse>(
-          { code: "validation_error", error: "No valid rows found.", status: "error" },
-          400,
-        );
-      }
-
-      const hashes = divRows.map((r) => r.source_hash);
-      const { data: existing } = await supabase
-        .from("dividends")
-        .select("source_hash")
-        .in("source_hash", hashes);
-      const { freshRows: newRows, skipped } = prepareDividendImportBatch(
-        divRows,
-        (existing ?? []).map((r: { source_hash: string }) => r.source_hash),
-      );
-
-      if (newRows.length > 0) {
-        const { error: insertError } = await supabase.from("dividends").insert(newRows);
-        if (insertError) {
-          return c.json<DividendImportResponse>(
-            { code: "database_error", error: insertError.message, status: "error" },
-            500,
-          );
-        }
-      }
-
-      return c.json<DividendImportResponse>({
-        source: "dividends-csv",
-        imported: newRows.length,
-        skipped,
-        failed: errors.length,
-        runtime: "cloudflare-worker",
-        persistence: "supabase",
-        status: "ok",
-        errors,
-      });
+      const importResult = await importDividendRows(file, accountId, supabase);
+      return c.json<DividendImportResponse>(importResult.response, importResult.status);
     })(),
 );
