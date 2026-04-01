@@ -97,6 +97,11 @@ export type ParseStockTradesResult = {
   errors: string[];
 };
 
+export type PrepareStockTradeImportBatchResult = {
+  freshTrades: StockTradeInput[];
+  skipped: number;
+};
+
 export function parseSinopacStockCsv(
   csvText: string,
   accountId: string,
@@ -174,4 +179,30 @@ export function parseSinopacStockCsv(
   });
 
   return { trades, errors };
+}
+
+export function prepareStockTradeImportBatch(
+  trades: StockTradeInput[],
+  existingSourceHashes: Iterable<string>,
+): PrepareStockTradeImportBatchResult {
+  const existingSet = new Set(existingSourceHashes);
+  const uniqueTrades = new Map<string, StockTradeInput>();
+  let duplicateRowsInPayload = 0;
+
+  for (const trade of trades) {
+    if (uniqueTrades.has(trade.source_hash)) {
+      duplicateRowsInPayload += 1;
+      continue;
+    }
+
+    uniqueTrades.set(trade.source_hash, trade);
+  }
+
+  const dedupedTrades = [...uniqueTrades.values()];
+  const freshTrades = dedupedTrades.filter((trade) => !existingSet.has(trade.source_hash));
+
+  return {
+    freshTrades,
+    skipped: duplicateRowsInPayload + (dedupedTrades.length - freshTrades.length),
+  };
 }

@@ -12,7 +12,7 @@ import { parseDividendsCsv, prepareDividendImportBatch } from "../lib/dividends"
 import { parseMonthlyExcel } from "../lib/excel-monthly";
 import { rebuildHoldingFromTrades } from "../lib/holdings";
 import { parseSinopacTransactionsCsv } from "../lib/sinopac";
-import { parseSinopacStockCsv } from "../lib/sinopac-stock";
+import { parseSinopacStockCsv, prepareStockTradeImportBatch } from "../lib/sinopac-stock";
 import { buildTransactionSourceHash } from "../lib/transaction-hash";
 import type { ApiEnv } from "../types";
 
@@ -851,8 +851,7 @@ importRoutes.post(
         source: "foreign-stock-csv" as const,
       }));
 
-      const dedupedTradeBatch = dedupeBySourceHash(normalizedTrades);
-      const sourceHashes = dedupedTradeBatch.rows.map((t) => t.source_hash);
+      const sourceHashes = normalizedTrades.map((t) => t.source_hash);
       const { data: existingRows, error: existingError } = await supabase
         .from("investment_trades")
         .select("source_hash")
@@ -865,11 +864,10 @@ importRoutes.post(
         );
       }
 
-      const existingHashes = new Set(
+      const { freshTrades, skipped } = prepareStockTradeImportBatch(
+        normalizedTrades,
         (existingRows ?? []).map((r: { source_hash: string }) => r.source_hash),
       );
-      const freshTrades = dedupedTradeBatch.rows.filter((t) => !existingHashes.has(t.source_hash));
-      const skipped = dedupedTradeBatch.duplicateRowsInPayload + (dedupedTradeBatch.rows.length - freshTrades.length);
 
       if (freshTrades.length > 0) {
         const { error: insertError } = await supabase.from("investment_trades").upsert(

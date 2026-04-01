@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { parseDividendsCsv, prepareDividendImportBatch } from "../src/lib/dividends";
 import { rebuildHoldingFromTrades } from "../src/lib/holdings";
-import { parseSinopacStockCsv } from "../src/lib/sinopac-stock";
+import { parseSinopacStockCsv, prepareStockTradeImportBatch } from "../src/lib/sinopac-stock";
 
 test("dividends csv golden: normalizes valid rows and builds stable source hashes", () => {
   const result = parseDividendsCsv(
@@ -179,6 +179,49 @@ test("sinopac stock csv golden: keeps parsing valid rows while surfacing invalid
   assert.equal(result.trades.length, 1);
   assert.equal(result.trades[0]?.ticker, "QQQ");
   assert.equal(result.errors.length, 2);
+});
+
+test("stock import batch golden: removes payload duplicates and existing hashes", () => {
+  const parsed = parseSinopacStockCsv(
+    [
+      "date,ticker,name,action,shares,price,fee,tax,currency",
+      "1130103,2330,TSMC,buy,2,610,1,0,TWD",
+      "1130103,2330,TSMC,buy,2,610,1,0,TWD",
+      "2026-03-28,VOO,Vanguard S&P 500 ETF,sell,3,25.5,1,0,USD",
+    ].join("\n"),
+    "account-stock",
+  );
+
+  const normalizedTrades = parsed.trades.map((trade) => ({
+    ...trade,
+    source: "foreign-stock-csv",
+  }));
+  const result = prepareStockTradeImportBatch(normalizedTrades, [normalizedTrades[0]!.source_hash]);
+
+  assert.equal(result.freshTrades.length, 1);
+  assert.equal(result.freshTrades[0]?.ticker, "VOO");
+  assert.equal(result.freshTrades[0]?.source, "foreign-stock-csv");
+  assert.equal(result.skipped, 2);
+});
+
+test("stock import batch golden: keeps all unique trades when no existing hashes match", () => {
+  const parsed = parseSinopacStockCsv(
+    [
+      "date,ticker,name,action,shares,price,fee,tax,currency",
+      "1130103,2330,TSMC,buy,2,610,1,0,TWD",
+      "2026-03-28,VOO,Vanguard S&P 500 ETF,sell,3,25.5,1,0,USD",
+    ].join("\n"),
+    "account-stock",
+  );
+
+  const normalizedTrades = parsed.trades.map((trade) => ({
+    ...trade,
+    source: "foreign-stock-csv",
+  }));
+  const result = prepareStockTradeImportBatch(normalizedTrades, []);
+
+  assert.equal(result.freshTrades.length, 2);
+  assert.equal(result.skipped, 0);
 });
 
 test("holding rebuild golden: buy trades produce weighted average cost", () => {
