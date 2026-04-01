@@ -8,10 +8,12 @@
 - [x] Aligned `sinopac-stock` with shared stock-import batch and holding rebuild helpers
 - [x] Extracted shared holdings refresh orchestration for stock import routes
 - [x] Extracted shared stock import execution flow for the two stock import routes
-- [ ] Continue thinning `apps/api/src/routes/import.ts` where route-owned DB write logic still duplicates across import families
+- [x] Routes now delegate stock import DB orchestration through `stock-import.ts`
+- [x] Extracted shared import preflight helpers for auth/form/account ownership checks in `apps/api/src/routes/import.ts`
+- [ ] Continue thinning `apps/api/src/routes/import.ts` where route-owned parse/response shaping logic still duplicates across import families
 - [ ] Keep structured memory and daily logs in sync going forward
 
 ## Context
-- **Recent achievements**: both stock import routes now share a full stock-import execution helper, so the routes mainly own auth, account selection, and source-specific parsing.
+- **Recent achievements**: stock routes now delegate their DB orchestration through `apps/api/src/lib/stock-import.ts`, and all import routes now share the same preflight helpers for file validation plus owned-account resolution.
 - **Validation baseline**: `npm.cmd --workspace @hearth/api run build` and `npm.cmd --workspace @hearth/api run test` both pass after the cleanup.
-- **Next steps**: Continue using helper extraction plus golden tests to shrink `import.ts`, and keep structured memory plus daily logs synchronized with those refactors.
+- **Next steps**: Continue using helper extraction plus golden tests to shrink `import.ts`, with the next obvious target being parse/result-shaping duplication rather than preflight duplication.

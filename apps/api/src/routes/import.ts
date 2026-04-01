@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Context, Hono } from "hono";
 import type {
   CreateTransactionInput,
   DividendImportResponse,
@@ -27,6 +27,69 @@ const createImportStub = (source: string) => ({
 });
 
 export const importRoutes = new Hono<ApiEnv>();
+type ImportRouteContext = Context<ApiEnv>;
+
+type ImportErrorResponse = {
+  code: "unauthorized" | "validation_error" | "database_error";
+  error: string;
+  status: "error";
+};
+
+function unauthorizedImportResponse(): ImportErrorResponse {
+  return {
+    code: "unauthorized",
+    error: "Missing or invalid Supabase bearer token.",
+    status: "error",
+  };
+}
+
+function validationImportResponse(error: string): ImportErrorResponse {
+  return {
+    code: "validation_error",
+    error,
+    status: "error",
+  };
+}
+
+function databaseImportResponse(error: string): ImportErrorResponse {
+  return {
+    code: "database_error",
+    error,
+    status: "error",
+  };
+}
+
+async function readOwnedImportFile(
+  c: ImportRouteContext,
+  fileLabel: "CSV" | "Excel",
+) {
+  const formData = await c.req.formData();
+  const accountId = String(formData.get("account_id") ?? "").trim();
+  const file = formData.get("file");
+
+  if (!accountId) {
+    return {
+      ok: false as const,
+      error: validationImportResponse("account_id is required."),
+      status: 400 as const,
+    };
+  }
+
+  if (!(file instanceof File)) {
+    return {
+      ok: false as const,
+      error: validationImportResponse(`${fileLabel} file is required.`),
+      status: 400 as const,
+    };
+  }
+
+  return {
+    ok: true as const,
+    accountId,
+    file,
+    formData,
+  };
+}
 
 async function resolveOwnedAccountIds(
   userId: string,
@@ -43,6 +106,42 @@ async function resolveOwnedAccountIds(
     supabase,
     ownedAccounts,
     accountsError,
+  };
+}
+
+async function resolveOwnedImportContext(
+  c: ImportRouteContext,
+  userId: string,
+  accountId: string,
+) {
+  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
+  const { supabase, ownedAccounts, accountsError } = await resolveOwnedAccountIds(
+    userId,
+    createSupabaseAdminClient,
+    c.env,
+  );
+
+  if (accountsError) {
+    return {
+      ok: false as const,
+      error: databaseImportResponse(accountsError.message),
+      status: 500 as const,
+    };
+  }
+
+  const accountIds = new Set((ownedAccounts ?? []).map((account: { id: string }) => account.id));
+  if (!accountIds.has(accountId)) {
+    return {
+      ok: false as const,
+      error: validationImportResponse("Selected account does not belong to the current user."),
+      status: 400 as const,
+    };
+  }
+
+  return {
+    ok: true as const,
+    supabase,
+    accountIds,
   };
 }
 
@@ -150,72 +249,22 @@ importRoutes.post("/transactions-csv", async (c) => {
   const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
   const user = await resolveAuthenticatedUser(c.req.raw, c.env);
   if (!user) {
-    return c.json<TransactionCsvImportResponse>(
-      {
-        code: "unauthorized",
-        error: "Missing or invalid Supabase bearer token.",
-        status: "error",
-      },
-      401,
-    );
+    return c.json<TransactionCsvImportResponse>(unauthorizedImportResponse(), 401);
   }
 
-  const formData = await c.req.formData();
-  const accountId = String(formData.get("account_id") ?? "").trim();
-  const file = formData.get("file");
+  const requestData = await readOwnedImportFile(c, "CSV");
+  if (!requestData.ok) {
+    return c.json<TransactionCsvImportResponse>(requestData.error, requestData.status);
+  }
+
+  const { accountId, file, formData } = requestData;
   const importSource = resolveTransactionsCsvSource(formData.get("source"));
 
-  if (!accountId) {
-    return c.json<TransactionCsvImportResponse>(
-      {
-        code: "validation_error",
-        error: "account_id is required.",
-        status: "error",
-      },
-      400,
-    );
+  const importContext = await resolveOwnedImportContext(c, user.id, accountId);
+  if (!importContext.ok) {
+    return c.json<TransactionCsvImportResponse>(importContext.error, importContext.status);
   }
-
-  if (!(file instanceof File)) {
-    return c.json<TransactionCsvImportResponse>(
-      {
-        code: "validation_error",
-        error: "CSV file is required.",
-        status: "error",
-      },
-      400,
-    );
-  }
-
-  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
-  const { supabase, ownedAccounts, accountsError } = await resolveOwnedAccountIds(
-    user.id,
-    createSupabaseAdminClient,
-    c.env,
-  );
-
-  if (accountsError) {
-    return c.json<TransactionCsvImportResponse>(
-      {
-        code: "database_error",
-        error: accountsError.message,
-        status: "error",
-      },
-      500,
-    );
-  }
-
-  const accountIds = new Set((ownedAccounts ?? []).map((account: { id: string }) => account.id));
-  if (!accountIds.has(accountId)) {
-    return c.json<TransactionCsvImportResponse>(
-      {
-        code: "validation_error",
-        error: "Selected account does not belong to the current user.",
-        status: "error",
-      },
-      400,
-    );
-  }
+  const { supabase } = importContext;
 
   const text = await file.text();
   const rows = parseCsv(text);
@@ -286,71 +335,20 @@ importRoutes.post("/sinopac-tw", async (c) => {
   const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
   const user = await resolveAuthenticatedUser(c.req.raw, c.env);
   if (!user) {
-    return c.json<TransactionCsvImportResponse>(
-      {
-        code: "unauthorized",
-        error: "Missing or invalid Supabase bearer token.",
-        status: "error",
-      },
-      401,
-    );
+    return c.json<TransactionCsvImportResponse>(unauthorizedImportResponse(), 401);
   }
 
-  const formData = await c.req.formData();
-  const accountId = String(formData.get("account_id") ?? "").trim();
-  const file = formData.get("file");
-
-  if (!accountId) {
-    return c.json<TransactionCsvImportResponse>(
-      {
-        code: "validation_error",
-        error: "account_id is required.",
-        status: "error",
-      },
-      400,
-    );
+  const requestData = await readOwnedImportFile(c, "CSV");
+  if (!requestData.ok) {
+    return c.json<TransactionCsvImportResponse>(requestData.error, requestData.status);
   }
+  const { accountId, file } = requestData;
 
-  if (!(file instanceof File)) {
-    return c.json<TransactionCsvImportResponse>(
-      {
-        code: "validation_error",
-        error: "CSV file is required.",
-        status: "error",
-      },
-      400,
-    );
+  const importContext = await resolveOwnedImportContext(c, user.id, accountId);
+  if (!importContext.ok) {
+    return c.json<TransactionCsvImportResponse>(importContext.error, importContext.status);
   }
-
-  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
-  const { supabase, ownedAccounts, accountsError } = await resolveOwnedAccountIds(
-    user.id,
-    createSupabaseAdminClient,
-    c.env,
-  );
-
-  if (accountsError) {
-    return c.json<TransactionCsvImportResponse>(
-      {
-        code: "database_error",
-        error: accountsError.message,
-        status: "error",
-      },
-      500,
-    );
-  }
-
-  const accountIds = new Set((ownedAccounts ?? []).map((account: { id: string }) => account.id));
-  if (!accountIds.has(accountId)) {
-    return c.json<TransactionCsvImportResponse>(
-      {
-        code: "validation_error",
-        error: "Selected account does not belong to the current user.",
-        status: "error",
-      },
-      400,
-    );
-  }
+  const { supabase } = importContext;
 
   const text = await file.text();
   const { normalized, errors, skipped } = parseSinopacTransactionsCsv(text, accountId);
@@ -379,71 +377,20 @@ importRoutes.post("/credit-card-tw", async (c) => {
   const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
   const user = await resolveAuthenticatedUser(c.req.raw, c.env);
   if (!user) {
-    return c.json<TransactionCsvImportResponse>(
-      {
-        code: "unauthorized",
-        error: "Missing or invalid Supabase bearer token.",
-        status: "error",
-      },
-      401,
-    );
+    return c.json<TransactionCsvImportResponse>(unauthorizedImportResponse(), 401);
   }
 
-  const formData = await c.req.formData();
-  const accountId = String(formData.get("account_id") ?? "").trim();
-  const file = formData.get("file");
-
-  if (!accountId) {
-    return c.json<TransactionCsvImportResponse>(
-      {
-        code: "validation_error",
-        error: "account_id is required.",
-        status: "error",
-      },
-      400,
-    );
+  const requestData = await readOwnedImportFile(c, "CSV");
+  if (!requestData.ok) {
+    return c.json<TransactionCsvImportResponse>(requestData.error, requestData.status);
   }
+  const { accountId, file } = requestData;
 
-  if (!(file instanceof File)) {
-    return c.json<TransactionCsvImportResponse>(
-      {
-        code: "validation_error",
-        error: "CSV file is required.",
-        status: "error",
-      },
-      400,
-    );
+  const importContext = await resolveOwnedImportContext(c, user.id, accountId);
+  if (!importContext.ok) {
+    return c.json<TransactionCsvImportResponse>(importContext.error, importContext.status);
   }
-
-  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
-  const { supabase, ownedAccounts, accountsError } = await resolveOwnedAccountIds(
-    user.id,
-    createSupabaseAdminClient,
-    c.env,
-  );
-
-  if (accountsError) {
-    return c.json<TransactionCsvImportResponse>(
-      {
-        code: "database_error",
-        error: accountsError.message,
-        status: "error",
-      },
-      500,
-    );
-  }
-
-  const accountIds = new Set((ownedAccounts ?? []).map((account: { id: string }) => account.id));
-  if (!accountIds.has(accountId)) {
-    return c.json<TransactionCsvImportResponse>(
-      {
-        code: "validation_error",
-        error: "Selected account does not belong to the current user.",
-        status: "error",
-      },
-      400,
-    );
-  }
+  const { supabase } = importContext;
 
   const text = await file.text();
   const { normalized, errors, skipped } = parseCreditCardTransactionsCsv(text, accountId);
@@ -472,71 +419,20 @@ importRoutes.post("/excel-monthly", (c) =>
     const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
     const user = await resolveAuthenticatedUser(c.req.raw, c.env);
     if (!user) {
-      return c.json<TransactionCsvImportResponse>(
-        {
-          code: "unauthorized",
-          error: "Missing or invalid Supabase bearer token.",
-          status: "error",
-        },
-        401,
-      );
+      return c.json<TransactionCsvImportResponse>(unauthorizedImportResponse(), 401);
     }
 
-    const formData = await c.req.formData();
-    const accountId = String(formData.get("account_id") ?? "").trim();
-    const file = formData.get("file");
-
-    if (!accountId) {
-      return c.json<TransactionCsvImportResponse>(
-        {
-          code: "validation_error",
-          error: "account_id is required.",
-          status: "error",
-        },
-        400,
-      );
+    const requestData = await readOwnedImportFile(c, "Excel");
+    if (!requestData.ok) {
+      return c.json<TransactionCsvImportResponse>(requestData.error, requestData.status);
     }
+    const { accountId, file } = requestData;
 
-    if (!(file instanceof File)) {
-      return c.json<TransactionCsvImportResponse>(
-        {
-          code: "validation_error",
-          error: "Excel file is required.",
-          status: "error",
-        },
-        400,
-      );
+    const importContext = await resolveOwnedImportContext(c, user.id, accountId);
+    if (!importContext.ok) {
+      return c.json<TransactionCsvImportResponse>(importContext.error, importContext.status);
     }
-
-    const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
-    const { supabase, ownedAccounts, accountsError } = await resolveOwnedAccountIds(
-      user.id,
-      createSupabaseAdminClient,
-      c.env,
-    );
-
-    if (accountsError) {
-      return c.json<TransactionCsvImportResponse>(
-        {
-          code: "database_error",
-          error: accountsError.message,
-          status: "error",
-        },
-        500,
-      );
-    }
-
-    const accountIds = new Set((ownedAccounts ?? []).map((account: { id: string }) => account.id));
-    if (!accountIds.has(accountId)) {
-      return c.json<TransactionCsvImportResponse>(
-        {
-          code: "validation_error",
-          error: "Selected account does not belong to the current user.",
-          status: "error",
-        },
-        400,
-      );
-    }
+    const { supabase } = importContext;
 
     const buffer = await file.arrayBuffer();
     const { normalized, errors, skipped, warnings, recurringCandidates } = parseMonthlyExcel(buffer, accountId);
@@ -571,51 +467,20 @@ importRoutes.post(
       const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
       const user = await resolveAuthenticatedUser(c.req.raw, c.env);
       if (!user) {
-        return c.json<StockTradeImportResponse>(
-          { code: "unauthorized", error: "Missing or invalid Supabase bearer token.", status: "error" },
-          401,
-        );
+        return c.json<StockTradeImportResponse>(unauthorizedImportResponse(), 401);
       }
 
-      const formData = await c.req.formData();
-      const accountId = String(formData.get("account_id") ?? "").trim();
-      const file = formData.get("file");
-
-      if (!accountId) {
-        return c.json<StockTradeImportResponse>(
-          { code: "validation_error", error: "account_id is required.", status: "error" },
-          400,
-        );
+      const requestData = await readOwnedImportFile(c, "CSV");
+      if (!requestData.ok) {
+        return c.json<StockTradeImportResponse>(requestData.error, requestData.status);
       }
+      const { accountId, file } = requestData;
 
-      if (!(file instanceof File)) {
-        return c.json<StockTradeImportResponse>(
-          { code: "validation_error", error: "CSV file is required.", status: "error" },
-          400,
-        );
+      const importContext = await resolveOwnedImportContext(c, user.id, accountId);
+      if (!importContext.ok) {
+        return c.json<StockTradeImportResponse>(importContext.error, importContext.status);
       }
-
-      const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
-      const { supabase, ownedAccounts, accountsError } = await resolveOwnedAccountIds(
-        user.id,
-        createSupabaseAdminClient,
-        c.env,
-      );
-
-      if (accountsError) {
-        return c.json<StockTradeImportResponse>(
-          { code: "database_error", error: accountsError.message, status: "error" },
-          500,
-        );
-      }
-
-      const accountIds = new Set((ownedAccounts ?? []).map((a: { id: string }) => a.id));
-      if (!accountIds.has(accountId)) {
-        return c.json<StockTradeImportResponse>(
-          { code: "validation_error", error: "Selected account does not belong to the current user.", status: "error" },
-          400,
-        );
-      }
+      const { supabase } = importContext;
 
       const text = await file.text();
       const { trades, errors } = parseSinopacStockCsv(text, accountId);
@@ -645,51 +510,20 @@ importRoutes.post(
       const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
       const user = await resolveAuthenticatedUser(c.req.raw, c.env);
       if (!user) {
-        return c.json<StockTradeImportResponse>(
-          { code: "unauthorized", error: "Missing or invalid Supabase bearer token.", status: "error" },
-          401,
-        );
+        return c.json<StockTradeImportResponse>(unauthorizedImportResponse(), 401);
       }
 
-      const formData = await c.req.formData();
-      const accountId = String(formData.get("account_id") ?? "").trim();
-      const file = formData.get("file");
-
-      if (!accountId) {
-        return c.json<StockTradeImportResponse>(
-          { code: "validation_error", error: "account_id is required.", status: "error" },
-          400,
-        );
+      const requestData = await readOwnedImportFile(c, "CSV");
+      if (!requestData.ok) {
+        return c.json<StockTradeImportResponse>(requestData.error, requestData.status);
       }
+      const { accountId, file } = requestData;
 
-      if (!(file instanceof File)) {
-        return c.json<StockTradeImportResponse>(
-          { code: "validation_error", error: "CSV file is required.", status: "error" },
-          400,
-        );
+      const importContext = await resolveOwnedImportContext(c, user.id, accountId);
+      if (!importContext.ok) {
+        return c.json<StockTradeImportResponse>(importContext.error, importContext.status);
       }
-
-      const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
-      const { supabase, ownedAccounts, accountsError } = await resolveOwnedAccountIds(
-        user.id,
-        createSupabaseAdminClient,
-        c.env,
-      );
-
-      if (accountsError) {
-        return c.json<StockTradeImportResponse>(
-          { code: "database_error", error: accountsError.message, status: "error" },
-          500,
-        );
-      }
-
-      const accountIds = new Set((ownedAccounts ?? []).map((a: { id: string }) => a.id));
-      if (!accountIds.has(accountId)) {
-        return c.json<StockTradeImportResponse>(
-          { code: "validation_error", error: "Selected account does not belong to the current user.", status: "error" },
-          400,
-        );
-      }
+      const { supabase } = importContext;
 
       const text = await file.text();
       const { trades, errors } = parseSinopacStockCsv(text, accountId);
@@ -726,44 +560,20 @@ importRoutes.post(
       const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
       const user = await resolveAuthenticatedUser(c.req.raw, c.env);
       if (!user) {
-        return c.json<DividendImportResponse>(
-          { code: "unauthorized", error: "Missing or invalid Supabase bearer token.", status: "error" },
-          401,
-        );
+        return c.json<DividendImportResponse>(unauthorizedImportResponse(), 401);
       }
 
-      const formData = await c.req.formData();
-      const accountId = String(formData.get("account_id") ?? "").trim();
-      const file = formData.get("file");
-
-      if (!accountId || !(file instanceof File)) {
-        return c.json<DividendImportResponse>(
-          { code: "validation_error", error: "account_id and file are required.", status: "error" },
-          400,
-        );
+      const requestData = await readOwnedImportFile(c, "CSV");
+      if (!requestData.ok) {
+        return c.json<DividendImportResponse>(requestData.error, requestData.status);
       }
+      const { accountId, file } = requestData;
 
-      const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
-      const { supabase, ownedAccounts, accountsError } = await resolveOwnedAccountIds(
-        user.id,
-        createSupabaseAdminClient,
-        c.env,
-      );
-
-      if (accountsError) {
-        return c.json<DividendImportResponse>(
-          { code: "database_error", error: accountsError.message, status: "error" },
-          500,
-        );
+      const importContext = await resolveOwnedImportContext(c, user.id, accountId);
+      if (!importContext.ok) {
+        return c.json<DividendImportResponse>(importContext.error, importContext.status);
       }
-
-      const accountIds = new Set((ownedAccounts ?? []).map((account: { id: string }) => account.id));
-      if (!accountIds.has(accountId)) {
-        return c.json<DividendImportResponse>(
-          { code: "validation_error", error: "Selected account does not belong to the current user.", status: "error" },
-          400,
-        );
-      }
+      const { supabase } = importContext;
 
       const csvText = await file.text();
       const parsedDividends = parseDividendsCsv(csvText, accountId);

@@ -22,6 +22,7 @@
   - `81/81`
   - `83/83`
   - `85/85`
+  - `87/87`
 - Scope covered:
   - user-settings secret handling
   - migration baseline setup
@@ -32,6 +33,7 @@
   - `sinopac-stock` route refactor onto shared batch + holding helpers
   - shared holdings refresh orchestration plus new helper-level portfolio tests
   - shared stock-import execution helper with route-level regression coverage still green
+  - shared import-route preflight helpers for file validation and owned-account resolution
 
 ## Review Notes
 
