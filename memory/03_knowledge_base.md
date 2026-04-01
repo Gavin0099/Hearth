@@ -8,6 +8,7 @@
 - `dividends-csv` now follows the tested shared helper path end-to-end: parser normalization plus batch diffing.
 - `sinopac-stock` now also uses the shared stock batch-preparation and holding rebuild helpers, so the two stock import routes no longer diverge on duplicate handling or weighted-cost logic.
 - Holdings refresh orchestration now lives in `apps/api/src/lib/holdings.ts`, including persistence-trade normalization and per-ticker upsert/delete behavior.
+- Stock-import route orchestration now lives in `apps/api/src/lib/stock-import.ts`, which owns existing-hash lookup, fresh-trade upsert, holdings refresh, and response shaping.
 - `import.ts` still contains other older route-owned branches and some legacy text noise, so continue refactors as focused slices with build/test verification.
 
 ### Web check blocker

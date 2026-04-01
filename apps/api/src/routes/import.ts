@@ -10,9 +10,9 @@ import { parseCsv } from "../lib/csv";
 import { parseCreditCardTransactionsCsv } from "../lib/credit-card";
 import { parseDividendsCsv, prepareDividendImportBatch } from "../lib/dividends";
 import { parseMonthlyExcel } from "../lib/excel-monthly";
-import { refreshHoldingsForTickers } from "../lib/holdings";
 import { parseSinopacTransactionsCsv } from "../lib/sinopac";
-import { parseSinopacStockCsv, prepareStockTradeImportBatch } from "../lib/sinopac-stock";
+import { parseSinopacStockCsv } from "../lib/sinopac-stock";
+import { executeStockTradeImport } from "../lib/stock-import";
 import { buildTransactionImportRows, prepareTransactionImportBatch } from "../lib/transaction-import";
 import type { ApiEnv } from "../types";
 
@@ -627,65 +627,14 @@ importRoutes.post(
         );
       }
 
-      const sourceHashes = trades.map((trade) => trade.source_hash);
-      const { data: existingRows, error: existingError } = await supabase
-        .from("investment_trades")
-        .select("source_hash")
-        .in("source_hash", sourceHashes);
-
-      if (existingError) {
-        return c.json<StockTradeImportResponse>(
-          { code: "database_error", error: existingError.message, status: "error" },
-          500,
-        );
-      }
-
-      const { freshTrades, skipped } = prepareStockTradeImportBatch(
-        trades,
-        (existingRows ?? []).map((row: { source_hash: string }) => row.source_hash),
-      );
-
-      if (freshTrades.length > 0) {
-        const { error: insertError } = await supabase.from("investment_trades").upsert(
-          freshTrades.map((t) => ({
-            account_id: t.account_id,
-            trade_date: t.trade_date,
-            ticker: t.ticker,
-            name: t.name,
-            action: t.action,
-            shares: t.shares,
-            price_per_share: t.price_per_share,
-            fee: t.fee,
-            tax: t.tax,
-            currency: t.currency,
-            source: t.source,
-            source_hash: t.source_hash,
-          })),
-          { onConflict: "source_hash", ignoreDuplicates: true },
-        );
-
-        if (insertError) {
-          return c.json<StockTradeImportResponse>(
-            { code: "database_error", error: insertError.message, status: "error" },
-            500,
-          );
-        }
-      }
-
-      const affectedTickers = [...new Set(freshTrades.map((t) => t.ticker))];
-      const { holdingsRecalculated } = await refreshHoldingsForTickers(supabase, accountId, affectedTickers);
-
-      return c.json<StockTradeImportResponse>({
+      const importResult = await executeStockTradeImport({
+        supabase,
+        accountId,
         source: "sinopac-stock",
-        imported: freshTrades.length,
-        skipped,
-        failed: errors.length,
-        holdingsRecalculated,
-        runtime: "cloudflare-worker",
-        persistence: "supabase",
-        status: "ok",
+        trades,
         errors,
       });
+      return c.json<StockTradeImportResponse>(importResult.response, importResult.status);
     })(),
 );
 
@@ -757,65 +706,14 @@ importRoutes.post(
         source: "foreign-stock-csv" as const,
       }));
 
-      const sourceHashes = normalizedTrades.map((t) => t.source_hash);
-      const { data: existingRows, error: existingError } = await supabase
-        .from("investment_trades")
-        .select("source_hash")
-        .in("source_hash", sourceHashes);
-
-      if (existingError) {
-        return c.json<StockTradeImportResponse>(
-          { code: "database_error", error: existingError.message, status: "error" },
-          500,
-        );
-      }
-
-      const { freshTrades, skipped } = prepareStockTradeImportBatch(
-        normalizedTrades,
-        (existingRows ?? []).map((r: { source_hash: string }) => r.source_hash),
-      );
-
-      if (freshTrades.length > 0) {
-        const { error: insertError } = await supabase.from("investment_trades").upsert(
-          freshTrades.map((t) => ({
-            account_id: t.account_id,
-            trade_date: t.trade_date,
-            ticker: t.ticker,
-            name: t.name,
-            action: t.action,
-            shares: t.shares,
-            price_per_share: t.price_per_share,
-            fee: t.fee,
-            tax: t.tax,
-            currency: t.currency,
-            source: t.source,
-            source_hash: t.source_hash,
-          })),
-          { onConflict: "source_hash", ignoreDuplicates: true },
-        );
-
-        if (insertError) {
-          return c.json<StockTradeImportResponse>(
-            { code: "database_error", error: insertError.message, status: "error" },
-            500,
-          );
-        }
-      }
-
-      const affectedTickers = [...new Set(freshTrades.map((t) => t.ticker))];
-      const { holdingsRecalculated } = await refreshHoldingsForTickers(supabase, accountId, affectedTickers);
-
-      return c.json<StockTradeImportResponse>({
+      const importResult = await executeStockTradeImport({
+        supabase,
+        accountId,
         source: "foreign-stock-csv",
-        imported: freshTrades.length,
-        skipped,
-        failed: errors.length,
-        holdingsRecalculated,
-        runtime: "cloudflare-worker",
-        persistence: "supabase",
-        status: "ok",
+        trades: normalizedTrades,
         errors,
       });
+      return c.json<StockTradeImportResponse>(importResult.response, importResult.status);
     })(),
 );
 
