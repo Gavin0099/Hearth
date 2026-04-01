@@ -35,6 +35,14 @@ type ImportErrorResponse = {
   status: "error";
 };
 
+type ParsedTransactionImport = {
+  normalized: CreateTransactionInput[];
+  errors: string[];
+  skipped: number;
+  warnings?: string[];
+  recurringCandidates?: RecurringImportCandidate[];
+};
+
 function unauthorizedImportResponse(): ImportErrorResponse {
   return {
     code: "unauthorized",
@@ -221,6 +229,71 @@ async function importNormalizedRows(
   };
 }
 
+async function importParsedTransactionRows(
+  file: File,
+  accountId: string,
+  supabase: any,
+  source: "sinopac-tw" | "credit-card-tw" | "excel-monthly",
+  invalidMessage: string,
+  parse: (payload: string | ArrayBuffer, accountId: string) => ParsedTransactionImport,
+) {
+  const payload = source === "excel-monthly" ? await file.arrayBuffer() : await file.text();
+  const {
+    normalized,
+    errors,
+    skipped,
+    warnings = [],
+    recurringCandidates = [],
+  } = parse(payload, accountId);
+
+  if (normalized.length === 0) {
+    return {
+      response: validationImportResponse(errors[0] ?? invalidMessage),
+      status: 400 as const,
+    };
+  }
+
+  return importNormalizedRows(
+    normalized,
+    source,
+    supabase,
+    errors,
+    skipped,
+    warnings,
+    recurringCandidates,
+  );
+}
+
+async function importParsedStockTrades(
+  file: File,
+  accountId: string,
+  supabase: any,
+  source: "sinopac-stock" | "foreign-stock-csv",
+  invalidMessage: string,
+) {
+  const text = await file.text();
+  const { trades, errors } = parseSinopacStockCsv(text, accountId);
+
+  if (trades.length === 0) {
+    return {
+      response: validationImportResponse(errors[0] ?? invalidMessage),
+      status: 400 as const,
+    };
+  }
+
+  const importResult = await executeStockTradeImport({
+    supabase,
+    accountId,
+    source,
+    trades: source === "foreign-stock-csv"
+      ? trades.map((trade) => ({ ...trade, source: "foreign-stock-csv" as const }))
+      : trades,
+    errors,
+  });
+
+  return importResult;
+}
+
 function resolveTransactionsCsvSource(rawValue: FormDataEntryValue | null) {
   const value = String(rawValue ?? "").trim();
   if (!value) {
@@ -350,25 +423,13 @@ importRoutes.post("/sinopac-tw", async (c) => {
   }
   const { supabase } = importContext;
 
-  const text = await file.text();
-  const { normalized, errors, skipped } = parseSinopacTransactionsCsv(text, accountId);
-  if (normalized.length === 0) {
-    return c.json<TransactionCsvImportResponse>(
-      {
-        code: "validation_error",
-        error: errors[0] ?? "Sinopac CSV rows are invalid.",
-        status: "error",
-      },
-      400,
-    );
-  }
-
-  const result = await importNormalizedRows(
-    normalized,
-    "sinopac-tw",
+  const result = await importParsedTransactionRows(
+    file,
+    accountId,
     supabase,
-    errors,
-    skipped,
+    "sinopac-tw",
+    "Sinopac CSV rows are invalid.",
+    (payload, ownedAccountId) => parseSinopacTransactionsCsv(String(payload), ownedAccountId),
   );
   return c.json<TransactionCsvImportResponse>(result.response, result.status as 200 | 500);
 });
@@ -392,25 +453,13 @@ importRoutes.post("/credit-card-tw", async (c) => {
   }
   const { supabase } = importContext;
 
-  const text = await file.text();
-  const { normalized, errors, skipped } = parseCreditCardTransactionsCsv(text, accountId);
-  if (normalized.length === 0) {
-    return c.json<TransactionCsvImportResponse>(
-      {
-        code: "validation_error",
-        error: errors[0] ?? "Credit card CSV rows are invalid.",
-        status: "error",
-      },
-      400,
-    );
-  }
-
-  const result = await importNormalizedRows(
-    normalized,
-    "credit-card-tw",
+  const result = await importParsedTransactionRows(
+    file,
+    accountId,
     supabase,
-    errors,
-    skipped,
+    "credit-card-tw",
+    "Credit card CSV rows are invalid.",
+    (payload, ownedAccountId) => parseCreditCardTransactionsCsv(String(payload), ownedAccountId),
   );
   return c.json<TransactionCsvImportResponse>(result.response, result.status as 200 | 500);
 });
@@ -434,27 +483,13 @@ importRoutes.post("/excel-monthly", (c) =>
     }
     const { supabase } = importContext;
 
-    const buffer = await file.arrayBuffer();
-    const { normalized, errors, skipped, warnings, recurringCandidates } = parseMonthlyExcel(buffer, accountId);
-    if (normalized.length === 0) {
-      return c.json<TransactionCsvImportResponse>(
-        {
-          code: "validation_error",
-          error: errors[0] ?? "Excel workbook rows are invalid.",
-          status: "error",
-        },
-        400,
-      );
-    }
-
-    const result = await importNormalizedRows(
-      normalized,
-      "excel-monthly",
+    const result = await importParsedTransactionRows(
+      file,
+      accountId,
       supabase,
-      errors,
-      skipped,
-      warnings,
-      recurringCandidates,
+      "excel-monthly",
+      "Excel workbook rows are invalid.",
+      (payload, ownedAccountId) => parseMonthlyExcel(payload as ArrayBuffer, ownedAccountId),
     );
     return c.json<TransactionCsvImportResponse>(result.response, result.status as 200 | 500);
   })(),
@@ -482,23 +517,13 @@ importRoutes.post(
       }
       const { supabase } = importContext;
 
-      const text = await file.text();
-      const { trades, errors } = parseSinopacStockCsv(text, accountId);
-
-      if (trades.length === 0) {
-        return c.json<StockTradeImportResponse>(
-          { code: "validation_error", error: errors[0] ?? "CSV rows are invalid.", status: "error" },
-          400,
-        );
-      }
-
-      const importResult = await executeStockTradeImport({
-        supabase,
+      const importResult = await importParsedStockTrades(
+        file,
         accountId,
-        source: "sinopac-stock",
-        trades,
-        errors,
-      });
+        supabase,
+        "sinopac-stock",
+        "CSV rows are invalid.",
+      );
       return c.json<StockTradeImportResponse>(importResult.response, importResult.status);
     })(),
 );
@@ -525,28 +550,13 @@ importRoutes.post(
       }
       const { supabase } = importContext;
 
-      const text = await file.text();
-      const { trades, errors } = parseSinopacStockCsv(text, accountId);
-
-      if (trades.length === 0) {
-        return c.json<StockTradeImportResponse>(
-          { code: "validation_error", error: errors[0] ?? "Foreign stock CSV rows are invalid.", status: "error" },
-          400,
-        );
-      }
-
-      const normalizedTrades = trades.map((trade) => ({
-        ...trade,
-        source: "foreign-stock-csv" as const,
-      }));
-
-      const importResult = await executeStockTradeImport({
-        supabase,
+      const importResult = await importParsedStockTrades(
+        file,
         accountId,
-        source: "foreign-stock-csv",
-        trades: normalizedTrades,
-        errors,
-      });
+        supabase,
+        "foreign-stock-csv",
+        "Foreign stock CSV rows are invalid.",
+      );
       return c.json<StockTradeImportResponse>(importResult.response, importResult.status);
     })(),
 );

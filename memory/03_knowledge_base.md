@@ -10,6 +10,7 @@
 - Holdings refresh orchestration now lives in `apps/api/src/lib/holdings.ts`, including persistence-trade normalization and per-ticker upsert/delete behavior.
 - Stock-import route orchestration now lives in `apps/api/src/lib/stock-import.ts`, which owns existing-hash lookup, fresh-trade upsert, holdings refresh, and response shaping.
 - Import-route preflight now also has shared helpers inside `apps/api/src/routes/import.ts` for unauthorized responses, `account_id` / file validation, and owned-account resolution.
+- Transaction and stock import routes now also share route-local parse/result helpers in `apps/api/src/routes/import.ts`, so `sinopac-tw`, `credit-card-tw`, `excel-monthly`, `sinopac-stock`, and `foreign-stock-csv` no longer each carry their own parse-empty-import-response boilerplate.
 - `import.ts` still contains other older route-owned branches and some legacy text noise, so continue refactors as focused slices with build/test verification.
 
 ### Web check blocker
