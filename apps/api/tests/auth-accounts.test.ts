@@ -2013,6 +2013,92 @@ test("POST /api/import/preview returns parser-backed preview for credit-card-tw"
   });
 });
 
+test("POST /api/import/preview rejects accounts outside the authenticated user's scope", async () => {
+  const formData = new FormData();
+  formData.set("account_id", "account-2");
+  formData.set("import_mode", "transactions-csv");
+  formData.set(
+    "file",
+    new File(["date,amount,currency,category,description\n2026-03-10,-150,TWD,Food,Dinner\n"], "preview.csv", {
+      type: "text/csv",
+    }),
+  );
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/import/preview", { method: "POST", body: formData }, env);
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), {
+    code: "validation_error",
+    error: "Selected account does not belong to the current user.",
+    status: "error",
+  });
+});
+
+test("POST /api/import/preview returns database_error when account lookup fails", async () => {
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set("import_mode", "transactions-csv");
+  formData.set(
+    "file",
+    new File(["date,amount,currency,category,description\n2026-03-10,-150,TWD,Food,Dinner\n"], "preview.csv", {
+      type: "text/csv",
+    }),
+  );
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: null,
+                error: { message: "accounts lookup failed" },
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/import/preview", { method: "POST", body: formData }, env);
+  assert.equal(response.status, 500);
+  assert.deepEqual(await response.json(), {
+    code: "database_error",
+    error: "accounts lookup failed",
+    status: "error",
+  });
+});
+
 test("POST /api/import/sinopac-tw maps minimal Sinopac csv rows into transactions", async () => {
   let insertedRows: Array<Record<string, unknown>> = [];
 

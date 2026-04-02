@@ -34,6 +34,7 @@
 - [x] Extended post-deploy smoke import checks to cover `/api/import/preview` validation wiring
 - [x] Extended post-deploy smoke import checks to cover stock-trade and dividend import routes too
 - [x] Extended parser-backed import preview coverage to `sinopac-tw` and `credit-card-tw`
+- [x] Added direct `/api/import/preview` error-path coverage for unowned accounts and account-lookup failures
 - [ ] Keep structured memory and daily logs in sync going forward
 
 ## Context
