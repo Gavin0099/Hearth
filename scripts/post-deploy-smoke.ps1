@@ -113,7 +113,8 @@ function Invoke-MultipartValidationCheck {
     [string]$Url,
     [hashtable]$Headers,
     [hashtable]$Fields,
-    [string]$ExpectedCode = "validation_error"
+    [string]$ExpectedCode = "validation_error",
+    [string]$ExpectedErrorLike = ""
   )
 
   Write-Host "[smoke] check $Name => multipart $Url"
@@ -148,6 +149,9 @@ function Invoke-MultipartValidationCheck {
     }
     if ($json.code -ne $ExpectedCode) {
       throw "[smoke] $Name expected code=$ExpectedCode, got $($json.code)"
+    }
+    if (-not [string]::IsNullOrWhiteSpace($ExpectedErrorLike) -and [string]$json.error -notlike "*$ExpectedErrorLike*") {
+      throw "[smoke] $Name expected error containing '$ExpectedErrorLike', got '$($json.error)'"
     }
   }
   finally {
@@ -297,6 +301,13 @@ if (-not [string]::IsNullOrWhiteSpace($BearerToken)) {
     Invoke-MultipartValidationCheck -Name "import sinopac-tw validation" -Url "$ApiBaseUrl/api/import/sinopac-tw" -Headers $headers -Fields @{ account_id = $resolvedAccountId }
     Invoke-MultipartValidationCheck -Name "import credit-card-tw validation" -Url "$ApiBaseUrl/api/import/credit-card-tw" -Headers $headers -Fields @{ account_id = $resolvedAccountId }
     Invoke-MultipartValidationCheck -Name "import excel-monthly validation" -Url "$ApiBaseUrl/api/import/excel-monthly" -Headers $headers -Fields @{ account_id = $resolvedAccountId }
+    Invoke-MultipartValidationCheck -Name "import preview missing file validation" -Url "$ApiBaseUrl/api/import/preview" -Headers $headers -Fields @{
+      account_id = $resolvedAccountId
+      import_mode = "transactions-csv"
+    } -ExpectedErrorLike "file is required"
+    Invoke-MultipartValidationCheck -Name "import preview missing mode validation" -Url "$ApiBaseUrl/api/import/preview" -Headers $headers -Fields @{
+      account_id = $resolvedAccountId
+    } -ExpectedErrorLike "import_mode is required"
   }
 
   if ($ExerciseRecurring) {

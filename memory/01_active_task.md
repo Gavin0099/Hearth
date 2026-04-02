@@ -30,7 +30,8 @@
 - [x] Closed final-review findings around stale ops loading and silent portfolio DB-error fallback
 - [x] Extended post-deploy smoke so ops checks can require healthy recent-window summary verdicts, not only a healthy latest run
 - [x] Extended parser-backed import preview coverage to stock/dividend routes and fixed blank stock price preview cells
-- [ ] Run findings-first final code review on the current UI/product-closure batch
+- [x] Run findings-first final code review on the current UI/product-closure batch
+- [x] Extended post-deploy smoke import checks to cover `/api/import/preview` validation wiring
 - [ ] Keep structured memory and daily logs in sync going forward
 
 ## Context

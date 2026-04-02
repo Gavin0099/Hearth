@@ -22,6 +22,7 @@
 - `GET /api/ops/job-runs/summary` also emits the threshold policy it used. For `daily-update`, Hearth now treats runs older than `4320` minutes (72h) as stale by default so verdicts are not silently "healthy" when the caller forgets to pass freshness parameters.
 - `OpsPanel` must catch request failures around `fetchOpsSummary`; otherwise a thrown request leaves the panel in perpetual loading state.
 - `scripts/post-deploy-smoke.ps1` now supports `-RequireOpsSummaryHealthy` so deploy validation can fail on unhealthy recent-window summary verdicts instead of relying only on the single latest cron row.
+- `ExerciseImports` in `scripts/post-deploy-smoke.ps1` now also probes `/api/import/preview`, so the preview route's auth/validation wiring is smoke-tested alongside the write endpoints.
 - Stock preview rows in `/api/import/preview` need a display-level `price` field mapped from `price_per_share`; otherwise the preview table shows a blank price column even when parsing succeeded.
 - `GET /api/portfolio/net-worth` now opportunistically upserts `net_worth_snapshots`; the chart/history slice is only trustworthy if tests also cover that write path plus `/api/portfolio/net-worth-history`.
 - `GET /api/portfolio/trade-costs` aggregates `investment_trades` in application code and must group by `ticker + currency`; otherwise USD/TWD fees get silently mixed into a fake single-currency total.
