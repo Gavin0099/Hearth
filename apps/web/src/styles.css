@@ -257,11 +257,98 @@ body {
   color: #241b15;
 }
 
-.category-list {
+/* ── Monthly Report Panel ─────────────────────────────────────────── */
+
+.month-nav {
   display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.month-nav .action-button {
+  padding: 2px 10px;
+  font-size: 1.1rem;
+  min-width: 2rem;
+}
+
+.month-label {
+  font-size: 1rem;
+  font-weight: 600;
+  min-width: 6rem;
+  text-align: center;
+}
+
+.report-summary-row {
+  display: flex;
+  gap: 1rem;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 16px;
+  margin-bottom: 0.75rem;
+}
+
+.report-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.report-stat .value.income {
+  color: #4caf50;
+  font-weight: 600;
+}
+
+.report-stat .value.expense {
+  color: #f44336;
+  font-weight: 600;
+}
+
+.category-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.category-item {
+  display: grid;
+  grid-template-columns: 6rem 1fr 5rem 2.5rem;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.cat-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #ccc;
+}
+
+.cat-bar-wrap {
+  height: 6px;
+  background: #2a2a3a;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.cat-bar {
+  height: 100%;
+  background: #e8b86d;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+.cat-amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.cat-pct {
+  text-align: right;
+  color: #888;
+  font-size: 0.78rem;
 }
 
 .category-chip {
@@ -270,6 +357,63 @@ body {
   background: #efe1cf;
   color: #5c3b22;
   font-size: 0.92rem;
+}
+
+/* ── Portfolio Holdings Table ─────────────────────────────────────── */
+
+.holdings-table-wrap {
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+
+.holdings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.holdings-table th {
+  text-align: left;
+  color: #888;
+  font-weight: normal;
+  padding: 4px 8px 6px 0;
+  border-bottom: 1px solid #2a2a3a;
+  white-space: nowrap;
+}
+
+.holdings-table th.num,
+.holdings-table td.num {
+  text-align: right;
+}
+
+.holdings-table td {
+  padding: 5px 8px 5px 0;
+  border-bottom: 1px solid #1e1e2e;
+  vertical-align: middle;
+}
+
+.holdings-table .ticker {
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.holdings-table .holding-name {
+  color: #888;
+  font-size: 0.78rem;
+  display: block;
+}
+
+.holdings-table .no-price {
+  color: #555;
+}
+
+.holdings-table .price-date {
+  color: #666;
+  font-size: 0.75rem;
+}
+
+.holdings-table .pnl-pct {
+  font-size: 0.78rem;
 }
 
 /* ── Credit Card Ledger Panel ─────────────────────────────────────── */

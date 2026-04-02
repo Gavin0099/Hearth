@@ -171,19 +171,21 @@ export function ImportPanel({
       {state.status === "success" ? (
         <>
           <p>
-            {importMode === "normalized"
-              ? "CSV 欄位格式：`date,amount,currency,category,description`"
-              : importMode === "sinopac-tw"
-                ? "永豐最小欄位格式：`日期,金額,摘要`，可選 `幣別` 與 `收支別`。"
-                : importMode === "credit-card-tw"
-                  ? "信用卡最小欄位格式：`交易日期,金額,摘要`，可選 `幣別` 與 `交易類型`。"
-                : importMode === "sinopac-stock"
-                  ? "永豐台股欄位：`成交日期,股票代號,股票名稱,買賣別,成交股數,成交單價,手續費,交易稅`。匯入後自動重算持倉。"
-                : importMode === "foreign-stock-csv"
-                  ? "複委託 CSV 欄位：`成交日期,股票代號,股票名稱,買賣別,成交股數,成交單價,手續費,交易稅,currency`。可匯入 USD 等外幣交易，匯入後同樣自動重算持倉。"
-                : importMode === "dividends-csv"
-                  ? "配息 CSV 欄位：`ticker,pay_date,net_amount[,gross_amount][,tax_withheld][,currency]`。日期格式 YYYY-MM-DD。"
-                : "Excel 第一版格式：第一列放日期欄，左側欄位使用 `分類` / `項目`，每日金額填在日期欄下方。"}
+            {importMode === "normalized" ? (
+              <>CSV 欄位格式：<code>date,amount,currency,category,description</code></>
+            ) : importMode === "sinopac-tw" ? (
+              <>永豐最小欄位格式：<code>日期,金額,摘要</code>，可選 <code>幣別</code> 與 <code>收支別</code>。</>
+            ) : importMode === "credit-card-tw" ? (
+              <>信用卡最小欄位格式：<code>交易日期,金額,摘要</code>，可選 <code>幣別</code> 與 <code>交易類型</code>。</>
+            ) : importMode === "sinopac-stock" ? (
+              <>永豐台股欄位：<code>成交日期,股票代號,股票名稱,買賣別,成交股數,成交單價,手續費,交易稅</code>。匯入後自動重算持倉。</>
+            ) : importMode === "foreign-stock-csv" ? (
+              <>複委託 CSV 欄位：<code>成交日期,股票代號,股票名稱,買賣別,成交股數,成交單價,手續費,交易稅,currency</code>。可匯入 USD 等外幣交易，匯入後同樣自動重算持倉。</>
+            ) : importMode === "dividends-csv" ? (
+              <>配息 CSV 欄位：<code>ticker,pay_date,net_amount[,gross_amount][,tax_withheld][,currency]</code>。日期格式 YYYY-MM-DD。</>
+            ) : (
+              <>Excel 第一版格式：第一列放日期欄，左側欄位使用 <code>分類</code> / <code>項目</code>，每日金額填在日期欄下方。</>
+            )}
           </p>
           <form className="account-form" onSubmit={handleSubmit}>
             <label>

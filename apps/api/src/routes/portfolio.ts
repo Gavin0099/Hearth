@@ -261,9 +261,34 @@ portfolioRoutes.get("/holdings", async (c) => {
     );
   }
 
+  const holdings = data ?? [];
+
+  // Enrich with latest close_price from price_snapshots
+  const tickers = [...new Set(holdings.map((h: { ticker: string }) => h.ticker))];
+  const latestPrices = new Map<string, { close_price: number; snapshot_date: string }>();
+
+  if (tickers.length > 0) {
+    const { data: prices } = await supabase
+      .from("price_snapshots")
+      .select("ticker, close_price, snapshot_date")
+      .in("ticker", tickers)
+      .order("snapshot_date", { ascending: false });
+
+    for (const p of prices ?? []) {
+      if (!latestPrices.has(p.ticker)) {
+        latestPrices.set(p.ticker, { close_price: Number(p.close_price), snapshot_date: p.snapshot_date });
+      }
+    }
+  }
+
+  const enriched = holdings.map((h: HoldingRecord) => {
+    const snap = latestPrices.get(h.ticker);
+    return { ...h, close_price: snap?.close_price ?? null, price_as_of: snap?.snapshot_date ?? null };
+  });
+
   return c.json<PortfolioHoldingsResponse>({
-    items: (data ?? []) as HoldingRecord[],
-    count: data?.length ?? 0,
+    items: enriched as HoldingRecord[],
+    count: enriched.length,
     provider: "supabase",
     status: "ok",
   });

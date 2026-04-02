@@ -155,7 +155,7 @@ export function App() {
             onClick={() => setCurrentView("settings")}
             type="button"
           >
-            帳單設定
+            設定
           </button>
         </nav>
         <AuthPanel

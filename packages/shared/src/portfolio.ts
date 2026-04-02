@@ -24,6 +24,9 @@ export type HoldingRecord = {
   avg_cost: number;
   currency: string;
   updated_at: string;
+  // enriched by API from price_snapshots
+  close_price: number | null;
+  price_as_of: string | null;
 };
 
 export type DividendRecord = {

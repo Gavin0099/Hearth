@@ -30,14 +30,12 @@ type LoadState =
         dividends: Extract<PortfolioDividendsResponse, { status: "ok" }>;
       };
 
-function formatTwd(value: number) {
-  return new Intl.NumberFormat("zh-TW", {
-    style: "currency",
-    currency: "TWD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+const fmtTwd = new Intl.NumberFormat("zh-TW", {
+  style: "currency",
+  currency: "TWD",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
 
 function formatAmount(value: number, currency: string) {
   return new Intl.NumberFormat("zh-TW", {
@@ -147,7 +145,7 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
 
     for (let i = 0; i < lines.length; i++) {
       const parts = lines[i].split(",").map((p) => p.trim());
-      if (i === 0 && parts[0].toLowerCase() === "ticker") continue; // skip header
+      if (i === 0 && parts[0].toLowerCase() === "ticker") continue;
       const [ticker, date, closePriceRaw, currency] = parts;
       if (!ticker || !date || !closePriceRaw) {
         errors.push(`第 ${i + 1} 行格式錯誤`);
@@ -219,31 +217,32 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
 
       {state.status === "success" ? (
         <>
+          {/* 淨值摘要 */}
           <section className="net-worth-summary">
             <div className="net-worth-total">
               <span className="label">總資產淨值</span>
-              <span className="value">{formatTwd(state.netWorth.totalNetWorthTwd)}</span>
+              <span className="value">{fmtTwd.format(state.netWorth.totalNetWorthTwd)}</span>
             </div>
             <div className="net-worth-breakdown">
               <div>
                 <span className="label">銀行現金</span>
-                <span className="value">{formatTwd(state.netWorth.cashBankTwd)}</span>
+                <span className="value">{fmtTwd.format(state.netWorth.cashBankTwd)}</span>
               </div>
               <div>
                 <span className="label">信用卡餘額</span>
-                <span className="value">{formatTwd(state.netWorth.cashCreditTwd)}</span>
+                <span className="value">{fmtTwd.format(state.netWorth.cashCreditTwd)}</span>
               </div>
               <div>
                 <span className="label">投資市值</span>
-                <span className="value">{formatTwd(state.netWorth.investmentsTwd)}</span>
+                <span className="value">{fmtTwd.format(state.netWorth.investmentsTwd)}</span>
               </div>
               <div>
                 <span className="label">累計配息</span>
-                <span className="value">{formatTwd(state.netWorth.dividendsReceivedTwd)}</span>
+                <span className="value">{fmtTwd.format(state.netWorth.dividendsReceivedTwd)}</span>
               </div>
               <div>
                 <span className="label">今年配息</span>
-                <span className="value">{formatTwd(state.netWorth.dividendsYearToDateTwd)}</span>
+                <span className="value">{fmtTwd.format(state.netWorth.dividendsYearToDateTwd)}</span>
               </div>
             </div>
             {state.netWorth.priceAsOf ? (
@@ -253,26 +252,77 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
             ) : null}
           </section>
 
+          {/* 持倉明細 table */}
           {state.holdings.items.length > 0 ? (
             <>
               <section className="holdings-list">
                 <h3>持倉明細</h3>
-                <ul>
-                  {state.holdings.items.map((item) => (
-                    <li key={item.id}>
-                      <span className="ticker">{item.ticker}</span>
-                      {item.name ? <span className="name">{item.name}</span> : null}
-                      <span className="shares">
-                        {Number(item.total_shares).toLocaleString("zh-TW", { maximumFractionDigits: 3 })} 股
-                      </span>
-                      <span className="cost">
-                        成本 {item.currency} {Number(item.avg_cost).toFixed(2)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="holdings-table-wrap">
+                  <table className="holdings-table">
+                    <thead>
+                      <tr>
+                        <th>股票</th>
+                        <th className="num">股數</th>
+                        <th className="num">成本均價</th>
+                        <th className="num">現價</th>
+                        <th className="num">未實現損益</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {state.holdings.items.map((item) => {
+                        const shares = Number(item.total_shares);
+                        const avgCost = Number(item.avg_cost);
+                        const closePrice = item.close_price;
+                        const costBasis = shares * avgCost;
+                        const marketValue = closePrice !== null ? shares * closePrice : null;
+                        const pnl = marketValue !== null ? marketValue - costBasis : null;
+                        const pnlPct = pnl !== null && costBasis > 0 ? (pnl / costBasis) * 100 : null;
+                        const pnlColor = pnl === null ? undefined : pnl >= 0 ? "#4caf50" : "#f44336";
+
+                        return (
+                          <tr key={item.id}>
+                            <td>
+                              <span className="ticker">{item.ticker}</span>
+                              {item.name ? <span className="holding-name">{item.name}</span> : null}
+                            </td>
+                            <td className="num">
+                              {shares.toLocaleString("zh-TW", { maximumFractionDigits: 3 })}
+                            </td>
+                            <td className="num">{avgCost.toFixed(2)}</td>
+                            <td className="num">
+                              {closePrice !== null ? (
+                                <>
+                                  {closePrice.toFixed(2)}
+                                  {item.price_as_of ? (
+                                    <span className="price-date"> ({item.price_as_of.slice(5)})</span>
+                                  ) : null}
+                                </>
+                              ) : (
+                                <span className="no-price">—</span>
+                              )}
+                            </td>
+                            <td className="num" style={{ color: pnlColor }}>
+                              {pnl !== null && pnlPct !== null ? (
+                                <>
+                                  {pnl >= 0 ? "+" : ""}
+                                  {fmtTwd.format(pnl)}
+                                  <span className="pnl-pct">
+                                    {" "}({pnlPct >= 0 ? "+" : ""}{pnlPct.toFixed(1)}%)
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="no-price">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </section>
 
+              {/* 更新報價 */}
               <section className="price-update">
                 <h3>更新報價</h3>
                 <label>
@@ -286,7 +336,7 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
                 <div className="price-inputs">
                   {state.holdings.items.map((item) => (
                     <label key={item.ticker}>
-                      {item.ticker} {item.name ? `(${item.name})` : ""}
+                      {item.ticker}{item.name ? ` (${item.name})` : ""}
                       <input
                         type="number"
                         min="0"
@@ -309,7 +359,7 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
                   {priceSaving ? "儲存中..." : "儲存報價"}
                 </button>
                 <label className="csv-upload-label">
-                  或上傳 CSV（ticker,date,close_price[,currency]）
+                  或上傳 CSV（<code>ticker,date,close_price[,currency]</code>）
                   <input
                     type="file"
                     accept=".csv,text/csv"
@@ -328,6 +378,7 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
             <p>目前沒有持倉資料，匯入台股或複委託交易後這裡會顯示。</p>
           )}
 
+          {/* 更新匯率 */}
           {fxRates.length > 0 ? (
             <section className="fx-update">
               <h3>更新匯率</h3>
@@ -369,6 +420,7 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
             </section>
           ) : null}
 
+          {/* 最近配息 */}
           {state.dividends.items.length > 0 ? (
             <section className="holdings-list">
               <h3>最近配息</h3>
