@@ -151,12 +151,18 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
   useEffect(() => {
     if (!session) {
       setState({ status: "idle" });
+      setHistory([]);
+      setFxRates([]);
+      setTradeCosts([]);
       return;
     }
 
     let cancelled = false;
     async function load() {
       setState({ status: "loading" });
+      setHistory([]);
+      setFxRates([]);
+      setTradeCosts([]);
       const [holdingsResult, netWorthResult, dividendsResult, fxResult, costsResult] = await Promise.all([
         fetchPortfolioHoldings(),
         fetchNetWorth(),

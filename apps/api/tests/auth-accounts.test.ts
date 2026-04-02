@@ -1019,6 +1019,82 @@ test("GET /api/portfolio/net-worth includes FX-adjusted holdings plus dividend s
   });
 });
 
+test("GET /api/portfolio/net-worth returns database_error when price snapshot lookup fails", async () => {
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1", type: "investment_tw", currency: "TWD" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "transactions") {
+          return {
+            select: () => ({
+              in: async () => ({
+                data: [],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "holdings") {
+          return {
+            select: () => ({
+              in: () => ({
+                data: [
+                  {
+                    account_id: "account-1",
+                    ticker: "2330",
+                    total_shares: 1,
+                    avg_cost: 600,
+                    currency: "TWD",
+                  },
+                ],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "price_snapshots") {
+          return {
+            select: () => ({
+              in: () => ({
+                order: async () => ({
+                  data: null,
+                  error: { message: "price lookup failed" },
+                }),
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/portfolio/net-worth", {}, env);
+  assert.equal(response.status, 500);
+  assert.deepEqual(await response.json(), {
+    code: "database_error",
+    error: "price lookup failed",
+    status: "error",
+  });
+});
+
 test("GET /api/portfolio/net-worth-history returns owned snapshot history", async () => {
   const app = createApp({
     resolveAuthenticatedUser: async () => ({
@@ -1130,6 +1206,57 @@ test("GET /api/portfolio/trade-costs aggregates fee and tax per ticker and curre
       { ticker: "AAPL", currency: "USD", total_fee: 8, total_tax: 0, trade_count: 1 },
     ],
     status: "ok",
+  });
+});
+
+test("GET /api/portfolio/fx-rates returns database_error when holdings lookup fails", async () => {
+  let accountSelectCount = 0;
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => {
+                accountSelectCount += 1;
+                return {
+                  data:
+                    accountSelectCount === 1
+                      ? [{ currency: "USD" }]
+                      : [{ id: "account-1" }],
+                  error: null,
+                };
+              },
+            }),
+          };
+        }
+
+        if (table === "holdings") {
+          return {
+            select: () => ({
+              in: async () => ({
+                data: null,
+                error: { message: "holdings lookup failed" },
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/portfolio/fx-rates", {}, env);
+  assert.equal(response.status, 500);
+  assert.deepEqual(await response.json(), {
+    code: "database_error",
+    error: "holdings lookup failed",
+    status: "error",
   });
 });
 

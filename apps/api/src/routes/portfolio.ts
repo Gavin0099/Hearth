@@ -97,11 +97,18 @@ portfolioRoutes.get("/net-worth", async (c) => {
   let priceAsOf: string | null = null;
 
   if (tickers.length > 0) {
-    const { data: prices } = await supabase
+    const { data: prices, error: pricesError } = await supabase
       .from("price_snapshots")
       .select("ticker, close_price, snapshot_date")
       .in("ticker", tickers)
       .order("snapshot_date", { ascending: false });
+
+    if (pricesError) {
+      return c.json<NetWorthResponse>(
+        { code: "database_error", error: pricesError.message, status: "error" },
+        500,
+      );
+    }
 
     for (const p of prices ?? []) {
       if (!latestPrices.has(p.ticker)) {
@@ -125,12 +132,19 @@ portfolioRoutes.get("/net-worth", async (c) => {
 
   const fxRates = new Map<string, number>([["TWD", 1]]);
   if (nonTwdCurrencies.length > 0) {
-    const { data: rates } = await supabase
+    const { data: rates, error: ratesError } = await supabase
       .from("fx_rates")
       .select("from_currency, rate, rate_date")
       .in("from_currency", nonTwdCurrencies)
       .eq("to_currency", "TWD")
       .order("rate_date", { ascending: false });
+
+    if (ratesError) {
+      return c.json<NetWorthResponse>(
+        { code: "database_error", error: ratesError.message, status: "error" },
+        500,
+      );
+    }
 
     for (const r of rates ?? []) {
       if (!fxRates.has(r.from_currency)) {
@@ -332,11 +346,22 @@ portfolioRoutes.get("/holdings", async (c) => {
   const latestPrices = new Map<string, { close_price: number; snapshot_date: string }>();
 
   if (tickers.length > 0) {
-    const { data: prices } = await supabase
+    const { data: prices, error: pricesError } = await supabase
       .from("price_snapshots")
       .select("ticker, close_price, snapshot_date")
       .in("ticker", tickers)
       .order("snapshot_date", { ascending: false });
+
+    if (pricesError) {
+      return c.json<PortfolioHoldingsResponse>(
+        {
+          code: "database_error",
+          error: pricesError.message,
+          status: "error",
+        },
+        500,
+      );
+    }
 
     for (const p of prices ?? []) {
       if (!latestPrices.has(p.ticker)) {
@@ -506,23 +531,44 @@ portfolioRoutes.get("/fx-rates", async (c) => {
   const supabase = createSupabaseAdminClient(c.env);
 
   // Collect non-TWD currencies from user's accounts and holdings
-  const { data: accounts } = await supabase
+  const { data: accounts, error: accountsError } = await supabase
     .from("accounts")
     .select("currency")
     .eq("user_id", user.id);
 
+  if (accountsError) {
+    return c.json<FxRatesResponse>(
+      { code: "database_error", error: accountsError.message, status: "error" },
+      500,
+    );
+  }
+
   const accountIds = (accounts ?? []).map((a: { currency: string }) => a.currency);
 
   // Get account IDs to find holdings currencies
-  const { data: ownedAccounts } = await supabase
+  const { data: ownedAccounts, error: ownedAccountsError } = await supabase
     .from("accounts")
     .select("id")
     .eq("user_id", user.id);
 
+  if (ownedAccountsError) {
+    return c.json<FxRatesResponse>(
+      { code: "database_error", error: ownedAccountsError.message, status: "error" },
+      500,
+    );
+  }
+
   const ids = (ownedAccounts ?? []).map((a: { id: string }) => a.id);
-  const { data: holdings } = ids.length > 0
+  const { data: holdings, error: holdingsError } = ids.length > 0
     ? await supabase.from("holdings").select("currency").in("account_id", ids)
-    : { data: [] };
+    : { data: [], error: null };
+
+  if (holdingsError) {
+    return c.json<FxRatesResponse>(
+      { code: "database_error", error: holdingsError.message, status: "error" },
+      500,
+    );
+  }
 
   const currencies = [
     ...new Set([

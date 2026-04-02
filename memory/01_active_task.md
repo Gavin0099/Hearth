@@ -27,6 +27,7 @@
 - [x] Split OCR/PDF parsing off the main web bundle through runtime lazy import in `GmailSyncPanel`
 - [x] Upgraded ops summary from passive counts to machine-readable verdicts (`healthy` / `warning` / `critical`)
 - [x] Added explicit ops threshold policy to the summary contract so freshness is no longer implicit / caller-only
+- [x] Closed final-review findings around stale ops loading and silent portfolio DB-error fallback
 - [ ] Run findings-first final code review on the current UI/product-closure batch
 - [ ] Keep structured memory and daily logs in sync going forward
 

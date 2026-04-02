@@ -20,9 +20,11 @@
 - `GET /api/ops/job-runs/summary` complements the latest-run verdict with recent-window counts (`ok`, `error`, `with_report_errors`) so operators can quickly see whether a clean latest run is hiding repeated recent failures.
 - `GET /api/ops/job-runs/summary` now also emits a backend verdict (`healthy` / `warning` / `critical`), reason strings, latest-run age, and consecutive failure counts; the UI should consume that verdict directly instead of re-deriving health client-side.
 - `GET /api/ops/job-runs/summary` also emits the threshold policy it used. For `daily-update`, Hearth now treats runs older than `4320` minutes (72h) as stale by default so verdicts are not silently "healthy" when the caller forgets to pass freshness parameters.
+- `OpsPanel` must catch request failures around `fetchOpsSummary`; otherwise a thrown request leaves the panel in perpetual loading state.
 - `GET /api/portfolio/net-worth` now opportunistically upserts `net_worth_snapshots`; the chart/history slice is only trustworthy if tests also cover that write path plus `/api/portfolio/net-worth-history`.
 - `GET /api/portfolio/trade-costs` aggregates `investment_trades` in application code and must group by `ticker + currency`; otherwise USD/TWD fees get silently mixed into a fake single-currency total.
 - `PortfolioPanel` should fetch `net-worth-history` only after the `net-worth` request that opportunistically writes today's snapshot; parallel fetches can make the chart miss the most recent point.
+- Portfolio analytics routes must not silently swallow `price_snapshots` / `fx_rates` / holdings lookup errors and fall back to guessed values, or the UI will present incorrect net-worth / FX data as if it were healthy.
 - Import dry-run preview now has a dedicated `/api/import/preview` path that reuses the real parser/normalization logic for `transactions-csv`, `sinopac-tw`, `credit-card-tw`, `excel-monthly`, `sinopac-stock`, `foreign-stock-csv`, and `dividends-csv`.
 - `ImportPanel` should treat preview fetch failures as a separate failure path from validation errors; request throws must clear preview state and release the loading indicator.
 - `apps/web/src/lib/pdf-parser.ts` currently relies on a repo-local `tesseract.js` ambient declaration (`apps/web/src/tesseract.d.ts`) to keep TypeScript happy under the current dependency/toolchain combination.

@@ -21,10 +21,19 @@ export function OpsPanel({ session }: OpsPanelProps) {
 
   async function load() {
     setLoading(true);
-    const result = await fetchOpsSummary("daily-update", 10);
-    setSummary(result);
-    setRefreshedAt(new Date());
-    setLoading(false);
+    try {
+      const result = await fetchOpsSummary("daily-update", 10);
+      setSummary(result);
+      setRefreshedAt(new Date());
+    } catch (error) {
+      setSummary({
+        code: "request_failed",
+        error: error instanceof Error ? error.message : "Unknown error",
+        status: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
