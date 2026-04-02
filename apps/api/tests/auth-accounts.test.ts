@@ -1897,6 +1897,122 @@ test("POST /api/import/preview returns parser-backed preview for normalized tran
   });
 });
 
+test("POST /api/import/preview returns parser-backed preview for sinopac-tw", async () => {
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set("import_mode", "sinopac-tw");
+  formData.set(
+    "file",
+    new File(
+      [
+        "日期,金額,摘要,幣別,收支別\n2026/03/12,120,午餐,TWD,支出\n小計,,,,\n2026/03/13,1500,退款,TWD,收入\n",
+      ],
+      "sinopac-preview.csv",
+      { type: "text/csv" },
+    ),
+  );
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/import/preview", { method: "POST", body: formData }, env);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    source: "sinopac-tw",
+    validRows: 2,
+    failedRows: 0,
+    skipped: 1,
+    estimatedRows: 3,
+    columns: ["date", "amount", "currency", "category", "description", "source"],
+    sampleRows: [
+      ["2026-03-12", "-120", "TWD", "餐飲", "午餐", "sinopac_bank"],
+      ["2026-03-13", "1500", "TWD", "退款", "退款", "sinopac_bank"],
+    ],
+    warnings: [],
+    errors: [],
+    recurringCandidates: [],
+    status: "ok",
+  });
+});
+
+test("POST /api/import/preview returns parser-backed preview for credit-card-tw", async () => {
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set("import_mode", "credit-card-tw");
+  formData.set(
+    "file",
+    new File(
+      [
+        "交易日期,金額,摘要,幣別,交易類型\n2026/03/20,320,Uber Eats,TWD,一般消費\n2026/03/21,320,退刷,TWD,退款\n小計,,,,\n",
+      ],
+      "credit-card-preview.csv",
+      { type: "text/csv" },
+    ),
+  );
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/import/preview", { method: "POST", body: formData }, env);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    source: "credit-card-tw",
+    validRows: 2,
+    failedRows: 0,
+    skipped: 1,
+    estimatedRows: 3,
+    columns: ["date", "amount", "currency", "category", "description", "source"],
+    sampleRows: [
+      ["2026-03-20", "-320", "TWD", "餐飲", "Uber Eats", "credit_card_tw"],
+      ["2026-03-21", "320", "TWD", "退款", "退刷", "credit_card_tw"],
+    ],
+    warnings: [],
+    errors: [],
+    recurringCandidates: [],
+    status: "ok",
+  });
+});
+
 test("POST /api/import/sinopac-tw maps minimal Sinopac csv rows into transactions", async () => {
   let insertedRows: Array<Record<string, unknown>> = [];
 

@@ -33,9 +33,10 @@
 - [x] Run findings-first final code review on the current UI/product-closure batch
 - [x] Extended post-deploy smoke import checks to cover `/api/import/preview` validation wiring
 - [x] Extended post-deploy smoke import checks to cover stock-trade and dividend import routes too
+- [x] Extended parser-backed import preview coverage to `sinopac-tw` and `credit-card-tw`
 - [ ] Keep structured memory and daily logs in sync going forward
 
 ## Context
-- **Recent achievements**: portfolio analytics now include `net-worth-history` and `trade-costs` routes/types with regression coverage, import dry-run preview now goes through the real parser/normalization path, the portfolio UI no longer renders mixed-currency trade costs as if they were all TWD, and ops now expose verdict-level health instead of raw counts only.
-- **Validation baseline**: `npm.cmd --workspace @hearth/api run build` and `npm.cmd --workspace @hearth/api run test` now pass with the import-preview slice in place (`98/98`).
-- **Next steps**: finish the findings-first review of the current A1/B1/A2/C1/C2/D1 worktree and then decide whether to commit/push the D1 API/shared pieces separately from the user’s in-progress UI changes.
+- **Recent achievements**: portfolio analytics now include verified `net-worth-history` and `trade-costs` behavior, import dry-run preview goes through the real parser/normalization path for cashflow, excel, stock, and dividend modes, and ops expose verdict-level health instead of raw counts only.
+- **Validation baseline**: `npm.cmd --workspace @hearth/api run build` and `npm.cmd --workspace @hearth/api run test` currently pass at `107/107`; `npm.cmd --workspace @hearth/web run check` and `npm.cmd --workspace @hearth/web run build` were also restored earlier in the current closure cycle.
+- **Next steps**: keep pushing new `P0 correctness / ops` slices instead of reopening the already-closed A1/B1/A2/C1/C2/D1/E1 batch, and keep structured memory aligned with the real validation state.

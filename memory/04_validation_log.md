@@ -50,6 +50,11 @@
 - Validation count progressed to:
   - `96/96`
   - `98/98`
+  - `99/99`
+  - `100/100`
+  - `102/102`
+  - `105/105`
+  - `107/107`
 - Scope covered:
   - `portfolio/trade-costs` response shape aligned with `InvestmentCostsResponse`
   - `portfolio/net-worth` snapshot upsert regression coverage
@@ -65,12 +70,9 @@
   - portfolio DB-error paths and ops panel request-failure path are now covered; API suite moved to `102/102`
   - post-deploy smoke now supports recent-window ops summary verdict enforcement
   - parser-backed import preview now has route coverage for `sinopac-stock`, `foreign-stock-csv`, and `dividends-csv`; API suite moved to `105/105`
+  - parser-backed import preview now also has direct route coverage for `sinopac-tw` and `credit-card-tw`; API suite moved to `107/107`
   - post-deploy smoke import checks now also cover `/api/import/preview` validation wiring
   - post-deploy smoke import checks now also cover stock-trade and dividend import endpoints
-
-## Review Notes
-
-- Web check remains blocked by the known `tesseract.js` typing issue and is not attributable to the recent API correctness slices.
 
 ## 2026-04-01 Governance Adoption
 
