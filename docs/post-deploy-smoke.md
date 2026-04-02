@@ -59,6 +59,12 @@ Require the latest `daily-update` run to be healthy, fresh, and free of section-
 powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseOps -RequireOpsHealthy -RequireOpsZeroReportErrors -OpsMaxAgeMinutes 1440
 ```
 
+Require the recent-window summary verdict to stay healthy, not just the single latest row:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseOps -RequireOpsSummaryHealthy -OpsMaxAgeMinutes 1440 -OpsConsecutiveFailureThreshold 2 -OpsConsecutiveReportErrorThreshold 2
+```
+
 ## What it verifies
 
 1. `GET <api>/health` responds `2xx` and payload has `status: "ok"`
@@ -87,7 +93,11 @@ powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerTo
 10. When `-RequireOpsZeroReportErrors` is also provided:
    - the smoke run additionally requires the latest persisted cron `report` to have no section-level `errors`
    - this lets deploy validation reject partial-success `daily-update` runs instead of checking freshness alone
-11. For manual ops inspection, `GET /api/ops/job-runs/summary?job_name=daily-update&limit=10` returns recent-window counts for `ok`, `error`, and `with_report_errors`
+11. When `-RequireOpsSummaryHealthy` is also provided:
+   - the smoke run also checks `GET /api/ops/job-runs/summary`
+   - it requires `verdict = "healthy"` on the recent-window summary, not just a healthy latest row
+   - `-OpsSummaryLimit`, `-OpsConsecutiveFailureThreshold`, and `-OpsConsecutiveReportErrorThreshold` let the smoke run encode repeated-failure policy explicitly
+12. For manual ops inspection, `GET /api/ops/job-runs/summary?job_name=daily-update&limit=10` returns recent-window counts, verdict, reasons, and threshold policy
 
 ## Scope note
 

@@ -63,6 +63,7 @@
   - ops summary now includes backend verdicts, reason strings, age, and consecutive-failure counters (`99/99`)
   - ops summary now also includes explicit threshold policy and default daily-update freshness protection
   - portfolio DB-error paths and ops panel request-failure path are now covered; API suite moved to `102/102`
+  - post-deploy smoke now supports recent-window ops summary verdict enforcement
 
 ## Review Notes
 

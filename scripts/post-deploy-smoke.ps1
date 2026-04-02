@@ -10,7 +10,11 @@ param(
   [switch]$ExerciseOps,
   [switch]$RequireOpsHealthy,
   [switch]$RequireOpsZeroReportErrors,
+  [switch]$RequireOpsSummaryHealthy,
   [int]$OpsMaxAgeMinutes = 0,
+  [int]$OpsSummaryLimit = 10,
+  [int]$OpsConsecutiveFailureThreshold = 0,
+  [int]$OpsConsecutiveReportErrorThreshold = 0,
   [int]$TimeoutSec = 30
 )
 
@@ -324,6 +328,31 @@ if (-not [string]::IsNullOrWhiteSpace($BearerToken)) {
     }
     if (($RequireOpsHealthy -or $RequireOpsZeroReportErrors) -and -not $opsJson.healthy) {
       throw "[smoke] latest daily-update job run is unhealthy: $($opsJson.reason)"
+    }
+
+    if ($RequireOpsSummaryHealthy) {
+      $summaryUrl = "$ApiBaseUrl/api/ops/job-runs/summary?job_name=daily-update&limit=$OpsSummaryLimit"
+      if ($OpsMaxAgeMinutes -gt 0) {
+        $summaryUrl += "&max_age_minutes=$OpsMaxAgeMinutes"
+      }
+      if ($OpsConsecutiveFailureThreshold -gt 0) {
+        $summaryUrl += "&consecutive_failure_threshold=$OpsConsecutiveFailureThreshold"
+      }
+      if ($OpsConsecutiveReportErrorThreshold -gt 0) {
+        $summaryUrl += "&consecutive_report_error_threshold=$OpsConsecutiveReportErrorThreshold"
+      }
+
+      $summaryJson = Assert-ApiOk -Name "api daily-update job run summary" -Url $summaryUrl -Headers $headers
+      if (-not ($summaryJson.PSObject.Properties.Name -contains "verdict")) {
+        throw "[smoke] ops summary response missing verdict field"
+      }
+      if ($summaryJson.verdict -ne "healthy") {
+        $reasonText = ""
+        if ($summaryJson.reasons) {
+          $reasonText = ($summaryJson.reasons -join "; ")
+        }
+        throw "[smoke] daily-update summary verdict is $($summaryJson.verdict): $reasonText"
+      }
     }
   }
 } else {

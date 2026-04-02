@@ -28,6 +28,7 @@
 - [x] Upgraded ops summary from passive counts to machine-readable verdicts (`healthy` / `warning` / `critical`)
 - [x] Added explicit ops threshold policy to the summary contract so freshness is no longer implicit / caller-only
 - [x] Closed final-review findings around stale ops loading and silent portfolio DB-error fallback
+- [x] Extended post-deploy smoke so ops checks can require healthy recent-window summary verdicts, not only a healthy latest run
 - [ ] Run findings-first final code review on the current UI/product-closure batch
 - [ ] Keep structured memory and daily logs in sync going forward
 
