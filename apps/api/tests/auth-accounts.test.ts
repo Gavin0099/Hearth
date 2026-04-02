@@ -1897,6 +1897,82 @@ test("POST /api/import/preview returns parser-backed preview for normalized tran
   });
 });
 
+test("POST /api/import/preview returns unauthorized when bearer user is missing", async () => {
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set("import_mode", "transactions-csv");
+  formData.set(
+    "file",
+    new File(["date,amount,currency,category,description\n2026-03-10,-150,TWD,Food,Dinner\n"], "preview.csv", {
+      type: "text/csv",
+    }),
+  );
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => null,
+  });
+
+  const response = await app.request("/api/import/preview", { method: "POST", body: formData }, env);
+  assert.equal(response.status, 401);
+  assert.deepEqual(await response.json(), {
+    code: "unauthorized",
+    error: "Missing or invalid Supabase bearer token.",
+    status: "error",
+  });
+});
+
+test("POST /api/import/preview validates missing import_mode", async () => {
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set(
+    "file",
+    new File(["date,amount,currency,category,description\n2026-03-10,-150,TWD,Food,Dinner\n"], "preview.csv", {
+      type: "text/csv",
+    }),
+  );
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+  });
+
+  const response = await app.request("/api/import/preview", { method: "POST", body: formData }, env);
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), {
+    code: "validation_error",
+    error: "import_mode is required.",
+    status: "error",
+  });
+});
+
+test("POST /api/import/preview validates missing account_id", async () => {
+  const formData = new FormData();
+  formData.set("import_mode", "transactions-csv");
+  formData.set(
+    "file",
+    new File(["date,amount,currency,category,description\n2026-03-10,-150,TWD,Food,Dinner\n"], "preview.csv", {
+      type: "text/csv",
+    }),
+  );
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+  });
+
+  const response = await app.request("/api/import/preview", { method: "POST", body: formData }, env);
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), {
+    code: "validation_error",
+    error: "account_id is required.",
+    status: "error",
+  });
+});
+
 test("POST /api/import/preview returns parser-backed preview for sinopac-tw", async () => {
   const formData = new FormData();
   formData.set("account_id", "account-1");

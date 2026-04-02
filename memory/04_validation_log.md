@@ -56,6 +56,7 @@
   - `105/105`
   - `107/107`
   - `109/109`
+  - `112/112`
 - Scope covered:
   - `portfolio/trade-costs` response shape aligned with `InvestmentCostsResponse`
   - `portfolio/net-worth` snapshot upsert regression coverage
@@ -73,6 +74,7 @@
   - parser-backed import preview now has route coverage for `sinopac-stock`, `foreign-stock-csv`, and `dividends-csv`; API suite moved to `105/105`
   - parser-backed import preview now also has direct route coverage for `sinopac-tw` and `credit-card-tw`; API suite moved to `107/107`
   - parser-backed import preview now also has direct error-path coverage for unowned accounts and account lookup failures; API suite moved to `109/109`
+  - parser-backed import preview now also has direct preflight coverage for unauthorized, missing `import_mode`, and missing `account_id`; API suite moved to `112/112`
   - post-deploy smoke import checks now also cover `/api/import/preview` validation wiring
   - post-deploy smoke import checks now also cover stock-trade and dividend import endpoints
 
