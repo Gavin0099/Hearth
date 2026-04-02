@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import type { AccountRecord } from "@hearth/shared";
+import type { AccountRecord, ParsedPdfTransaction } from "@hearth/shared";
 import {
   downloadAttachment,
   fetchBillEmails,
@@ -9,22 +9,7 @@ import {
 } from "../lib/gmail";
 import { fetchAccounts } from "../lib/accounts";
 import { importTransactionsCsv } from "../lib/imports";
-import {
-  extractPdfText,
-  parseCathayPdfText,
-  parseCtbcPdfText,
-  parseEsunBankPdfText,
-  parseEsunLoanSection,
-  type PdfTextExtractionSource,
-  parseEsunPdfText,
-  parseMegaPdfText,
-  parseSinopacBankPdfText,
-  parseSinopacPdfText,
-  parseSinopacLoanSection,
-  parseSinopacInsuranceSection,
-  parseTaishinPdfText,
-  type ParsedTransaction,
-} from "../lib/pdf-parser";
+import type { PdfTextExtractionSource } from "../lib/pdf-parser";
 import { fetchUserSettingsSecrets } from "../lib/user-settings";
 import { saveBankSnapshot } from "../lib/bank-snapshots";
 
@@ -59,28 +44,71 @@ const BANK_NAME_KEYWORDS: Record<BankKey, string[]> = {
   mega: ["兆豐", "mega", "megabank"],
 };
 
-const BANK_PARSERS: Record<BankKey, (text: string) => ParsedTransaction[]> = {
-  sinopac: parseSinopacPdfText,
-  esun: parseEsunPdfText,
-  cathay: parseCathayPdfText,
-  taishin: parseTaishinPdfText,
-  ctbc: parseCtbcPdfText,
-  mega: parseMegaPdfText,
-};
+type ParsedTransaction = ParsedPdfTransaction;
+type PdfParserModule = typeof import("../lib/pdf-parser");
 
-const BANK_STATEMENT_PARSERS: Record<BankKey, (text: string) => ParsedTransaction[]> = {
-  sinopac: parseSinopacBankPdfText,
-  esun: parseEsunBankPdfText,
-  cathay: parseSinopacBankPdfText,
-  taishin: parseSinopacBankPdfText,
-  ctbc: parseSinopacBankPdfText,
-  mega: parseSinopacBankPdfText,
-};
+async function loadPdfParser() {
+  return import("../lib/pdf-parser");
+}
 
-const LOAN_SECTION_PARSERS: Partial<Record<BankKey, (text: string) => ReturnType<typeof parseSinopacLoanSection>>> = {
-  sinopac: parseSinopacLoanSection,
-  esun: parseEsunLoanSection,
-};
+function parseCreditCardTransactions(
+  pdfParser: PdfParserModule,
+  bank: BankKey,
+  text: string,
+): ParsedTransaction[] {
+  const parsers: Record<BankKey, (input: string) => ParsedTransaction[]> = {
+    sinopac: pdfParser.parseSinopacPdfText,
+    esun: pdfParser.parseEsunPdfText,
+    cathay: pdfParser.parseCathayPdfText,
+    taishin: pdfParser.parseTaishinPdfText,
+    ctbc: pdfParser.parseCtbcPdfText,
+    mega: pdfParser.parseMegaPdfText,
+  };
+
+  return parsers[bank](text);
+}
+
+function parseBankStatementTransactions(
+  pdfParser: PdfParserModule,
+  bank: BankKey,
+  text: string,
+): ParsedTransaction[] {
+  const parsers: Record<BankKey, (input: string) => ParsedTransaction[]> = {
+    sinopac: pdfParser.parseSinopacBankPdfText,
+    esun: pdfParser.parseEsunBankPdfText,
+    cathay: pdfParser.parseSinopacBankPdfText,
+    taishin: pdfParser.parseSinopacBankPdfText,
+    ctbc: pdfParser.parseSinopacBankPdfText,
+    mega: pdfParser.parseSinopacBankPdfText,
+  };
+
+  return parsers[bank](text);
+}
+
+function parseLoanSection(
+  pdfParser: PdfParserModule,
+  bank: BankKey,
+  text: string,
+) {
+  const parsers = {
+    sinopac: pdfParser.parseSinopacLoanSection,
+    esun: pdfParser.parseEsunLoanSection,
+  } as const;
+
+  if (bank !== "sinopac" && bank !== "esun") {
+    return [];
+  }
+
+  return parsers[bank](text);
+}
+
+function parseInsuranceSection(
+  pdfParser: PdfParserModule,
+  bank: BankKey,
+  text: string,
+) {
+  return bank === "sinopac" ? pdfParser.parseSinopacInsuranceSection(text) : [];
+}
 
 function resolveImportAccountId(
   bank: BankKey,
@@ -344,6 +372,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
     setState({ status: "loading", message: `下載 ${email.subject} 中...` });
 
     try {
+      const pdfParser = await loadPdfParser();
       const settings = await fetchUserSettingsSecrets();
       const defaultPw = settings.default_pdf_password ?? "";
       const password =
@@ -378,7 +407,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
 
       setState({ status: "loading", message: "讀取 PDF 中..." });
       const bytes = await downloadAttachment(email.id, pdfAttachment.id, accessToken);
-      const extraction = await extractPdfText(bytes, password, email.bank);
+      const extraction = await pdfParser.extractPdfText(bytes, password, email.bank);
       const text = extraction.text;
 
       if (extraction.source === "ocr_fallback") {
@@ -396,13 +425,13 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       }
 
       const statementDate = resolveStatementDate(text, email.date);
-      const loanRecords = LOAN_SECTION_PARSERS[email.bank]?.(text) ?? [];
-      const insuranceRecords = email.bank === "sinopac" ? parseSinopacInsuranceSection(text) : [];
+      const loanRecords = parseLoanSection(pdfParser, email.bank, text);
+      const insuranceRecords = parseInsuranceSection(pdfParser, email.bank, text);
       let loanSaveError: string | null = null;
 
       const parsed = isBankStatement
-        ? BANK_STATEMENT_PARSERS[email.bank](text)
-        : BANK_PARSERS[email.bank](text);
+        ? parseBankStatementTransactions(pdfParser, email.bank, text)
+        : parseCreditCardTransactions(pdfParser, email.bank, text);
 
       if (parsed.length === 0 && loanRecords.length === 0 && insuranceRecords.length === 0) {
         setState({

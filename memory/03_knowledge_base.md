@@ -24,6 +24,7 @@
 - Import dry-run preview now has a dedicated `/api/import/preview` path that reuses the real parser/normalization logic for `transactions-csv`, `sinopac-tw`, `credit-card-tw`, `excel-monthly`, `sinopac-stock`, `foreign-stock-csv`, and `dividends-csv`.
 - `ImportPanel` should treat preview fetch failures as a separate failure path from validation errors; request throws must clear preview state and release the loading indicator.
 - `apps/web/src/lib/pdf-parser.ts` currently relies on a repo-local `tesseract.js` ambient declaration (`apps/web/src/tesseract.d.ts`) to keep TypeScript happy under the current dependency/toolchain combination.
+- `GmailSyncPanel` now lazy-loads `../lib/pdf-parser` at sync time, which keeps `pdfjs-dist` and `tesseract.js` out of the main application bundle and leaves OCR in a separate chunk.
 - `import.ts` still contains other older route-owned branches and some legacy text noise, so continue refactors as focused slices with build/test verification.
 
 ### Web check blocker

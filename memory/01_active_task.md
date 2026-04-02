@@ -24,6 +24,7 @@
 - [x] Fixed portfolio load order so `net-worth-history` reads after the snapshot-producing `net-worth` call
 - [x] Added explicit error feedback for monthly-report category drill-down fetch failures
 - [x] Restored `@hearth/web` typecheck by adding a local `tesseract.js` module shim
+- [x] Split OCR/PDF parsing off the main web bundle through runtime lazy import in `GmailSyncPanel`
 - [ ] Run findings-first final code review on the current UI/product-closure batch
 - [ ] Keep structured memory and daily logs in sync going forward
 
