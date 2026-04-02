@@ -25,10 +25,11 @@
 - [x] Added explicit error feedback for monthly-report category drill-down fetch failures
 - [x] Restored `@hearth/web` typecheck by adding a local `tesseract.js` module shim
 - [x] Split OCR/PDF parsing off the main web bundle through runtime lazy import in `GmailSyncPanel`
+- [x] Upgraded ops summary from passive counts to machine-readable verdicts (`healthy` / `warning` / `critical`)
 - [ ] Run findings-first final code review on the current UI/product-closure batch
 - [ ] Keep structured memory and daily logs in sync going forward
 
 ## Context
-- **Recent achievements**: portfolio analytics now include `net-worth-history` and `trade-costs` routes/types with regression coverage, import dry-run preview now goes through the real parser/normalization path, and the portfolio UI no longer renders mixed-currency trade costs as if they were all TWD.
+- **Recent achievements**: portfolio analytics now include `net-worth-history` and `trade-costs` routes/types with regression coverage, import dry-run preview now goes through the real parser/normalization path, the portfolio UI no longer renders mixed-currency trade costs as if they were all TWD, and ops now expose verdict-level health instead of raw counts only.
 - **Validation baseline**: `npm.cmd --workspace @hearth/api run build` and `npm.cmd --workspace @hearth/api run test` now pass with the import-preview slice in place (`98/98`).
 - **Next steps**: finish the findings-first review of the current A1/B1/A2/C1/C2/D1 worktree and then decide whether to commit/push the D1 API/shared pieces separately from the user’s in-progress UI changes.

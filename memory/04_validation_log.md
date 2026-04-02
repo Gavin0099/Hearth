@@ -60,6 +60,7 @@
   - front-end dry-run preview now uses the API parser path instead of local file sniffing
   - local `tesseract.js` type shim restores `@hearth/web` TypeScript check
   - OCR parser now lazy-loads into a separate web chunk; production web build passes and main bundle size dropped materially
+  - ops summary now includes backend verdicts, reason strings, age, and consecutive-failure counters (`99/99`)
 
 ## Review Notes
 

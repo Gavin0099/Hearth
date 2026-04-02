@@ -270,12 +270,91 @@ test("GET /api/ops/job-runs/summary returns recent status and report-error total
   assert.equal(payload.status, "ok");
   assert.equal(payload.job_name, "daily-update");
   assert.equal(payload.limit, 3);
+  assert.equal(payload.verdict, "healthy");
+  assert.deepEqual(payload.reasons, []);
   assert.equal(payload.latest.id, "run-3");
   assert.deepEqual(payload.latest.report_error_sections, []);
+  assert.equal(typeof payload.latest.age_minutes, "number");
   assert.deepEqual(payload.totals, {
     runs: 3,
     ok: 2,
     error: 1,
     with_report_errors: 2,
+    consecutive_status_errors: 0,
+    consecutive_report_error_runs: 0,
   });
+});
+
+test("GET /api/ops/job-runs/summary reports critical when latest runs are stale and consecutively failing", async () => {
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "ops@example.com" }),
+    createSupabaseAdminClient: () =>
+      ({
+        from() {
+          return {
+            select() {
+              return {
+                eq() {
+                  return {
+                    order() {
+                      return {
+                        limit() {
+                          return Promise.resolve({
+                            data: [
+                              {
+                                id: "run-5",
+                                job_name: "daily-update",
+                                run_started_at: "2026-03-28T06:00:00.000Z",
+                                run_finished_at: "2026-03-28T06:00:05.000Z",
+                                status: "error",
+                                report: { fxRates: { errors: ["FX API 500"] } },
+                                created_at: "2026-03-28T06:00:05.000Z",
+                              },
+                              {
+                                id: "run-4",
+                                job_name: "daily-update",
+                                run_started_at: "2026-03-27T06:00:00.000Z",
+                                run_finished_at: "2026-03-27T06:00:05.000Z",
+                                status: "error",
+                                report: { priceSnapshots: { errors: ["TWSE 503"] } },
+                                created_at: "2026-03-27T06:00:05.000Z",
+                              },
+                            ],
+                            error: null,
+                          });
+                        },
+                      };
+                    },
+                  };
+                },
+              };
+            },
+          };
+        },
+      }) as any,
+  });
+
+  const response = await app.request(
+    "/api/ops/job-runs/summary?job_name=daily-update&limit=2&max_age_minutes=60&consecutive_failure_threshold=2&consecutive_report_error_threshold=2",
+    {
+      headers: { Authorization: "Bearer valid-token" },
+    },
+  );
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.status, "ok");
+  assert.equal(payload.verdict, "critical");
+  assert.equal(payload.latest.status, "error");
+  assert.deepEqual(payload.totals, {
+    runs: 2,
+    ok: 0,
+    error: 2,
+    with_report_errors: 2,
+    consecutive_status_errors: 2,
+    consecutive_report_error_runs: 2,
+  });
+  assert.match(payload.reasons.join(" | "), /older than 60 minute/);
+  assert.match(payload.reasons.join(" | "), /latest 2 run\(s\) ended with status=error/);
+  assert.match(payload.reasons.join(" | "), /latest 2 run\(s\) contain report section errors/);
 });
