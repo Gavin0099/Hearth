@@ -32,6 +32,7 @@
 - [x] Extended parser-backed import preview coverage to stock/dividend routes and fixed blank stock price preview cells
 - [x] Run findings-first final code review on the current UI/product-closure batch
 - [x] Extended post-deploy smoke import checks to cover `/api/import/preview` validation wiring
+- [x] Extended post-deploy smoke import checks to cover stock-trade and dividend import routes too
 - [ ] Keep structured memory and daily logs in sync going forward
 
 ## Context

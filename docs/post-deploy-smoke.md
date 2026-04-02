@@ -80,6 +80,7 @@ powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerTo
    - `GET /api/report/monthly` returns `status: "ok"` and includes `summary`
 6. When `-ExerciseImports` is provided:
    - import endpoints respond with expected validation errors on missing file payload
+   - this now includes transaction, Excel, stock-trade, and dividend import routes
    - `/api/import/preview` also responds with the expected validation errors for missing `file` and missing `import_mode`
    - this confirms auth + route wiring without writing data
 7. When `-ExerciseRecurring` is provided:

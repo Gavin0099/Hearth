@@ -66,6 +66,7 @@
   - post-deploy smoke now supports recent-window ops summary verdict enforcement
   - parser-backed import preview now has route coverage for `sinopac-stock`, `foreign-stock-csv`, and `dividends-csv`; API suite moved to `105/105`
   - post-deploy smoke import checks now also cover `/api/import/preview` validation wiring
+  - post-deploy smoke import checks now also cover stock-trade and dividend import endpoints
 
 ## Review Notes
 

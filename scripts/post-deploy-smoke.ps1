@@ -301,6 +301,9 @@ if (-not [string]::IsNullOrWhiteSpace($BearerToken)) {
     Invoke-MultipartValidationCheck -Name "import sinopac-tw validation" -Url "$ApiBaseUrl/api/import/sinopac-tw" -Headers $headers -Fields @{ account_id = $resolvedAccountId }
     Invoke-MultipartValidationCheck -Name "import credit-card-tw validation" -Url "$ApiBaseUrl/api/import/credit-card-tw" -Headers $headers -Fields @{ account_id = $resolvedAccountId }
     Invoke-MultipartValidationCheck -Name "import excel-monthly validation" -Url "$ApiBaseUrl/api/import/excel-monthly" -Headers $headers -Fields @{ account_id = $resolvedAccountId }
+    Invoke-MultipartValidationCheck -Name "import sinopac-stock validation" -Url "$ApiBaseUrl/api/import/sinopac-stock" -Headers $headers -Fields @{ account_id = $resolvedAccountId }
+    Invoke-MultipartValidationCheck -Name "import foreign-stock-csv validation" -Url "$ApiBaseUrl/api/import/foreign-stock-csv" -Headers $headers -Fields @{ account_id = $resolvedAccountId }
+    Invoke-MultipartValidationCheck -Name "import dividends-csv validation" -Url "$ApiBaseUrl/api/import/dividends-csv" -Headers $headers -Fields @{ account_id = $resolvedAccountId }
     Invoke-MultipartValidationCheck -Name "import preview missing file validation" -Url "$ApiBaseUrl/api/import/preview" -Headers $headers -Fields @{
       account_id = $resolvedAccountId
       import_mode = "transactions-csv"
