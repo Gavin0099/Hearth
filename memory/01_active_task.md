@@ -26,6 +26,7 @@
 - [x] Restored `@hearth/web` typecheck by adding a local `tesseract.js` module shim
 - [x] Split OCR/PDF parsing off the main web bundle through runtime lazy import in `GmailSyncPanel`
 - [x] Upgraded ops summary from passive counts to machine-readable verdicts (`healthy` / `warning` / `critical`)
+- [x] Added explicit ops threshold policy to the summary contract so freshness is no longer implicit / caller-only
 - [ ] Run findings-first final code review on the current UI/product-closure batch
 - [ ] Keep structured memory and daily logs in sync going forward
 

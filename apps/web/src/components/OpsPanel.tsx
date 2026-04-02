@@ -41,6 +41,7 @@ export function OpsPanel({ session }: OpsPanelProps) {
   const totals = summary?.status === "ok" ? summary.totals : null;
   const verdict = summary?.status === "ok" ? summary.verdict : null;
   const reasons = summary?.status === "ok" ? summary.reasons : [];
+  const thresholds = summary?.status === "ok" ? summary.thresholds : null;
 
   const healthLabel = !latest
     ? "No Data"
@@ -143,6 +144,15 @@ export function OpsPanel({ session }: OpsPanelProps) {
                 </p>
               ))}
             </div>
+          ) : null}
+
+          {thresholds ? (
+            <p style={{ fontSize: "0.8rem", color: "#888", margin: "0 0 0.75rem" }}>
+              Policy: max age{" "}
+              {thresholds.max_age_minutes === null ? "disabled" : `${thresholds.max_age_minutes} min`}
+              , consecutive status errors {thresholds.consecutive_failure_threshold}, consecutive report-error
+              runs {thresholds.consecutive_report_error_threshold}
+            </p>
           ) : null}
 
           {totals && totals.runs > 0 ? (

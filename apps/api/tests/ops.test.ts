@@ -272,6 +272,11 @@ test("GET /api/ops/job-runs/summary returns recent status and report-error total
   assert.equal(payload.limit, 3);
   assert.equal(payload.verdict, "healthy");
   assert.deepEqual(payload.reasons, []);
+  assert.deepEqual(payload.thresholds, {
+    max_age_minutes: 4320,
+    consecutive_failure_threshold: 2,
+    consecutive_report_error_threshold: 2,
+  });
   assert.equal(payload.latest.id, "run-3");
   assert.deepEqual(payload.latest.report_error_sections, []);
   assert.equal(typeof payload.latest.age_minutes, "number");
@@ -346,6 +351,11 @@ test("GET /api/ops/job-runs/summary reports critical when latest runs are stale 
   assert.equal(payload.status, "ok");
   assert.equal(payload.verdict, "critical");
   assert.equal(payload.latest.status, "error");
+  assert.deepEqual(payload.thresholds, {
+    max_age_minutes: 60,
+    consecutive_failure_threshold: 2,
+    consecutive_report_error_threshold: 2,
+  });
   assert.deepEqual(payload.totals, {
     runs: 2,
     ok: 0,
@@ -357,4 +367,60 @@ test("GET /api/ops/job-runs/summary reports critical when latest runs are stale 
   assert.match(payload.reasons.join(" | "), /older than 60 minute/);
   assert.match(payload.reasons.join(" | "), /latest 2 run\(s\) ended with status=error/);
   assert.match(payload.reasons.join(" | "), /latest 2 run\(s\) contain report section errors/);
+});
+
+test("GET /api/ops/job-runs/summary applies default freshness policy for daily-update", async () => {
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "ops@example.com" }),
+    createSupabaseAdminClient: () =>
+      ({
+        from() {
+          return {
+            select() {
+              return {
+                eq() {
+                  return {
+                    order() {
+                      return {
+                        limit() {
+                          return Promise.resolve({
+                            data: [
+                              {
+                                id: "run-6",
+                                job_name: "daily-update",
+                                run_started_at: "2026-03-29T06:00:00.000Z",
+                                run_finished_at: "2026-03-29T06:00:05.000Z",
+                                status: "ok",
+                                report: { fxRates: { errors: [] } },
+                                created_at: "2026-03-29T06:00:05.000Z",
+                              },
+                            ],
+                            error: null,
+                          });
+                        },
+                      };
+                    },
+                  };
+                },
+              };
+            },
+          };
+        },
+      }) as any,
+  });
+
+  const response = await app.request("/api/ops/job-runs/summary?job_name=daily-update&limit=1", {
+    headers: { Authorization: "Bearer valid-token" },
+  });
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.status, "ok");
+  assert.equal(payload.verdict, "critical");
+  assert.deepEqual(payload.thresholds, {
+    max_age_minutes: 4320,
+    consecutive_failure_threshold: 2,
+    consecutive_report_error_threshold: 2,
+  });
+  assert.match(payload.reasons.join(" | "), /older than 4320 minute/);
 });

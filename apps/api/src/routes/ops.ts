@@ -45,6 +45,11 @@ type JobRunSummaryResponse =
       limit: number;
       verdict: "healthy" | "warning" | "critical";
       reasons: string[];
+      thresholds: {
+        max_age_minutes: number | null;
+        consecutive_failure_threshold: number;
+        consecutive_report_error_threshold: number;
+      };
       latest: {
         id: string;
         status: string;
@@ -69,6 +74,55 @@ type JobRunSummaryResponse =
     };
 
 export const opsRoutes = new Hono<ApiEnv>();
+
+const DEFAULT_JOB_THRESHOLDS = {
+  "daily-update": {
+    max_age_minutes: 72 * 60,
+    consecutive_failure_threshold: 2,
+    consecutive_report_error_threshold: 2,
+  },
+} as const;
+
+function resolveSummaryThresholds(
+  jobName: string,
+  raw: {
+    maxAgeMinutesRaw: string;
+    consecutiveFailureThresholdRaw: string;
+    consecutiveReportErrorThresholdRaw: string;
+  },
+) {
+  const defaults =
+    DEFAULT_JOB_THRESHOLDS[jobName as keyof typeof DEFAULT_JOB_THRESHOLDS] ?? {
+      max_age_minutes: null,
+      consecutive_failure_threshold: 2,
+      consecutive_report_error_threshold: 2,
+    };
+
+  const maxAgeMinutes =
+    raw.maxAgeMinutesRaw &&
+    Number.isFinite(Number(raw.maxAgeMinutesRaw)) &&
+    Number(raw.maxAgeMinutesRaw) > 0
+      ? Math.floor(Number(raw.maxAgeMinutesRaw))
+      : defaults.max_age_minutes;
+  const consecutiveFailureThreshold =
+    raw.consecutiveFailureThresholdRaw &&
+    Number.isFinite(Number(raw.consecutiveFailureThresholdRaw)) &&
+    Number(raw.consecutiveFailureThresholdRaw) > 0
+      ? Math.floor(Number(raw.consecutiveFailureThresholdRaw))
+      : defaults.consecutive_failure_threshold;
+  const consecutiveReportErrorThreshold =
+    raw.consecutiveReportErrorThresholdRaw &&
+    Number.isFinite(Number(raw.consecutiveReportErrorThresholdRaw)) &&
+    Number(raw.consecutiveReportErrorThresholdRaw) > 0
+      ? Math.floor(Number(raw.consecutiveReportErrorThresholdRaw))
+      : defaults.consecutive_report_error_threshold;
+
+  return {
+    max_age_minutes: maxAgeMinutes,
+    consecutive_failure_threshold: consecutiveFailureThreshold,
+    consecutive_report_error_threshold: consecutiveReportErrorThreshold,
+  };
+}
 
 function countLeadingMatches<T>(items: T[], predicate: (item: T) => boolean) {
   let count = 0;
@@ -186,20 +240,13 @@ opsRoutes.get("/job-runs/summary", async (c) => {
     limitRaw && Number.isFinite(Number(limitRaw)) && Number(limitRaw) > 0 ? Number(limitRaw) : 10;
   const limit = Math.min(50, Math.max(1, Math.floor(requestedLimit)));
   const maxAgeMinutesRaw = String(c.req.query("max_age_minutes") ?? "").trim();
-  const maxAgeMinutes =
-    maxAgeMinutesRaw && Number.isFinite(Number(maxAgeMinutesRaw)) && Number(maxAgeMinutesRaw) > 0
-      ? Math.floor(Number(maxAgeMinutesRaw))
-      : null;
   const consecutiveFailureThresholdRaw = String(c.req.query("consecutive_failure_threshold") ?? "").trim();
-  const consecutiveFailureThreshold =
-    consecutiveFailureThresholdRaw && Number.isFinite(Number(consecutiveFailureThresholdRaw)) && Number(consecutiveFailureThresholdRaw) > 0
-      ? Math.floor(Number(consecutiveFailureThresholdRaw))
-      : 2;
   const consecutiveReportErrorThresholdRaw = String(c.req.query("consecutive_report_error_threshold") ?? "").trim();
-  const consecutiveReportErrorThreshold =
-    consecutiveReportErrorThresholdRaw && Number.isFinite(Number(consecutiveReportErrorThresholdRaw)) && Number(consecutiveReportErrorThresholdRaw) > 0
-      ? Math.floor(Number(consecutiveReportErrorThresholdRaw))
-      : 2;
+  const thresholds = resolveSummaryThresholds(jobName, {
+    maxAgeMinutesRaw,
+    consecutiveFailureThresholdRaw,
+    consecutiveReportErrorThresholdRaw,
+  });
 
   const { data, error } = await supabase
     .from("job_runs")
@@ -268,17 +315,21 @@ opsRoutes.get("/job-runs/summary", async (c) => {
       reasons.push(`latest report has section errors: ${latestReportErrorSections.join(",")}`);
     }
 
-    if (maxAgeMinutes !== null && latestAgeMinutes !== null && latestAgeMinutes > maxAgeMinutes) {
+    if (
+      thresholds.max_age_minutes !== null &&
+      latestAgeMinutes !== null &&
+      latestAgeMinutes > thresholds.max_age_minutes
+    ) {
       verdict = "critical";
-      reasons.push(`latest run is older than ${maxAgeMinutes} minute(s)`);
+      reasons.push(`latest run is older than ${thresholds.max_age_minutes} minute(s)`);
     }
 
-    if (consecutiveStatusErrors >= consecutiveFailureThreshold) {
+    if (consecutiveStatusErrors >= thresholds.consecutive_failure_threshold) {
       verdict = "critical";
       reasons.push(`latest ${consecutiveStatusErrors} run(s) ended with status=error`);
     }
 
-    if (consecutiveReportErrorRuns >= consecutiveReportErrorThreshold) {
+    if (consecutiveReportErrorRuns >= thresholds.consecutive_report_error_threshold) {
       verdict = "critical";
       reasons.push(`latest ${consecutiveReportErrorRuns} run(s) contain report section errors`);
     }
@@ -289,6 +340,7 @@ opsRoutes.get("/job-runs/summary", async (c) => {
     limit,
     verdict,
     reasons,
+    thresholds,
     latest: latest
       ? {
           id: latest.id,

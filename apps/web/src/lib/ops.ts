@@ -6,6 +6,11 @@ export type JobRunSummaryResponse =
       limit: number;
       verdict: "healthy" | "warning" | "critical";
       reasons: string[];
+      thresholds: {
+        max_age_minutes: number | null;
+        consecutive_failure_threshold: number;
+        consecutive_report_error_threshold: number;
+      };
       latest: {
         id: string;
         status: string;
