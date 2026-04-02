@@ -12,6 +12,7 @@ import { LoanPanel } from "./components/LoanPanel";
 import { MonthlyReportPanel } from "./components/MonthlyReportPanel";
 import { PortfolioPanel } from "./components/PortfolioPanel";
 import { RecurringTemplatesPanel } from "./components/RecurringTemplatesPanel";
+import { OpsPanel } from "./components/OpsPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { TransactionsPanel } from "./components/TransactionsPanel";
 import { getCurrentSession, signInWithGoogle, signOut } from "./lib/auth";
@@ -217,8 +218,9 @@ export function App() {
       )}
 
       {currentView === "settings" && (
-        <section>
+        <section className="two-column">
           <SettingsPanel session={session} />
+          <OpsPanel session={session} />
         </section>
       )}
     </main>
