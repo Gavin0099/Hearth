@@ -41,6 +41,29 @@ export type DividendRecord = {
   created_at: string;
 };
 
+export type InvestmentCostRecord = {
+  ticker: string;
+  currency: string;
+  total_fee: number;
+  total_tax: number;
+  trade_count: number;
+};
+
+export type InvestmentCostsResponse =
+  | { items: InvestmentCostRecord[]; status: "ok" }
+  | { code: "unauthorized" | "database_error"; error: string; status: "error" };
+
+export type NetWorthSnapshotRecord = {
+  snapshot_date: string;
+  total_twd: number;
+  cash_bank_twd: number;
+  investments_twd: number;
+};
+
+export type NetWorthHistoryResponse =
+  | { snapshots: NetWorthSnapshotRecord[]; status: "ok" }
+  | { code: "unauthorized" | "database_error"; error: string; status: "error" };
+
 export type FxRateRecord = {
   from_currency: string;
   to_currency: string;

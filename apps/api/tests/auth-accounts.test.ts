@@ -1,4 +1,4 @@
-import test from "node:test";
+﻿import test from "node:test";
 import assert from "node:assert/strict";
 import * as XLSX from "xlsx";
 import { createApp, type AuthenticatedUser, type SupabaseAdminClient } from "../src/app";
@@ -373,6 +373,8 @@ test("GET /api/portfolio/holdings returns owned holdings", async () => {
       avg_cost: 610.25,
       currency: "TWD",
       updated_at: "2026-03-22T00:00:00Z",
+      close_price: 912,
+      price_as_of: "2026-03-31",
     },
   ];
 
@@ -399,7 +401,20 @@ test("GET /api/portfolio/holdings returns owned holdings", async () => {
             select: () => ({
               in: () => ({
                 order: async () => ({
-                  data: holdings,
+                  data: holdings.map(({ close_price: _closePrice, price_as_of: _priceAsOf, ...holding }) => holding),
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+
+        if (table === "price_snapshots") {
+          return {
+            select: () => ({
+              in: () => ({
+                order: async () => ({
+                  data: [{ ticker: "2330", close_price: 912, snapshot_date: "2026-03-31" }],
                   error: null,
                 }),
               }),
@@ -872,6 +887,7 @@ test("GET /api/report/monthly excludes out-of-month rows and aggregates same-day
 });
 
 test("GET /api/portfolio/net-worth includes FX-adjusted holdings plus dividend summary", async () => {
+  let savedSnapshot: Record<string, unknown> | null = null;
   const app = createApp({
     resolveAuthenticatedUser: async () => ({
       id: "user-1",
@@ -968,6 +984,15 @@ test("GET /api/portfolio/net-worth includes FX-adjusted holdings plus dividend s
           };
         }
 
+        if (table === "net_worth_snapshots") {
+          return {
+            upsert: async (value: Record<string, unknown>) => {
+              savedSnapshot = value;
+              return { error: null };
+            },
+          };
+        }
+
         throw new Error(`Unexpected table ${table}`);
       },
     }),
@@ -983,6 +1008,127 @@ test("GET /api/portfolio/net-worth includes FX-adjusted holdings plus dividend s
     dividendsYearToDateTwd: 390,
     totalNetWorthTwd: 27800,
     priceAsOf: "2026-03-31",
+    status: "ok",
+  });
+  assert.deepEqual(savedSnapshot, {
+    user_id: "user-1",
+    snapshot_date: new Date().toISOString().slice(0, 10),
+    total_twd: 27800,
+    cash_bank_twd: 20000,
+    investments_twd: 7800,
+  });
+});
+
+test("GET /api/portfolio/net-worth-history returns owned snapshot history", async () => {
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "net_worth_snapshots") {
+          return {
+            select: () => ({
+              eq: () => ({
+                gte: () => ({
+                  order: async () => ({
+                    data: [
+                      {
+                        snapshot_date: "2026-03-30",
+                        total_twd: "26000",
+                        cash_bank_twd: "20000",
+                        investments_twd: "6000",
+                      },
+                      {
+                        snapshot_date: "2026-03-31",
+                        total_twd: "27800",
+                        cash_bank_twd: "20000",
+                        investments_twd: "7800",
+                      },
+                    ],
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/portfolio/net-worth-history?days=90", {}, env);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    snapshots: [
+      {
+        snapshot_date: "2026-03-30",
+        total_twd: 26000,
+        cash_bank_twd: 20000,
+        investments_twd: 6000,
+      },
+      {
+        snapshot_date: "2026-03-31",
+        total_twd: 27800,
+        cash_bank_twd: 20000,
+        investments_twd: 7800,
+      },
+    ],
+    status: "ok",
+  });
+});
+
+test("GET /api/portfolio/trade-costs aggregates fee and tax per ticker and currency", async () => {
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }, { id: "account-2" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "investment_trades") {
+          return {
+            select: () => ({
+              in: async () => ({
+                data: [
+                  { ticker: "2330", fee: 20, tax: 60, currency: "TWD" },
+                  { ticker: "2330", fee: 15, tax: 45, currency: "TWD" },
+                  { ticker: "0050", fee: 12, tax: 0, currency: "TWD" },
+                  { ticker: "AAPL", fee: 8, tax: 0, currency: "USD" },
+                ],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/portfolio/trade-costs", {}, env);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    items: [
+      { ticker: "2330", currency: "TWD", total_fee: 35, total_tax: 105, trade_count: 2 },
+      { ticker: "0050", currency: "TWD", total_fee: 12, total_tax: 0, trade_count: 1 },
+      { ticker: "AAPL", currency: "USD", total_fee: 8, total_tax: 0, trade_count: 1 },
+    ],
     status: "ok",
   });
 });
@@ -1569,6 +1715,59 @@ test("POST /api/import/transactions-csv imports normalized transaction csv rows"
       source_hash: insertedRows[1]?.source_hash,
     },
   ]);
+});
+
+test("POST /api/import/preview returns parser-backed preview for normalized transaction csv", async () => {
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set("import_mode", "transactions-csv");
+  formData.set(
+    "file",
+    new File(
+      [
+        "date,amount,currency,category,description\n2026-03-10,-150,TWD,Food,Dinner\n2026-03-11,0,TWD,Bonus,Invalid\n",
+      ],
+      "transactions.csv",
+      { type: "text/csv" },
+    ),
+  );
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/import/preview", { method: "POST", body: formData }, env);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    source: "transactions-csv",
+    validRows: 1,
+    failedRows: 1,
+    skipped: 0,
+    estimatedRows: 2,
+    columns: ["date", "amount", "currency", "category", "description", "source"],
+    sampleRows: [["2026-03-10", "-150", "TWD", "Food", "Dinner", "csv_import"]],
+    errors: ["line 3: amount must be a non-zero number"],
+    status: "ok",
+  });
 });
 
 test("POST /api/import/sinopac-tw maps minimal Sinopac csv rows into transactions", async () => {
@@ -2163,6 +2362,54 @@ test("POST /api/import/excel-monthly imports horizontal calendar workbook with c
       source_hash: insertedRows[2]?.source_hash,
     },
   ]);
+});
+
+test("POST /api/import/preview returns parser-backed preview for excel-monthly", async () => {
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set("import_mode", "excel-monthly");
+  formData.set(
+    "file",
+    createExcelMonthlyFile([
+      ["Category", "Label", "2026/03/01", "2026/03/02"],
+      ["Food", "Breakfast", 80, 120],
+      ["Income", "Salary", "", 3000],
+    ]),
+  );
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/import/preview", { method: "POST", body: formData }, env);
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.status, "ok");
+  assert.equal(payload.source, "excel-monthly");
+  assert.equal(payload.validRows, 3);
+  assert.equal(payload.failedRows, 0);
+  assert.deepEqual(payload.columns, ["date", "amount", "currency", "category", "description", "source"]);
+  assert.equal(Array.isArray(payload.sampleRows), true);
+  assert.equal(payload.sampleRows.length, 3);
 });
 
 test("POST /api/import/excel-monthly aggregates parsable rows across multiple monthly sheets and ignores sidebar rows", async () => {

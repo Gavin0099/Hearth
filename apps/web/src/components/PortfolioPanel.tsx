@@ -2,15 +2,19 @@ import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import type {
   FxRateRecord,
+  InvestmentCostRecord,
   NetWorthResponse,
+  NetWorthSnapshotRecord,
   PortfolioDividendsResponse,
   PortfolioHoldingsResponse,
 } from "@hearth/shared";
 import {
   fetchFxRates,
   fetchNetWorth,
+  fetchNetWorthHistory,
   fetchPortfolioDividends,
   fetchPortfolioHoldings,
+  fetchTradeCosts,
   saveFxRates,
   savePriceSnapshots,
 } from "../lib/portfolio";
@@ -50,6 +54,72 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function NetWorthChart({ snapshots }: { snapshots: NetWorthSnapshotRecord[] }) {
+  const W = 400;
+  const H = 80;
+  const PAD = { top: 6, right: 4, bottom: 18, left: 4 };
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
+
+  const values = snapshots.map((s) => s.total_twd);
+  const minV = Math.min(...values);
+  const maxV = Math.max(...values);
+  const range = maxV - minV || 1;
+
+  const toX = (i: number) => PAD.left + (i / (snapshots.length - 1)) * innerW;
+  const toY = (v: number) => PAD.top + innerH - ((v - minV) / range) * innerH;
+
+  const points = snapshots.map((s, i) => `${toX(i)},${toY(s.total_twd)}`).join(" ");
+  const areaPoints = [
+    `${toX(0)},${PAD.top + innerH}`,
+    ...snapshots.map((s, i) => `${toX(i)},${toY(s.total_twd)}`),
+    `${toX(snapshots.length - 1)},${PAD.top + innerH}`,
+  ].join(" ");
+
+  const fmtShort = (v: number) => {
+    if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+    if (v >= 1_000) return `${(v / 1_000).toFixed(0)}K`;
+    return String(v);
+  };
+
+  const first = snapshots[0].snapshot_date.slice(5);
+  const last = snapshots[snapshots.length - 1].snapshot_date.slice(5);
+
+  return (
+    <section className="nw-chart-section">
+      <h3 style={{ margin: "0 0 6px", fontSize: "0.85rem", color: "#888" }}>淨值走勢（近 90 天）</h3>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        style={{ width: "100%", height: "auto", display: "block" }}
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient id="nw-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#e8b86d" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#e8b86d" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <polygon points={areaPoints} fill="url(#nw-grad)" />
+        <polyline points={points} fill="none" stroke="#e8b86d" strokeWidth="1.5" />
+        {/* Min / max labels */}
+        <text x={PAD.left + 2} y={PAD.top + 4} fontSize="7" fill="#888" dominantBaseline="hanging">
+          {fmtShort(maxV)}
+        </text>
+        <text x={PAD.left + 2} y={PAD.top + innerH - 2} fontSize="7" fill="#888">
+          {fmtShort(minV)}
+        </text>
+        {/* Date range */}
+        <text x={PAD.left} y={H - 3} fontSize="7" fill="#666">
+          {first}
+        </text>
+        <text x={W - PAD.right} y={H - 3} fontSize="7" fill="#666" textAnchor="end">
+          {last}
+        </text>
+      </svg>
+    </section>
+  );
+}
+
 export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
   const [state, setState] = useState<LoadState>({ status: "idle" });
   const [priceDate, setPriceDate] = useState(todayIso);
@@ -62,6 +132,21 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
   const [fxInputs, setFxInputs] = useState<Record<string, string>>({});
   const [fxSaving, setFxSaving] = useState(false);
   const [fxMessage, setFxMessage] = useState<string | null>(null);
+  const [history, setHistory] = useState<NetWorthSnapshotRecord[]>([]);
+  const [tradeCosts, setTradeCosts] = useState<InvestmentCostRecord[]>([]);
+
+  const tradeCostTotalsByCurrency = tradeCosts.reduce<Record<string, { fee: number; tax: number; trades: number }>>(
+    (acc, item) => {
+      const current = acc[item.currency] ?? { fee: 0, tax: 0, trades: 0 };
+      acc[item.currency] = {
+        fee: current.fee + item.total_fee,
+        tax: current.tax + item.total_tax,
+        trades: current.trades + item.trade_count,
+      };
+      return acc;
+    },
+    {},
+  );
 
   useEffect(() => {
     if (!session) {
@@ -72,11 +157,12 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
     let cancelled = false;
     async function load() {
       setState({ status: "loading" });
-      const [holdingsResult, netWorthResult, dividendsResult, fxResult] = await Promise.all([
+      const [holdingsResult, netWorthResult, dividendsResult, fxResult, costsResult] = await Promise.all([
         fetchPortfolioHoldings(),
         fetchNetWorth(),
         fetchPortfolioDividends(),
         fetchFxRates(),
+        fetchTradeCosts(),
       ]);
       if (cancelled) return;
 
@@ -94,6 +180,12 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
       }
 
       if (fxResult.status === "ok") setFxRates(fxResult.rates);
+      if (costsResult.status === "ok") setTradeCosts(costsResult.items);
+
+      const historyResult = await fetchNetWorthHistory(90);
+      if (cancelled) return;
+      if (historyResult.status === "ok") setHistory(historyResult.snapshots);
+
       setState({
         status: "success",
         holdings: holdingsResult,
@@ -251,6 +343,11 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
               <p className="price-as-of">尚無報價，以成本計算</p>
             ) : null}
           </section>
+
+          {/* 淨值歷史走勢圖 */}
+          {history.length >= 2 ? (
+            <NetWorthChart snapshots={history} />
+          ) : null}
 
           {/* 持倉明細 table */}
           {state.holdings.items.length > 0 ? (
@@ -438,6 +535,47 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
                   </li>
                 ))}
               </ul>
+            </section>
+          ) : null}
+
+          {/* 投資費用彙總 */}
+          {tradeCosts.length > 0 ? (
+            <section className="holdings-list">
+              <h3>交易費用彙總</h3>
+              <div className="holdings-table-wrap">
+                <table className="holdings-table">
+                  <thead>
+                    <tr>
+                      <th>股票</th>
+                      <th>幣別</th>
+                      <th className="num">交易次數</th>
+                      <th className="num">手續費</th>
+                      <th className="num">證交稅</th>
+                      <th className="num">合計</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tradeCosts.map((item) => (
+                      <tr key={`${item.ticker}-${item.currency}`}>
+                        <td><span className="ticker">{item.ticker}</span></td>
+                        <td>{item.currency}</td>
+                        <td className="num">{item.trade_count}</td>
+                        <td className="num">{formatAmount(item.total_fee, item.currency)}</td>
+                        <td className="num">{formatAmount(item.total_tax, item.currency)}</td>
+                        <td className="num">{formatAmount(item.total_fee + item.total_tax, item.currency)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ marginTop: "0.75rem", fontSize: "0.85rem", color: "#666" }}>
+                {Object.entries(tradeCostTotalsByCurrency).map(([currency, totals]) => (
+                  <p key={currency} style={{ margin: "0.2rem 0" }}>
+                    {currency} 合計: {totals.trades} 筆交易，手續費 {formatAmount(totals.fee, currency)}，
+                    證交稅 {formatAmount(totals.tax, currency)}，總成本 {formatAmount(totals.fee + totals.tax, currency)}
+                  </p>
+                ))}
+              </div>
             </section>
           ) : null}
         </>

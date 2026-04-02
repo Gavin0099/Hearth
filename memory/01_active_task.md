@@ -1,4 +1,4 @@
-# Current Task: Import Route Cleanup And Memory Discipline
+# Current Task: Portfolio Surface Closure And Memory Discipline
 
 ## Progress
 - [x] Local governance baseline exists under `governance/`
@@ -18,10 +18,15 @@
 - [x] Added authenticated `job_runs` read path and smoke coverage for cron history
 - [x] Added stricter cron verdict rules so ops checks can reject section-level report errors
 - [x] Added recent-window cron summary view for repeated failure inspection
-- [ ] Continue on the next `P0 ops` slice after latest+summary inspection baseline
+- [x] Verified `net-worth-history` and `trade-costs` API behavior with regression tests
+- [x] Upgraded import preview from client-side file sniffing to parser-backed `/api/import/preview`
+- [x] Fixed `trade-costs` to stop mixing different currencies into a fake TWD total
+- [x] Fixed portfolio load order so `net-worth-history` reads after the snapshot-producing `net-worth` call
+- [x] Added explicit error feedback for monthly-report category drill-down fetch failures
+- [ ] Run findings-first final code review on the current UI/product-closure batch
 - [ ] Keep structured memory and daily logs in sync going forward
 
 ## Context
-- **Recent achievements**: stock routes now delegate their DB orchestration through `apps/api/src/lib/stock-import.ts`; all import routes share preflight, parse-result, transaction-csv, and dividend import helpers in `apps/api/src/lib/import-workflows.ts`; the `daily-update` cron now both returns structured execution reports and persists them into `job_runs`; and there are now authenticated ops endpoints for both latest-run verdicts and recent-window cron summaries.
-- **Validation baseline**: `npm.cmd --workspace @hearth/api run build` and `npm.cmd --workspace @hearth/api run test` both pass after the cleanup.
-- **Next steps**: Stay off route-cleanup churn and continue the operational path from cron observability outward.
+- **Recent achievements**: portfolio analytics now include `net-worth-history` and `trade-costs` routes/types with regression coverage, import dry-run preview now goes through the real parser/normalization path, and the portfolio UI no longer renders mixed-currency trade costs as if they were all TWD.
+- **Validation baseline**: `npm.cmd --workspace @hearth/api run build` and `npm.cmd --workspace @hearth/api run test` now pass with the import-preview slice in place (`98/98`).
+- **Next steps**: finish the findings-first review of the current A1/B1/A2/C1/C2/D1 worktree and then decide whether to commit/push the D1 API/shared pieces separately from the user’s in-progress UI changes.

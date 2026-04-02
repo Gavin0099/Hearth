@@ -3,6 +3,8 @@ import type {
   DividendRecord,
   FxRatesResponse,
   HoldingRecord,
+  InvestmentCostsResponse,
+  NetWorthHistoryResponse,
   NetWorthResponse,
   PortfolioDividendsResponse,
   PortfolioHoldingsResponse,
@@ -10,6 +12,8 @@ import type {
 import type { ApiEnv } from "../types";
 
 export const portfolioRoutes = new Hono<ApiEnv>();
+
+type InvestmentCostsSuccessResponse = Extract<InvestmentCostsResponse, { status: "ok" }>;
 
 portfolioRoutes.get("/net-worth", async (c) => {
   const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
@@ -189,6 +193,23 @@ portfolioRoutes.get("/net-worth", async (c) => {
 
   const totalNetWorthTwd = cashBankTwd + cashCreditTwd + investmentsTwd;
 
+  // Upsert daily snapshot; ignore errors (table may not exist yet)
+  const todayDate = new Date().toISOString().slice(0, 10);
+  try {
+    await supabase.from("net_worth_snapshots").upsert(
+      {
+        user_id: user.id,
+        snapshot_date: todayDate,
+        total_twd: Math.round(totalNetWorthTwd),
+        cash_bank_twd: Math.round(cashBankTwd),
+        investments_twd: Math.round(investmentsTwd),
+      },
+      { onConflict: "user_id,snapshot_date" },
+    );
+  } catch {
+    // Non-critical; don't fail the net-worth response
+  }
+
   return c.json<NetWorthResponse>({
     cashBankTwd: Math.round(cashBankTwd),
     cashCreditTwd: Math.round(cashCreditTwd),
@@ -197,6 +218,49 @@ portfolioRoutes.get("/net-worth", async (c) => {
     dividendsYearToDateTwd: Math.round(dividendsYearToDateTwd),
     totalNetWorthTwd: Math.round(totalNetWorthTwd),
     priceAsOf,
+    status: "ok",
+  });
+});
+
+portfolioRoutes.get("/net-worth-history", async (c) => {
+  const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
+  const user = await resolveAuthenticatedUser(c.req.raw, c.env);
+  if (!user) {
+    return c.json<NetWorthHistoryResponse>(
+      { code: "unauthorized", error: "Missing or invalid Supabase bearer token.", status: "error" },
+      401,
+    );
+  }
+
+  const days = Math.min(Math.max(parseInt(c.req.query("days") ?? "90") || 90, 1), 365);
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+  const sinceDate = since.toISOString().slice(0, 10);
+
+  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
+  const supabase = createSupabaseAdminClient(c.env);
+
+  const { data, error } = await supabase
+    .from("net_worth_snapshots")
+    .select("snapshot_date, total_twd, cash_bank_twd, investments_twd")
+    .eq("user_id", user.id)
+    .gte("snapshot_date", sinceDate)
+    .order("snapshot_date", { ascending: true });
+
+  if (error) {
+    return c.json<NetWorthHistoryResponse>(
+      { code: "database_error", error: error.message, status: "error" },
+      500,
+    );
+  }
+
+  return c.json<NetWorthHistoryResponse>({
+    snapshots: (data ?? []).map((r: { snapshot_date: string; total_twd: number; cash_bank_twd: number; investments_twd: number }) => ({
+      snapshot_date: r.snapshot_date,
+      total_twd: Number(r.total_twd),
+      cash_bank_twd: Number(r.cash_bank_twd),
+      investments_twd: Number(r.investments_twd),
+    })),
     status: "ok",
   });
 });
@@ -567,4 +631,74 @@ portfolioRoutes.post("/fx-rates", async (c) => {
   }
 
   return c.json<FxRateSaveResponse>({ saved: rows.length, status: "ok" });
+});
+
+// GET /trade-costs — total fee+tax per ticker from investment_trades
+portfolioRoutes.get("/trade-costs", async (c) => {
+  const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
+  const user = await resolveAuthenticatedUser(c.req.raw, c.env);
+  if (!user) {
+    return c.json<InvestmentCostsResponse>(
+      { code: "unauthorized", error: "Missing or invalid Supabase bearer token.", status: "error" },
+      401,
+    );
+  }
+
+  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
+  const supabase = createSupabaseAdminClient(c.env);
+
+  const { data: ownedAccounts, error: accountsError } = await supabase
+    .from("accounts")
+    .select("id")
+    .eq("user_id", user.id);
+
+  if (accountsError) {
+    return c.json<InvestmentCostsResponse>(
+      { code: "database_error", error: accountsError.message, status: "error" },
+      500,
+    );
+  }
+
+  const accountIds = (ownedAccounts ?? []).map((a: { id: string }) => a.id);
+  if (accountIds.length === 0) {
+    return c.json<InvestmentCostsResponse>({ items: [], status: "ok" });
+  }
+
+  const { data, error } = await supabase
+    .from("investment_trades")
+    .select("ticker, fee, tax, currency")
+    .in("account_id", accountIds);
+
+  if (error) {
+    return c.json<InvestmentCostsResponse>(
+      { code: "database_error", error: error.message, status: "error" },
+      500,
+    );
+  }
+
+  // Aggregate per ticker in JS (avoids needing a DB function)
+  const map = new Map<string, { ticker: string; currency: string; total_fee: number; total_tax: number; trade_count: number }>();
+  for (const row of data ?? []) {
+    const ticker = String(row.ticker);
+    const currency = String(row.currency ?? "TWD").toUpperCase();
+    const key = `${ticker}::${currency}`;
+    const prev = map.get(key) ?? { ticker, currency, total_fee: 0, total_tax: 0, trade_count: 0 };
+    map.set(key, {
+      ticker,
+      currency,
+      total_fee: prev.total_fee + Number(row.fee),
+      total_tax: prev.total_tax + Number(row.tax),
+      trade_count: prev.trade_count + 1,
+    });
+  }
+
+  const items: InvestmentCostsSuccessResponse["items"] = [...map.entries()]
+    .map(([, value]) => value)
+    .sort((a, b) => {
+      const totalDiff = (b.total_fee + b.total_tax) - (a.total_fee + a.total_tax);
+      if (totalDiff !== 0) return totalDiff;
+      return a.ticker.localeCompare(b.ticker);
+    });
+
+  return c.json<InvestmentCostsResponse>({ items, status: "ok" });
 });

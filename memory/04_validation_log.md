@@ -41,6 +41,22 @@
   - strict ops verdict rules for section-level cron report errors (`93/93`)
   - recent-window ops summary for cron-history inspection (`94/94`)
 
+## 2026-04-02
+
+- `npm.cmd --workspace @hearth/api run build`
+- `npm.cmd --workspace @hearth/api run test`
+- Validation count progressed to:
+  - `96/96`
+  - `98/98`
+- Scope covered:
+  - `portfolio/trade-costs` response shape aligned with `InvestmentCostsResponse`
+  - `portfolio/net-worth` snapshot upsert regression coverage
+  - `portfolio/net-worth-history` response normalization coverage
+  - `portfolio/trade-costs` per-ticker-per-currency fee/tax aggregation coverage
+  - holdings test stub updated for price-snapshot enrichment
+  - parser-backed `/api/import/preview` route coverage for normalized CSV and `excel-monthly`
+  - front-end dry-run preview now uses the API parser path instead of local file sniffing
+
 ## Review Notes
 
 - Web check remains blocked by the known `tesseract.js` typing issue and is not attributable to the recent API correctness slices.

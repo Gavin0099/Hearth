@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type {
   DividendImportResponse,
+  ImportPreviewResponse,
   StockTradeImportResponse,
   TransactionCsvImportResponse,
 } from "@hearth/shared";
@@ -11,6 +12,7 @@ import {
   importParsedStockTrades,
   importParsedTransactionRows,
   importTransactionsCsvRows,
+  previewImportFile,
   readOwnedImportFile,
   resolveOwnedImportContext,
   unauthorizedImportResponse,
@@ -53,6 +55,62 @@ function resolveTransactionsCsvSource(rawValue: FormDataEntryValue | null) {
   ];
   return allowed.includes(value) ? value : "csv_import";
 }
+
+function resolveImportPreviewMode(rawValue: FormDataEntryValue | null) {
+  const value = String(rawValue ?? "").trim();
+  const allowed = [
+    "transactions-csv",
+    "sinopac-tw",
+    "credit-card-tw",
+    "excel-monthly",
+    "sinopac-stock",
+    "foreign-stock-csv",
+    "dividends-csv",
+  ];
+  return allowed.includes(value)
+    ? (value as
+        | "transactions-csv"
+        | "sinopac-tw"
+        | "credit-card-tw"
+        | "excel-monthly"
+        | "sinopac-stock"
+        | "foreign-stock-csv"
+        | "dividends-csv")
+    : null;
+}
+
+importRoutes.post("/preview", async (c) => {
+  const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
+  const user = await resolveAuthenticatedUser(c.req.raw, c.env);
+  if (!user) {
+    return c.json<ImportPreviewResponse>(unauthorizedImportResponse(), 401);
+  }
+
+  const formData = await c.req.formData();
+  const importMode = resolveImportPreviewMode(formData.get("import_mode"));
+  if (!importMode) {
+    return c.json<ImportPreviewResponse>(
+      { code: "validation_error", error: "import_mode is required.", status: "error" },
+      400,
+    );
+  }
+
+  const requestData = await readOwnedImportFile(c, importMode === "excel-monthly" ? "Excel" : "CSV");
+  if (!requestData.ok) {
+    return c.json<ImportPreviewResponse>(requestData.error, requestData.status);
+  }
+
+  const { accountId, file, formData: requestFormData } = requestData;
+
+  const importContext = await resolveOwnedImportContext(c, user.id, accountId);
+  if (!importContext.ok) {
+    return c.json<ImportPreviewResponse>(importContext.error, importContext.status);
+  }
+
+  const importSource = resolveTransactionsCsvSource(requestFormData.get("source"));
+  const preview = await previewImportFile(file, accountId, importMode, importSource);
+  return c.json<ImportPreviewResponse>(preview.response, preview.status);
+});
 
 importRoutes.post("/transactions-csv", async (c) => {
   const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
@@ -98,15 +156,15 @@ importRoutes.post("/sinopac-tw", async (c) => {
   }
   const { supabase } = importContext;
 
-  const result = await importParsedTransactionRows(
-    file,
-    accountId,
-    supabase,
-    "sinopac-tw",
-    "Sinopac CSV rows are invalid.",
-    (payload, ownedAccountId) => parseSinopacTransactionsCsv(String(payload), ownedAccountId),
-  );
-  return c.json<TransactionCsvImportResponse>(result.response, result.status as 200 | 500);
+    const result = await importParsedTransactionRows(
+      file,
+      accountId,
+      supabase,
+      "sinopac-tw",
+      "Sinopac CSV rows are invalid.",
+      (payload, ownedAccountId) => parseSinopacTransactionsCsv(String(payload), ownedAccountId),
+    );
+    return c.json<TransactionCsvImportResponse>(result.response, result.status as 200 | 500);
 });
 
 importRoutes.post("/credit-card-tw", async (c) => {

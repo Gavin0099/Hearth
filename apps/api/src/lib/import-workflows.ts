@@ -3,8 +3,11 @@ import type {
   CreateTransactionInput,
   RecurringImportCandidate,
 } from "@hearth/shared";
+import { parseCreditCardTransactionsCsv } from "./credit-card";
 import { parseCsv } from "./csv";
 import { parseDividendsCsv, prepareDividendImportBatch } from "./dividends";
+import { parseMonthlyExcel } from "./excel-monthly";
+import { parseSinopacTransactionsCsv } from "./sinopac";
 import { parseSinopacStockCsv } from "./sinopac-stock";
 import { executeStockTradeImport } from "./stock-import";
 import { buildTransactionImportRows, prepareTransactionImportBatch } from "./transaction-import";
@@ -25,6 +28,40 @@ export type ParsedTransactionImport = {
   warnings?: string[];
   recurringCandidates?: RecurringImportCandidate[];
 };
+
+export type ImportPreviewSuccess = {
+  source:
+    | "transactions-csv"
+    | "sinopac-tw"
+    | "credit-card-tw"
+    | "excel-monthly"
+    | "sinopac-stock"
+    | "foreign-stock-csv"
+    | "dividends-csv";
+  validRows: number;
+  failedRows: number;
+  skipped: number;
+  estimatedRows: number;
+  columns: string[];
+  sampleRows: string[][];
+  warnings?: string[];
+  errors: string[];
+  recurringCandidates?: RecurringImportCandidate[];
+  status: "ok";
+};
+
+function previewCell(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  return String(value);
+}
+
+function buildPreviewRows(
+  columns: string[],
+  rows: Array<Record<string, unknown>>,
+  limit = 5,
+): string[][] {
+  return rows.slice(0, limit).map((row) => columns.map((column) => previewCell(row[column])));
+}
 
 export function unauthorizedImportResponse(): ImportErrorResponse {
   return {
@@ -386,6 +423,144 @@ export async function importDividendRows(
       persistence: "supabase" as const,
       status: "ok" as const,
       errors,
+    },
+    status: 200 as const,
+  };
+}
+
+export async function previewImportFile(
+  file: File,
+  accountId: string,
+  importMode:
+    | "transactions-csv"
+    | "sinopac-tw"
+    | "credit-card-tw"
+    | "excel-monthly"
+    | "sinopac-stock"
+    | "foreign-stock-csv"
+    | "dividends-csv",
+  importSource = "csv_import",
+) {
+  if (importMode === "transactions-csv") {
+    const text = await file.text();
+    const rows = parseCsv(text);
+    const normalized: CreateTransactionInput[] = [];
+    const errors: string[] = [];
+
+    rows.forEach((row, index) => {
+      const line = index + 2;
+      const date = String(row.date ?? "").trim();
+      const amount = Number(String(row.amount ?? "").trim());
+      const currency = String(row.currency ?? "TWD").trim().toUpperCase();
+      const category = String(row.category ?? "").trim() || null;
+      const description = String(row.description ?? "").trim() || null;
+
+      if (!date) {
+        errors.push(`line ${line}: date is required`);
+        return;
+      }
+
+      if (!Number.isFinite(amount) || amount === 0) {
+        errors.push(`line ${line}: amount must be a non-zero number`);
+        return;
+      }
+
+      normalized.push({
+        account_id: accountId,
+        date,
+        amount,
+        currency,
+        category,
+        description,
+        source: importSource,
+      });
+    });
+
+    const columns = ["date", "amount", "currency", "category", "description", "source"];
+    return {
+      response: {
+        source: "transactions-csv" as const,
+        validRows: normalized.length,
+        failedRows: errors.length,
+        skipped: 0,
+        estimatedRows: rows.length,
+        columns,
+        sampleRows: buildPreviewRows(columns, normalized as Array<Record<string, unknown>>),
+        errors,
+        status: "ok" as const,
+      },
+      status: 200 as const,
+    };
+  }
+
+  if (importMode === "sinopac-tw" || importMode === "credit-card-tw" || importMode === "excel-monthly") {
+    const parsed =
+      importMode === "sinopac-tw"
+        ? parseSinopacTransactionsCsv(await file.text(), accountId)
+        : importMode === "credit-card-tw"
+          ? parseCreditCardTransactionsCsv(await file.text(), accountId)
+          : parseMonthlyExcel(await file.arrayBuffer(), accountId);
+    const warnings: string[] = "warnings" in parsed ? ((parsed.warnings ?? []) as string[]) : [];
+    const recurringCandidates: RecurringImportCandidate[] =
+      "recurringCandidates" in parsed
+        ? ((parsed.recurringCandidates ?? []) as RecurringImportCandidate[])
+        : [];
+
+    const columns = ["date", "amount", "currency", "category", "description", "source"];
+    return {
+      response: {
+        source: importMode,
+        validRows: parsed.normalized.length,
+        failedRows: parsed.errors.length,
+        skipped: parsed.skipped,
+        estimatedRows: parsed.normalized.length + parsed.errors.length + parsed.skipped,
+        columns,
+        sampleRows: buildPreviewRows(columns, parsed.normalized as Array<Record<string, unknown>>),
+        warnings,
+        errors: parsed.errors,
+        recurringCandidates,
+        status: "ok" as const,
+      },
+      status: 200 as const,
+    };
+  }
+
+  if (importMode === "sinopac-stock" || importMode === "foreign-stock-csv") {
+    const parsed = parseSinopacStockCsv(await file.text(), accountId);
+    const rows =
+      importMode === "foreign-stock-csv"
+        ? parsed.trades.map((trade) => ({ ...trade, source: "foreign-stock-csv" }))
+        : parsed.trades;
+    const columns = ["trade_date", "ticker", "action", "shares", "price", "fee", "tax", "currency"];
+    return {
+      response: {
+        source: importMode,
+        validRows: rows.length,
+        failedRows: parsed.errors.length,
+        skipped: 0,
+        estimatedRows: rows.length + parsed.errors.length,
+        columns,
+        sampleRows: buildPreviewRows(columns, rows as Array<Record<string, unknown>>),
+        errors: parsed.errors,
+        status: "ok" as const,
+      },
+      status: 200 as const,
+    };
+  }
+
+  const parsedDividends = parseDividendsCsv(await file.text(), accountId);
+  const columns = ["ticker", "pay_date", "gross_amount", "tax_withheld", "net_amount", "currency"];
+  return {
+    response: {
+      source: "dividends-csv" as const,
+      validRows: parsedDividends.rows.length,
+      failedRows: parsedDividends.errors.length,
+      skipped: 0,
+      estimatedRows: parsedDividends.rows.length + parsedDividends.errors.length,
+      columns,
+      sampleRows: buildPreviewRows(columns, parsedDividends.rows as Array<Record<string, unknown>>),
+      errors: parsedDividends.errors,
+      status: "ok" as const,
     },
     status: 200 as const,
   };

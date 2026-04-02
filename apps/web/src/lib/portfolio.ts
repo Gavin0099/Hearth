@@ -1,5 +1,7 @@
 import type {
   FxRatesResponse,
+  InvestmentCostsResponse,
+  NetWorthHistoryResponse,
   NetWorthResponse,
   PortfolioDividendsResponse,
   PortfolioHoldingsResponse,
@@ -24,6 +26,16 @@ export async function fetchPortfolioDividends() {
 export async function fetchFxRates() {
   const response = await apiFetch("/api/portfolio/fx-rates");
   return (await response.json()) as FxRatesResponse;
+}
+
+export async function fetchNetWorthHistory(days = 90) {
+  const response = await apiFetch(`/api/portfolio/net-worth-history?days=${days}`);
+  return (await response.json()) as NetWorthHistoryResponse;
+}
+
+export async function fetchTradeCosts() {
+  const response = await apiFetch("/api/portfolio/trade-costs");
+  return (await response.json()) as InvestmentCostsResponse;
 }
 
 export type FxRateEntry = { from_currency: string; rate_date: string; rate: number };

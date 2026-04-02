@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import type {
   AccountRecord,
@@ -28,6 +28,21 @@ type LoadState =
 
 const today = new Date().toISOString().slice(0, 10);
 const monthStart = `${today.slice(0, 8)}01`;
+const PAGE_SIZE = 50;
+
+function getMonthRange(year: number, month: number): { from: string; to: string } {
+  const from = `${year}-${String(month).padStart(2, "0")}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const to = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  return { from, to };
+}
+
+const fmtTwd = new Intl.NumberFormat("zh-TW", {
+  style: "currency",
+  currency: "TWD",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
 
 export function TransactionsPanel({
   session,
@@ -59,6 +74,14 @@ export function TransactionsPanel({
     description: "",
     source: "manual",
   });
+  const [navYear, setNavYear] = useState(() => parseInt(monthStart.slice(0, 4)));
+  const [navMonth, setNavMonth] = useState(() => parseInt(monthStart.slice(5, 7)));
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [filters.date_from, filters.date_to, filters.account_id, filters.category, filters.q]);
 
   useEffect(() => {
     if (!session) {
@@ -123,12 +146,27 @@ export function TransactionsPanel({
     };
   }, [session, refreshKey, filters.account_id, filters.category, filters.date_from, filters.date_to, filters.q]);
 
-  const visibleTransactions = useMemo(() => {
-    if (state.status !== "success") {
-      return [];
-    }
-    return state.transactions.slice(0, 20);
-  }, [state]);
+  const curNavY = parseInt(monthStart.slice(0, 4));
+  const curNavM = parseInt(monthStart.slice(5, 7));
+  const isCurrentMonth = navYear === curNavY && navMonth === curNavM;
+
+  function navigateMonth(delta: number) {
+    const d = new Date(navYear, navMonth - 1 + delta, 1);
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1;
+    if (y > curNavY || (y === curNavY && m > curNavM)) return;
+    setNavYear(y);
+    setNavMonth(m);
+    const { from, to } = getMonthRange(y, m);
+    setFilters((current) => ({ ...current, date_from: from, date_to: to }));
+  }
+
+  function goToCurrentMonth() {
+    setNavYear(curNavY);
+    setNavMonth(curNavM);
+    const { from, to } = getMonthRange(curNavY, curNavM);
+    setFilters((current) => ({ ...current, date_from: from, date_to: to }));
+  }
 
   function updateForm<K extends keyof CreateTransactionInput>(
     field: K,
@@ -272,6 +310,10 @@ export function TransactionsPanel({
     onTransactionCreated();
   }
 
+  const allTransactions = state.status === "success" ? state.transactions : [];
+  const visibleTransactions = allTransactions.slice(0, visibleCount);
+  const hasMore = allTransactions.length > visibleCount;
+
   return (
     <article className="panel">
       <h2>手動交易</h2>
@@ -333,6 +375,30 @@ export function TransactionsPanel({
             {formSuccess ? <p>{formSuccess}</p> : null}
           </form>
 
+          {/* Month navigation */}
+          <div className="month-nav">
+            <button className="action-button" type="button" onClick={() => navigateMonth(-1)}>‹</button>
+            <span className="month-label">
+              {navYear}/{String(navMonth).padStart(2, "0")}
+            </span>
+            <button
+              className="action-button"
+              type="button"
+              onClick={() => navigateMonth(1)}
+              disabled={isCurrentMonth}
+            >›</button>
+            {!isCurrentMonth ? (
+              <button
+                className="action-button secondary"
+                type="button"
+                onClick={goToCurrentMonth}
+                style={{ fontSize: "0.8rem", padding: "4px 10px" }}
+              >
+                本月
+              </button>
+            ) : null}
+          </div>
+
           <form className="account-form" onSubmit={(event) => event.preventDefault()}>
             <label>
               檢視帳戶
@@ -381,85 +447,116 @@ export function TransactionsPanel({
             </label>
           </form>
 
-          {visibleTransactions.length > 0 ? (
-            <ul>
-              {visibleTransactions.map((transaction) => (
-                <li key={transaction.id}>
-                  {editingTransactionId === transaction.id ? (
-                    <>
-                      <input
-                        type="date"
-                        value={editForm.date ?? ""}
-                        onChange={(event) =>
-                          setEditForm((current) => ({
-                            ...current,
-                            date: event.target.value,
-                          }))
-                        }
-                      />{" "}
-                      <input
-                        type="number"
-                        value={editForm.amount ?? 0}
-                        onChange={(event) =>
-                          setEditForm((current) => ({
-                            ...current,
-                            amount: Number(event.target.value),
-                          }))
-                        }
-                      />{" "}
-                      <input
-                        value={editForm.category ?? ""}
-                        onChange={(event) =>
-                          setEditForm((current) => ({
-                            ...current,
-                            category: event.target.value,
-                          }))
-                        }
-                      />{" "}
-                      <input
-                        value={editForm.description ?? ""}
-                        onChange={(event) =>
-                          setEditForm((current) => ({
-                            ...current,
-                            description: event.target.value,
-                          }))
-                        }
-                      />{" "}
-                      <button
-                        className="action-button"
-                        onClick={() => void saveEdit(transaction.id)}
-                        type="button"
-                      >
-                        儲存
-                      </button>{" "}
-                      <button className="action-button" onClick={cancelEdit} type="button">
-                        取消
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      {transaction.date} | {transaction.category ?? "未分類"} | NT${" "}
-                      {Number(transaction.amount).toFixed(2)}{" "}
-                      <button
-                        className="action-button"
-                        onClick={() => startEdit(transaction)}
-                        type="button"
-                      >
-                        編輯
-                      </button>{" "}
-                      <button
-                        className="action-button"
-                        disabled={deletingTransactionId === transaction.id}
-                        onClick={() => void handleDeleteTransaction(transaction.id)}
-                        type="button"
-                      >
-                        {deletingTransactionId === transaction.id ? "刪除中..." : "刪除"}
-                      </button>
-                    </>
-                  )}
-                </li>
-              ))}
-            </ul>
+          {allTransactions.length > 0 ? (
+            <>
+              <p style={{ fontSize: "0.8rem", color: "#888", margin: "0 0 8px" }}>
+                共 {allTransactions.length} 筆
+                {allTransactions.length > visibleCount ? `，顯示前 ${visibleCount} 筆` : ""}
+              </p>
+              <ul>
+                {visibleTransactions.map((transaction) => (
+                  <li key={transaction.id}>
+                    {editingTransactionId === transaction.id ? (
+                      <>
+                        <input
+                          type="date"
+                          value={editForm.date ?? ""}
+                          onChange={(event) =>
+                            setEditForm((current) => ({
+                              ...current,
+                              date: event.target.value,
+                            }))
+                          }
+                        />{" "}
+                        <input
+                          type="number"
+                          value={editForm.amount ?? 0}
+                          onChange={(event) =>
+                            setEditForm((current) => ({
+                              ...current,
+                              amount: Number(event.target.value),
+                            }))
+                          }
+                        />{" "}
+                        <input
+                          value={editForm.category ?? ""}
+                          onChange={(event) =>
+                            setEditForm((current) => ({
+                              ...current,
+                              category: event.target.value,
+                            }))
+                          }
+                        />{" "}
+                        <input
+                          value={editForm.description ?? ""}
+                          onChange={(event) =>
+                            setEditForm((current) => ({
+                              ...current,
+                              description: event.target.value,
+                            }))
+                          }
+                        />{" "}
+                        <button
+                          className="action-button"
+                          onClick={() => void saveEdit(transaction.id)}
+                          type="button"
+                        >
+                          儲存
+                        </button>{" "}
+                        <button className="action-button" onClick={cancelEdit} type="button">
+                          取消
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="tx-date">{transaction.date}</span>
+                        {" | "}
+                        <span className="tx-cat">{transaction.category ?? "未分類"}</span>
+                        {transaction.description ? (
+                          <span className="tx-desc"> {transaction.description}</span>
+                        ) : null}
+                        {" | "}
+                        <span
+                          className="tx-amount"
+                          style={{ color: Number(transaction.amount) >= 0 ? "#4caf50" : "#f44336" }}
+                        >
+                          {fmtTwd.format(Number(transaction.amount))}
+                        </span>{" "}
+                        <button
+                          className="action-button"
+                          onClick={() => startEdit(transaction)}
+                          type="button"
+                        >
+                          編輯
+                        </button>{" "}
+                        <button
+                          className="action-button"
+                          disabled={deletingTransactionId === transaction.id}
+                          onClick={() => void handleDeleteTransaction(transaction.id)}
+                          type="button"
+                        >
+                          {deletingTransactionId === transaction.id ? "刪除中..." : "刪除"}
+                        </button>
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {hasMore ? (
+                <button
+                  className="action-button secondary"
+                  type="button"
+                  onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+                  style={{ marginTop: "0.5rem", fontSize: "0.85rem" }}
+                >
+                  載入更多（剩餘 {allTransactions.length - visibleCount} 筆）
+                </button>
+              ) : allTransactions.length > PAGE_SIZE ? (
+                <p style={{ fontSize: "0.8rem", color: "#888", marginTop: "0.25rem" }}>
+                  已顯示全部 {allTransactions.length} 筆
+                </p>
+              ) : null}
+            </>
           ) : (
             <p>目前找不到符合篩選條件的交易。</p>
           )}

@@ -1,4 +1,9 @@
-import type { DividendImportResponse, StockTradeImportResponse, TransactionCsvImportResponse } from "@hearth/shared";
+import type {
+  DividendImportResponse,
+  ImportPreviewResponse,
+  StockTradeImportResponse,
+  TransactionCsvImportResponse,
+} from "@hearth/shared";
 import { apiFetch } from "./api";
 
 type TransactionsCsvSource =
@@ -48,6 +53,34 @@ export async function importForeignStockCsv(
   file: File,
 ): Promise<StockTradeImportResponse> {
   return importStockTrades("/api/import/foreign-stock-csv", accountId, file);
+}
+
+export async function previewImportFile(
+  importMode:
+    | "normalized"
+    | "sinopac-tw"
+    | "credit-card-tw"
+    | "excel-monthly"
+    | "sinopac-stock"
+    | "foreign-stock-csv"
+    | "dividends-csv",
+  accountId: string,
+  file: File,
+  source?: TransactionsCsvSource,
+): Promise<ImportPreviewResponse> {
+  const formData = new FormData();
+  formData.set("account_id", accountId);
+  formData.set("file", file);
+  formData.set("import_mode", importMode === "normalized" ? "transactions-csv" : importMode);
+  if (source) {
+    formData.set("source", source);
+  }
+
+  const response = await apiFetch("/api/import/preview", {
+    method: "POST",
+    body: formData,
+  });
+  return (await response.json()) as ImportPreviewResponse;
 }
 
 async function importStockTrades(

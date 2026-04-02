@@ -60,3 +60,32 @@ export type StockTradeImportResponse =
       error: string;
       status: "error";
     };
+
+export type ImportPreviewSource =
+  | "transactions-csv"
+  | "sinopac-tw"
+  | "credit-card-tw"
+  | "excel-monthly"
+  | "sinopac-stock"
+  | "foreign-stock-csv"
+  | "dividends-csv";
+
+export type ImportPreviewResponse =
+  | {
+      source: ImportPreviewSource;
+      validRows: number;
+      failedRows: number;
+      skipped: number;
+      estimatedRows: number;
+      columns: string[];
+      sampleRows: string[][];
+      warnings?: string[];
+      errors: string[];
+      recurringCandidates?: RecurringImportCandidate[];
+      status: "ok";
+    }
+  | {
+      code: "unauthorized" | "validation_error" | "database_error";
+      error: string;
+      status: "error";
+    };

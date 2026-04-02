@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import type { MonthlyReportResponse } from "@hearth/shared";
+import type { MonthlyReportResponse, TransactionRecord } from "@hearth/shared";
 import { fetchMonthlyReport } from "../lib/report";
+import { fetchTransactions } from "../lib/transactions";
 
 type MonthlyReportPanelProps = {
   session: Session | null;
@@ -28,12 +29,25 @@ function addMonths(year: number, month: number, delta: number): [number, number]
   return [d.getFullYear(), d.getMonth() + 1];
 }
 
+function getMonthRange(year: number, month: number): { from: string; to: string } {
+  const from = `${year}-${String(month).padStart(2, "0")}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const to = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  return { from, to };
+}
+
 export function MonthlyReportPanel({ session, refreshKey }: MonthlyReportPanelProps) {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [state, setState] = useState<LoadState>({ status: "idle" });
   const [showAllCategories, setShowAllCategories] = useState(false);
+
+  // Category drill-down state
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [catTxCache, setCatTxCache] = useState<Record<string, TransactionRecord[]>>({});
+  const [catTxLoading, setCatTxLoading] = useState<string | null>(null);
+  const [catTxError, setCatTxError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!session) {
@@ -63,6 +77,41 @@ export function MonthlyReportPanel({ session, refreshKey }: MonthlyReportPanelPr
     void load();
     return () => { cancelled = true; };
   }, [session, refreshKey, year, month]);
+
+  // Reset expanded category when month changes
+  useEffect(() => {
+    setExpandedCategory(null);
+    setCatTxCache({});
+    setCatTxError(null);
+  }, [year, month]);
+
+  async function handleCategoryClick(category: string) {
+    if (expandedCategory === category) {
+      setExpandedCategory(null);
+      return;
+    }
+
+    setExpandedCategory(category);
+    setCatTxError(null);
+
+    if (catTxCache[category]) return; // already loaded
+
+    setCatTxLoading(category);
+    const { from, to } = getMonthRange(year, month);
+    try {
+      const result = await fetchTransactions({ date_from: from, date_to: to, category });
+      if (result.status === "ok") {
+        setCatTxCache((prev) => ({ ...prev, [category]: result.items }));
+        return;
+      }
+
+      setCatTxError(result.error);
+    } catch (error) {
+      setCatTxError(error instanceof Error ? error.message : "載入分類交易失敗。");
+    } finally {
+      setCatTxLoading(null);
+    }
+  }
 
   function handlePrev() {
     const [y, m] = addMonths(year, month, -1);
@@ -136,14 +185,51 @@ export function MonthlyReportPanel({ session, refreshKey }: MonthlyReportPanelPr
                 <ul className="category-list">
                   {visibleCategories.map((cat) => {
                     const pct = totalExpense > 0 ? Math.round((Math.abs(cat.amount) / totalExpense) * 100) : 0;
+                    const isExpanded = expandedCategory === cat.category;
+                    const isLoading = catTxLoading === cat.category;
+                    const txs = catTxCache[cat.category];
                     return (
-                      <li key={cat.category} className="category-item">
-                        <span className="cat-name">{cat.category}</span>
-                        <div className="cat-bar-wrap">
-                          <div className="cat-bar" style={{ width: `${pct}%` }} />
+                      <li key={cat.category}>
+                        <div
+                          className={`category-item category-item-clickable${isExpanded ? " expanded" : ""}`}
+                          onClick={() => void handleCategoryClick(cat.category)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => e.key === "Enter" && void handleCategoryClick(cat.category)}
+                        >
+                          <span className="cat-name">{cat.category}</span>
+                          <div className="cat-bar-wrap">
+                            <div className="cat-bar" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="cat-amount">{fmtTwd.format(Math.abs(cat.amount))}</span>
+                          <span className="cat-pct">{pct}%</span>
                         </div>
-                        <span className="cat-amount">{fmtTwd.format(Math.abs(cat.amount))}</span>
-                        <span className="cat-pct">{pct}%</span>
+                        {isExpanded ? (
+                          <div className="cat-drill-down">
+                            {isLoading ? (
+                              <p className="cat-drill-loading">載入中...</p>
+                            ) : txs && txs.length > 0 ? (
+                              <ul className="cat-drill-list">
+                                {txs.map((tx) => (
+                                  <li key={tx.id} className="cat-drill-item">
+                                    <span className="cat-drill-date">{tx.date}</span>
+                                    <span className="cat-drill-desc">{tx.description ?? "—"}</span>
+                                    <span
+                                      className="cat-drill-amount"
+                                      style={{ color: Number(tx.amount) >= 0 ? "#4caf50" : "#f44336" }}
+                                    >
+                                      {fmtTwd.format(Number(tx.amount))}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : catTxError ? (
+                              <p className="cat-drill-loading">{catTxError}</p>
+                            ) : txs ? (
+                              <p className="cat-drill-loading">無交易紀錄</p>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </li>
                     );
                   })}

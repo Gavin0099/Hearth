@@ -10,6 +10,7 @@ import {
   importSinopacStockCsv,
   importSinopacTransactionsCsv,
   importTransactionsCsv,
+  previewImportFile,
 } from "../lib/imports";
 import { createRecurringTemplatesFromCandidates } from "../lib/recurring";
 
@@ -39,6 +40,22 @@ export function ImportPanel({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [latestRecurringCandidates, setLatestRecurringCandidates] = useState<RecurringImportCandidate[]>([]);
   const [isCreatingRecurring, setIsCreatingRecurring] = useState(false);
+
+  type FilePreview = {
+    name: string;
+    sizeKb: number;
+    headers: string[];
+    sampleRows: string[][];
+    estimatedDataRows: number;
+    validRows: number;
+    failedRows: number;
+    skipped: number;
+    warnings: string[];
+    errors: string[];
+    recurringCandidates: number;
+  };
+  const [filePreview, setFilePreview] = useState<FilePreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
     if (!session) {
@@ -73,6 +90,58 @@ export function ImportPanel({
       cancelled = true;
     };
   }, [session]);
+
+  async function loadDryRunPreview(file: File | null, mode = importMode, accountId = selectedAccountId) {
+    if (!file || !accountId) {
+      setFilePreview(null);
+      return;
+    }
+
+    setPreviewLoading(true);
+    let preview;
+    try {
+      preview = await previewImportFile(mode, accountId, file);
+    } catch (error) {
+      setFilePreview(null);
+      setMessage(error instanceof Error ? `預覽失敗: ${error.message}` : "預覽失敗。");
+      return;
+    } finally {
+      setPreviewLoading(false);
+    }
+
+    if (preview.status === "error") {
+      setFilePreview(null);
+      setMessage(`預覽失敗: ${preview.error}`);
+      return;
+    }
+
+    setFilePreview({
+      name: file.name,
+      sizeKb: Math.round(file.size / 1024),
+      headers: preview.columns,
+      sampleRows: preview.sampleRows,
+      estimatedDataRows: preview.estimatedRows,
+      validRows: preview.validRows,
+      failedRows: preview.failedRows,
+      skipped: preview.skipped,
+      warnings: preview.warnings ?? [],
+      errors: preview.errors,
+      recurringCandidates: preview.recurringCandidates?.length ?? 0,
+    });
+  }
+
+  async function handleFileChange(file: File | null) {
+    setSelectedFile(file);
+    setFilePreview(null);
+    setMessage(null);
+    if (!file) return;
+    await loadDryRunPreview(file);
+  }
+
+  useEffect(() => {
+    if (!selectedFile || !session || !selectedAccountId) return;
+    void loadDryRunPreview(selectedFile, importMode, selectedAccountId);
+  }, [importMode, selectedAccountId]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -236,9 +305,60 @@ export function ImportPanel({
                     : ".csv,text/csv,.txt"
                 }
                 type="file"
-                onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+                onChange={(event) => void handleFileChange(event.target.files?.[0] ?? null)}
               />
             </label>
+            {filePreview ? (
+              <div className="import-preview">
+                <div className="import-preview-meta">
+                  <span>{filePreview.name}</span>
+                  <span>{filePreview.sizeKb} KB</span>
+                  {filePreview.estimatedDataRows > 0 ? (
+                    <span>約 {filePreview.estimatedDataRows} 筆資料列</span>
+                  ) : null}
+                  <span>可匯入 {filePreview.validRows} 筆</span>
+                  {filePreview.failedRows > 0 ? <span>錯誤 {filePreview.failedRows} 筆</span> : null}
+                  {filePreview.skipped > 0 ? <span>略過 {filePreview.skipped} 筆</span> : null}
+                  {filePreview.recurringCandidates > 0 ? (
+                    <span>recurring 候選 {filePreview.recurringCandidates} 筆</span>
+                  ) : null}
+                </div>
+                {filePreview.headers.length > 0 ? (
+                  <div className="import-preview-table-wrap">
+                    <table className="import-preview-table">
+                      <thead>
+                        <tr>
+                          {filePreview.headers.slice(0, 6).map((h, i) => (
+                            <th key={i}>{h || `欄 ${i + 1}`}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filePreview.sampleRows.map((row, ri) => (
+                          <tr key={ri}>
+                            {filePreview.headers.slice(0, 6).map((_, ci) => (
+                              <td key={ci}>{row[ci] ?? ""}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
+                {filePreview.warnings.length > 0 ? (
+                  <p style={{ fontSize: "0.8rem", color: "#8a6a2f", margin: "8px 0 0" }}>
+                    warnings: {filePreview.warnings.join(" | ")}
+                  </p>
+                ) : null}
+                {filePreview.errors.length > 0 ? (
+                  <p style={{ fontSize: "0.8rem", color: "#b23b2a", margin: "8px 0 0" }}>
+                    errors: {filePreview.errors.slice(0, 3).join(" | ")}
+                    {filePreview.errors.length > 3 ? ` | ...共 ${filePreview.errors.length} 筆` : ""}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+            {previewLoading ? <p style={{ fontSize: "0.85rem", color: "#666" }}>預覽解析中...</p> : null}
             <button className="action-button" disabled={isSubmitting} type="submit">
               {isSubmitting
                 ? "匯入中..."
