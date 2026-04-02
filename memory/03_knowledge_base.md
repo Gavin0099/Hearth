@@ -23,6 +23,7 @@
 - `PortfolioPanel` should fetch `net-worth-history` only after the `net-worth` request that opportunistically writes today's snapshot; parallel fetches can make the chart miss the most recent point.
 - Import dry-run preview now has a dedicated `/api/import/preview` path that reuses the real parser/normalization logic for `transactions-csv`, `sinopac-tw`, `credit-card-tw`, `excel-monthly`, `sinopac-stock`, `foreign-stock-csv`, and `dividends-csv`.
 - `ImportPanel` should treat preview fetch failures as a separate failure path from validation errors; request throws must clear preview state and release the loading indicator.
+- `apps/web/src/lib/pdf-parser.ts` currently relies on a repo-local `tesseract.js` ambient declaration (`apps/web/src/tesseract.d.ts`) to keep TypeScript happy under the current dependency/toolchain combination.
 - `import.ts` still contains other older route-owned branches and some legacy text noise, so continue refactors as focused slices with build/test verification.
 
 ### Web check blocker

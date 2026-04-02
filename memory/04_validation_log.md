@@ -45,6 +45,7 @@
 
 - `npm.cmd --workspace @hearth/api run build`
 - `npm.cmd --workspace @hearth/api run test`
+- `npm.cmd --workspace @hearth/web run check`
 - Validation count progressed to:
   - `96/96`
   - `98/98`
@@ -56,6 +57,7 @@
   - holdings test stub updated for price-snapshot enrichment
   - parser-backed `/api/import/preview` route coverage for normalized CSV and `excel-monthly`
   - front-end dry-run preview now uses the API parser path instead of local file sniffing
+  - local `tesseract.js` type shim restores `@hearth/web` TypeScript check
 
 ## Review Notes
 
