@@ -529,8 +529,15 @@ export async function previewImportFile(
     const parsed = parseSinopacStockCsv(await file.text(), accountId);
     const rows =
       importMode === "foreign-stock-csv"
-        ? parsed.trades.map((trade) => ({ ...trade, source: "foreign-stock-csv" }))
-        : parsed.trades;
+        ? parsed.trades.map((trade) => ({
+            ...trade,
+            price: trade.price_per_share,
+            source: "foreign-stock-csv",
+          }))
+        : parsed.trades.map((trade) => ({
+            ...trade,
+            price: trade.price_per_share,
+          }));
     const columns = ["trade_date", "ticker", "action", "shares", "price", "fee", "tax", "currency"];
     return {
       response: {

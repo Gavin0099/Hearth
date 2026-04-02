@@ -2539,6 +2539,166 @@ test("POST /api/import/preview returns parser-backed preview for excel-monthly",
   assert.equal(payload.sampleRows.length, 3);
 });
 
+test("POST /api/import/preview returns parser-backed preview for sinopac-stock", async () => {
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set("import_mode", "sinopac-stock");
+  formData.set(
+    "file",
+    new File(
+      [
+        "date,ticker,name,action,shares,price,fee,tax,currency\n2026-03-11,2330,TSMC,buy,2,612,20,0,TWD\n2026/03/12,0050,ETF,sell,1,150,10,0,TWD\n",
+      ],
+      "sinopac-stock.csv",
+      { type: "text/csv" },
+    ),
+  );
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/import/preview", { method: "POST", body: formData }, env);
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.status, "ok");
+  assert.equal(payload.source, "sinopac-stock");
+  assert.equal(payload.validRows, 2);
+  assert.equal(payload.failedRows, 0);
+  assert.equal(payload.skipped, 0);
+  assert.equal(payload.estimatedRows, 2);
+  assert.deepEqual(payload.columns, ["trade_date", "ticker", "action", "shares", "price", "fee", "tax", "currency"]);
+  assert.deepEqual(payload.sampleRows, [
+    ["2026-03-11", "2330", "buy", "2", "612", "20", "0", "TWD"],
+    ["2026-03-12", "0050", "sell", "1", "150", "10", "0", "TWD"],
+  ]);
+  assert.deepEqual(payload.errors, []);
+});
+
+test("POST /api/import/preview returns parser-backed preview for foreign-stock-csv", async () => {
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set("import_mode", "foreign-stock-csv");
+  formData.set(
+    "file",
+    new File(
+      [
+        "date,ticker,name,action,shares,price,fee,tax,currency\n2026-03-11,AAPL,Apple,buy,3,185.5,1.2,0,USD\n,MSFT,Microsoft,buy,1,410,1,0,USD\n",
+      ],
+      "foreign-stock.csv",
+      { type: "text/csv" },
+    ),
+  );
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/import/preview", { method: "POST", body: formData }, env);
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.status, "ok");
+  assert.equal(payload.source, "foreign-stock-csv");
+  assert.equal(payload.validRows, 1);
+  assert.equal(payload.failedRows, 1);
+  assert.equal(payload.skipped, 0);
+  assert.equal(payload.estimatedRows, 2);
+  assert.deepEqual(payload.columns, ["trade_date", "ticker", "action", "shares", "price", "fee", "tax", "currency"]);
+  assert.deepEqual(payload.sampleRows, [["2026-03-11", "AAPL", "buy", "3", "185.5", "1.2", "0", "USD"]]);
+  assert.equal(payload.errors.length, 1);
+});
+
+test("POST /api/import/preview returns parser-backed preview for dividends-csv", async () => {
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set("import_mode", "dividends-csv");
+  formData.set(
+    "file",
+    new File(
+      [
+        "ticker,pay_date,net_amount,gross_amount,tax_withheld,currency\n00919,2026-03-20,900,900,0,TWD\n0056,2026/03/15,1080,1200,120,TWD\n",
+      ],
+      "dividends.csv",
+      { type: "text/csv" },
+    ),
+  );
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/import/preview", { method: "POST", body: formData }, env);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    source: "dividends-csv",
+    validRows: 1,
+    failedRows: 1,
+    skipped: 0,
+    estimatedRows: 2,
+    columns: ["ticker", "pay_date", "gross_amount", "tax_withheld", "net_amount", "currency"],
+    sampleRows: [["00919", "2026-03-20", "900", "0", "900", "TWD"]],
+    errors: ['line 3: invalid pay_date "2026/03/15"'],
+    status: "ok",
+  });
+});
+
 test("POST /api/import/excel-monthly aggregates parsable rows across multiple monthly sheets and ignores sidebar rows", async () => {
   let insertedRows: Array<Record<string, unknown>> = [];
 
