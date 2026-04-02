@@ -9,7 +9,9 @@ import { fetchAccounts } from "../lib/accounts";
 import {
   applyRecurringTemplates,
   createRecurringTemplate,
+  deleteRecurringTemplate,
   fetchRecurringTemplates,
+  updateRecurringTemplate,
 } from "../lib/recurring";
 
 type RecurringTemplatesPanelProps = {
@@ -36,6 +38,24 @@ const defaultForm: CreateRecurringTemplateInput = {
   notes: "",
 };
 
+type EditForm = {
+  name: string;
+  category: string;
+  amount: string;
+  anchor_day: string;
+};
+
+function nextMonthYearMonth() {
+  const now = new Date();
+  const m = now.getMonth() + 2;
+  const y = m > 12 ? now.getFullYear() + 1 : now.getFullYear();
+  return { year: y, month: m > 12 ? 1 : m };
+}
+
+function daysInMonth(year: number, month: number) {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
 export function RecurringTemplatesPanel({
   session,
   refreshKey = 0,
@@ -48,6 +68,11 @@ export function RecurringTemplatesPanel({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [applyMessage, setApplyMessage] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<EditForm>({ name: "", category: "", amount: "", anchor_day: "" });
+  const [editSavingId, setEditSavingId] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!session) {
@@ -103,6 +128,72 @@ export function RecurringTemplatesPanel({
       ...current,
       [field]: value,
     }));
+  }
+
+  function startEdit(item: RecurringTemplateRecord) {
+    setEditingId(item.id);
+    setEditForm({
+      name: item.name,
+      category: item.category ?? "",
+      amount: item.amount === null ? "" : String(item.amount),
+      anchor_day: item.anchor_day === null ? "" : String(item.anchor_day),
+    });
+    setEditError(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditError(null);
+  }
+
+  async function handleEditSave(id: string) {
+    const name = editForm.name.trim();
+    if (!name) {
+      setEditError("模板名稱不能為空。");
+      return;
+    }
+    const amount = editForm.amount === "" ? null : Number(editForm.amount);
+    if (amount !== null && !Number.isFinite(amount)) {
+      setEditError("金額格式無效。");
+      return;
+    }
+    const anchor_day = editForm.anchor_day === "" ? null : Number(editForm.anchor_day);
+    if (anchor_day !== null && (!Number.isInteger(anchor_day) || anchor_day < 1 || anchor_day > 31)) {
+      setEditError("扣款日須為 1–31 的整數。");
+      return;
+    }
+    setEditSavingId(id);
+    setEditError(null);
+    const result = await updateRecurringTemplate(id, {
+      name,
+      category: editForm.category.trim() || null,
+      amount,
+      anchor_day,
+    });
+    setEditSavingId(null);
+    if (result.status === "error") {
+      setEditError(result.error);
+      return;
+    }
+    const updated = result.items[0];
+    if (updated) {
+      setState((current) => {
+        if (current.status !== "success") return current;
+        return { ...current, items: current.items.map((t) => (t.id === id ? updated : t)) };
+      });
+    }
+    setEditingId(null);
+  }
+
+  async function handleDelete(id: string) {
+    if (!window.confirm("確定要刪除此週期模板？")) return;
+    setDeletingId(id);
+    await deleteRecurringTemplate(id);
+    setDeletingId(null);
+    setState((current) => {
+      if (current.status !== "success") return current;
+      return { ...current, items: current.items.filter((t) => t.id !== id) };
+    });
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -185,6 +276,24 @@ export function RecurringTemplatesPanel({
     onTemplatesApplied?.();
   }
 
+  // Compute next-month preview from templates with amount set
+  const nextMonthPreview: { name: string; amount: number; date: string }[] = [];
+  if (state.status === "success" && state.items.length > 0) {
+    const { year, month } = nextMonthYearMonth();
+    const days = daysInMonth(year, month);
+    for (const t of state.items) {
+      if (t.amount === null || t.cadence !== "monthly") continue;
+      const anchor = t.anchor_day && t.anchor_day >= 1 && t.anchor_day <= 31 ? t.anchor_day : 1;
+      const day = Math.min(anchor, days);
+      nextMonthPreview.push({
+        name: t.name,
+        amount: Number(t.amount),
+        date: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+      });
+    }
+    nextMonthPreview.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
   return (
     <article className="panel">
       <h2>週期模板</h2>
@@ -239,7 +348,7 @@ export function RecurringTemplatesPanel({
             />
           </label>
           <label>
-            扣款日
+            扣款日（1–31）
             <input
               type="number"
               min={1}
@@ -252,6 +361,7 @@ export function RecurringTemplatesPanel({
                 )
               }
             />
+            <span className="field-hint">月份天數不足時自動取最後一天</span>
           </label>
           <label>
             來源區塊
@@ -279,14 +389,100 @@ export function RecurringTemplatesPanel({
       ) : null}
       {state.status === "success" ? (
         state.items.length > 0 ? (
-          <ul>
-            {state.items.map((item) => (
-              <li key={item.id}>
-                {item.name} / {item.category ?? "未分類"} /{" "}
-                {item.amount === null ? "未設定金額" : `NT$ ${Number(item.amount).toFixed(2)}`}
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul>
+              {state.items.map((item) =>
+                editingId === item.id ? (
+                  <li key={item.id} className="account-list-item account-list-item--editing">
+                    <div className="account-edit-form">
+                      <input
+                        value={editForm.name}
+                        onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                        placeholder="模板名稱"
+                      />
+                      <input
+                        value={editForm.category}
+                        onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value }))}
+                        placeholder="類別（可留空）"
+                      />
+                      <input
+                        type="number"
+                        value={editForm.amount}
+                        onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))}
+                        placeholder="金額（可留空）"
+                        style={{ width: "7rem" }}
+                      />
+                      <input
+                        type="number"
+                        min={1}
+                        max={31}
+                        value={editForm.anchor_day}
+                        onChange={(e) => setEditForm((f) => ({ ...f, anchor_day: e.target.value }))}
+                        placeholder="扣款日"
+                        style={{ width: "5rem" }}
+                      />
+                      {editError ? <span className="account-edit-error">{editError}</span> : null}
+                    </div>
+                    <div className="account-item-actions">
+                      <button
+                        className="action-button"
+                        type="button"
+                        disabled={editSavingId === item.id}
+                        onClick={() => void handleEditSave(item.id)}
+                      >
+                        {editSavingId === item.id ? "儲存中..." : "儲存"}
+                      </button>
+                      <button className="action-button" type="button" onClick={cancelEdit}>
+                        取消
+                      </button>
+                    </div>
+                  </li>
+                ) : (
+                  <li key={item.id} className="account-list-item">
+                    <span className="account-item-label">
+                      {item.name}
+                      <span className="account-item-meta">
+                        {item.category ?? "未分類"} ·{" "}
+                        {item.amount === null ? "未設定金額" : `NT$ ${Number(item.amount).toLocaleString()}`}
+                        {item.anchor_day ? ` · ${item.anchor_day} 日` : ""}
+                      </span>
+                    </span>
+                    <div className="account-item-actions">
+                      <button
+                        className="action-button"
+                        type="button"
+                        onClick={() => startEdit(item)}
+                      >
+                        編輯
+                      </button>
+                      <button
+                        className="action-button action-button-danger"
+                        type="button"
+                        disabled={deletingId === item.id}
+                        onClick={() => void handleDelete(item.id)}
+                      >
+                        {deletingId === item.id ? "刪除中..." : "刪除"}
+                      </button>
+                    </div>
+                  </li>
+                )
+              )}
+            </ul>
+            {nextMonthPreview.length > 0 ? (
+              <section className="recurring-preview">
+                <h4>下個月預計產生（{nextMonthPreview.length} 筆）</h4>
+                <ul className="recurring-preview-list">
+                  {nextMonthPreview.map((p) => (
+                    <li key={p.date + p.name} className="recurring-preview-item">
+                      <span className="recurring-preview-date">{p.date.slice(5)}</span>
+                      <span className="recurring-preview-name">{p.name}</span>
+                      <span className="recurring-preview-amount">NT$ {p.amount.toLocaleString()}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+          </>
         ) : (
           <p>目前還沒有週期模板，可以先建立房租、月費、學費這類固定項目。</p>
         )

@@ -38,6 +38,23 @@ export async function createRecurringTemplatesFromCandidates(
   return (await response.json()) as RecurringTemplatesResponse;
 }
 
+export async function updateRecurringTemplate(
+  id: string,
+  payload: { name?: string; category?: string | null; amount?: number | null; anchor_day?: number | null },
+) {
+  const response = await apiFetch(`/api/recurring-templates/${id}`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return (await response.json()) as RecurringTemplatesResponse;
+}
+
+export async function deleteRecurringTemplate(id: string) {
+  const response = await apiFetch(`/api/recurring-templates/${id}`, { method: "DELETE" });
+  return (await response.json()) as { status: "ok" } | { error: string; status: "error" };
+}
+
 export async function applyRecurringTemplates(input: ApplyRecurringTemplatesInput) {
   const response = await apiFetch("/api/recurring-templates/apply", {
     method: "POST",

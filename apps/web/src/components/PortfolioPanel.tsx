@@ -9,6 +9,8 @@ import type {
   PortfolioHoldingsResponse,
 } from "@hearth/shared";
 import {
+  deleteFxRate,
+  deletePriceSnapshot,
   fetchFxRates,
   fetchNetWorth,
   fetchNetWorthHistory,
@@ -134,6 +136,8 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
   const [fxMessage, setFxMessage] = useState<string | null>(null);
   const [history, setHistory] = useState<NetWorthSnapshotRecord[]>([]);
   const [tradeCosts, setTradeCosts] = useState<InvestmentCostRecord[]>([]);
+  const [deletingPriceTicker, setDeletingPriceTicker] = useState<string | null>(null);
+  const [deletingFxCurrency, setDeletingFxCurrency] = useState<string | null>(null);
 
   const tradeCostTotalsByCurrency = tradeCosts.reduce<Record<string, { fee: number; tax: number; trades: number }>>(
     (acc, item) => {
@@ -275,6 +279,39 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
     }
   }
 
+  async function handleDeletePrice(ticker: string, date: string) {
+    setDeletingPriceTicker(ticker);
+    setPriceMessage(null);
+    const result = await deletePriceSnapshot(ticker, date);
+    setDeletingPriceTicker(null);
+    if (result.status === "error") {
+      setPriceMessage(`刪除失敗：${result.error}`);
+    } else {
+      setPriceMessage(`已刪除 ${ticker} ${date} 的報價。`);
+      // Refresh holdings to reflect removal
+      const updated = await fetchPortfolioHoldings();
+      if (updated.status !== "error") {
+        setState((prev) =>
+          prev.status === "success" ? { ...prev, holdings: updated } : prev,
+        );
+      }
+    }
+  }
+
+  async function handleDeleteFxRate(fromCurrency: string, rateDate: string) {
+    setDeletingFxCurrency(fromCurrency);
+    setFxMessage(null);
+    const result = await deleteFxRate(fromCurrency, rateDate);
+    setDeletingFxCurrency(null);
+    if (result.status === "error") {
+      setFxMessage(`刪除失敗：${result.error}`);
+    } else {
+      setFxMessage(`已刪除 ${fromCurrency}/TWD ${rateDate} 的匯率。`);
+      const updated = await fetchFxRates();
+      if (updated.status === "ok") setFxRates(updated.rates);
+    }
+  }
+
   async function handleSaveFxRates() {
     const entries = Object.entries(fxInputs)
       .filter(([, v]) => v.trim() !== "")
@@ -394,12 +431,21 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
                             <td className="num">{avgCost.toFixed(2)}</td>
                             <td className="num">
                               {closePrice !== null ? (
-                                <>
+                                <span className="price-cell">
                                   {closePrice.toFixed(2)}
                                   {item.price_as_of ? (
                                     <span className="price-date"> ({item.price_as_of.slice(5)})</span>
                                   ) : null}
-                                </>
+                                  <button
+                                    className="price-delete-btn"
+                                    title="刪除此報價"
+                                    disabled={deletingPriceTicker === item.ticker}
+                                    onClick={() => item.price_as_of ? void handleDeletePrice(item.ticker, item.price_as_of) : undefined}
+                                    type="button"
+                                  >
+                                    ×
+                                  </button>
+                                </span>
                               ) : (
                                 <span className="no-price">—</span>
                               )}
@@ -497,7 +543,18 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
                 {fxRates.map((r) => (
                   <label key={r.from_currency}>
                     {r.from_currency} / TWD
-                    <span className="current-rate">目前：{r.rate}（{r.rate_date}）</span>
+                    <span className="current-rate">
+                      目前：{r.rate}（{r.rate_date}）
+                      <button
+                        className="price-delete-btn"
+                        title="刪除此匯率"
+                        disabled={deletingFxCurrency === r.from_currency}
+                        onClick={() => void handleDeleteFxRate(r.from_currency, r.rate_date)}
+                        type="button"
+                      >
+                        ×
+                      </button>
+                    </span>
                     <input
                       type="number"
                       min="0"

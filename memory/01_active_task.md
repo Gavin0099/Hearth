@@ -36,6 +36,7 @@
 - [x] Extended parser-backed import preview coverage to `sinopac-tw` and `credit-card-tw`
 - [x] Added direct `/api/import/preview` error-path coverage for unowned accounts and account-lookup failures
 - [x] Added direct `/api/import/preview` preflight coverage for unauthorized, missing `import_mode`, and missing `account_id`
+- [x] Added symmetric import write-route coverage for unowned accounts and account-lookup failures
 - [ ] Keep structured memory and daily logs in sync going forward
 
 ## Context

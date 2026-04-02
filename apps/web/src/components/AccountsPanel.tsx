@@ -6,7 +6,7 @@ import {
   type AccountType,
   type CreateAccountInput,
 } from "@hearth/shared";
-import { createAccount, fetchAccounts } from "../lib/accounts";
+import { createAccount, deleteAccount, fetchAccounts, updateAccount } from "../lib/accounts";
 
 type LoadState =
   | { status: "idle" | "loading" }
@@ -24,12 +24,19 @@ const defaultFormState: CreateAccountInput = {
   broker: "",
 };
 
+type EditForm = { name: string; currency: string; broker: string };
+
 export function AccountsPanel({ session }: AccountsPanelProps) {
   const [state, setState] = useState<LoadState>({ status: "idle" });
   const [form, setForm] = useState<CreateAccountInput>(defaultFormState);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<EditForm>({ name: "", currency: "", broker: "" });
+  const [editSavingId, setEditSavingId] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!session) {
@@ -71,6 +78,56 @@ export function AccountsPanel({ session }: AccountsPanelProps) {
       ...current,
       [field]: value,
     }));
+  }
+
+  function startEdit(item: AccountRecord) {
+    setEditingId(item.id);
+    setEditForm({ name: item.name, currency: item.currency, broker: item.broker ?? "" });
+    setEditError(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditError(null);
+  }
+
+  async function handleEditSave(id: string) {
+    const name = editForm.name.trim();
+    if (!name) {
+      setEditError("帳戶名稱不能為空。");
+      return;
+    }
+    setEditSavingId(id);
+    setEditError(null);
+    const result = await updateAccount(id, {
+      name,
+      currency: editForm.currency.trim() || "TWD",
+      broker: editForm.broker.trim() || null,
+    });
+    setEditSavingId(null);
+    if (result.status === "error") {
+      setEditError(result.error);
+      return;
+    }
+    const updated = result.items[0];
+    if (updated) {
+      setState((current) => {
+        if (current.status !== "success") return current;
+        return { ...current, items: current.items.map((a) => (a.id === id ? updated : a)) };
+      });
+    }
+    setEditingId(null);
+  }
+
+  async function handleDelete(id: string) {
+    if (!window.confirm("確定要刪除此帳戶？這也會刪除所有相關交易記錄。")) return;
+    setDeletingId(id);
+    await deleteAccount(id);
+    setDeletingId(null);
+    setState((current) => {
+      if (current.status !== "success") return current;
+      return { ...current, items: current.items.filter((a) => a.id !== id) };
+    });
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -178,11 +235,71 @@ export function AccountsPanel({ session }: AccountsPanelProps) {
       {state.status === "success" ? (
         state.items.length > 0 ? (
           <ul>
-            {state.items.map((item) => (
-              <li key={item.id}>
-                {item.name} / {item.type} / {item.currency}
-              </li>
-            ))}
+            {state.items.map((item) =>
+              editingId === item.id ? (
+                <li key={item.id} className="account-list-item account-list-item--editing">
+                  <div className="account-edit-form">
+                    <input
+                      value={editForm.name}
+                      onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                      placeholder="帳戶名稱"
+                    />
+                    <input
+                      value={editForm.currency}
+                      onChange={(e) => setEditForm((f) => ({ ...f, currency: e.target.value.toUpperCase() }))}
+                      placeholder="幣別"
+                      style={{ width: "5rem" }}
+                    />
+                    <input
+                      value={editForm.broker}
+                      onChange={(e) => setEditForm((f) => ({ ...f, broker: e.target.value }))}
+                      placeholder="券商 / 備註（可留空）"
+                    />
+                    {editError ? <span className="account-edit-error">{editError}</span> : null}
+                  </div>
+                  <div className="account-item-actions">
+                    <button
+                      className="action-button"
+                      type="button"
+                      disabled={editSavingId === item.id}
+                      onClick={() => void handleEditSave(item.id)}
+                    >
+                      {editSavingId === item.id ? "儲存中..." : "儲存"}
+                    </button>
+                    <button className="action-button" type="button" onClick={cancelEdit}>
+                      取消
+                    </button>
+                  </div>
+                </li>
+              ) : (
+                <li key={item.id} className="account-list-item">
+                  <span className="account-item-label">
+                    {item.name}
+                    <span className="account-item-meta">
+                      {item.type === "cash_bank" ? "現金／銀行" : item.type === "cash_credit" ? "信用卡" : item.type === "investment_tw" ? "台股" : "海外"} · {item.currency}
+                      {item.broker ? ` · ${item.broker}` : ""}
+                    </span>
+                  </span>
+                  <div className="account-item-actions">
+                    <button
+                      className="action-button"
+                      type="button"
+                      onClick={() => startEdit(item)}
+                    >
+                      編輯
+                    </button>
+                    <button
+                      className="action-button action-button-danger"
+                      type="button"
+                      disabled={deletingId === item.id}
+                      onClick={() => void handleDelete(item.id)}
+                    >
+                      {deletingId === item.id ? "刪除中..." : "刪除"}
+                    </button>
+                  </div>
+                </li>
+              )
+            )}
           </ul>
         ) : (
           <p>目前沒有帳戶資料。下一步可以先建立第一個現金或投資帳戶。</p>

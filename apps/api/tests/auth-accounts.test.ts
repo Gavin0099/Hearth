@@ -247,6 +247,48 @@ test("POST /api/accounts creates a new account", async () => {
   });
 });
 
+test("DELETE /api/accounts/:id deletes an owned account", async () => {
+  let deletedId: string | null = null;
+  let deletedUserId: string | null = null;
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        assert.equal(table, "accounts");
+        return {
+          delete: () => ({
+            eq: (col: string, val: string) => ({
+              eq: async (col2: string, val2: string) => {
+                if (col === "id") deletedId = val;
+                if (col2 === "user_id") deletedUserId = val2;
+                return { error: null };
+              },
+            }),
+          }),
+        };
+      },
+    }),
+  });
+
+  const response = await app.request("/api/accounts/account-1", { method: "DELETE" }, env);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { status: "ok" });
+  assert.equal(deletedId, "account-1");
+  assert.equal(deletedUserId, "user-1");
+});
+
+test("DELETE /api/accounts/:id returns 401 when bearer user is missing", async () => {
+  const app = createApp({ resolveAuthenticatedUser: async () => null });
+  const response = await app.request("/api/accounts/account-1", { method: "DELETE" }, env);
+  assert.equal(response.status, 401);
+  assert.deepEqual(await response.json(), {
+    code: "unauthorized",
+    error: "Missing or invalid Supabase bearer token.",
+    status: "error",
+  });
+});
+
 test("GET /api/report/monthly summarizes income, expense, categories, and daily totals", async () => {
   const transactions = [
     {
@@ -3921,6 +3963,126 @@ test("POST /api/import/dividends-csv keeps valid rows while surfacing validation
   ]);
 });
 
+// --- Import write route contract: unauthorized + missing account_id ---
+
+const minimalCsv = () => new File(["a,b\n1,2\n"], "t.csv", { type: "text/csv" });
+
+function makeWriteFormData(opts: { withAccountId?: boolean } = {}) {
+  const fd = new FormData();
+  if (opts.withAccountId !== false) fd.set("account_id", "account-1");
+  fd.set("file", minimalCsv());
+  return fd;
+}
+
+for (const route of [
+  "transactions-csv",
+  "sinopac-tw",
+  "credit-card-tw",
+  "excel-monthly",
+  "sinopac-stock",
+  "foreign-stock-csv",
+  "dividends-csv",
+] as const) {
+  test(`POST /api/import/${route} returns 401 when bearer user is missing`, async () => {
+    const app = createApp({ resolveAuthenticatedUser: async () => null });
+    const response = await app.request(
+      `/api/import/${route}`,
+      { method: "POST", body: makeWriteFormData() },
+      env,
+    );
+    assert.equal(response.status, 401);
+    assert.deepEqual(await response.json(), {
+      code: "unauthorized",
+      error: "Missing or invalid Supabase bearer token.",
+      status: "error",
+    });
+  });
+
+  test(`POST /api/import/${route} returns validation_error when account_id is missing`, async () => {
+    const app = createApp({
+      resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+    });
+    const response = await app.request(
+      `/api/import/${route}`,
+      { method: "POST", body: makeWriteFormData({ withAccountId: false }) },
+      env,
+    );
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), {
+      code: "validation_error",
+      error: "account_id is required.",
+      status: "error",
+    });
+  });
+
+  test(`POST /api/import/${route} rejects accounts outside the authenticated user's scope`, async () => {
+    const app = createApp({
+      resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+      createSupabaseAdminClient: () => ({
+        from: (table: string) => {
+          if (table === "accounts") {
+            return {
+              select: () => ({
+                eq: async () => ({
+                  data: [{ id: "account-1" }],
+                  error: null,
+                }),
+              }),
+            };
+          }
+
+          throw new Error(`Unexpected table ${table}`);
+        },
+      }),
+    });
+    const fd = new FormData();
+    fd.set("account_id", "account-2");
+    fd.set("file", route === "excel-monthly" ? createExcelMonthlyFile([["Category", "Label", "2026/03/01"], ["Food", "Breakfast", 80]]) : minimalCsv());
+    const response = await app.request(`/api/import/${route}`, { method: "POST", body: fd }, env);
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), {
+      code: "validation_error",
+      error: "Selected account does not belong to the current user.",
+      status: "error",
+    });
+  });
+
+  test(`POST /api/import/${route} returns database_error when account lookup fails`, async () => {
+    const app = createApp({
+      resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+      createSupabaseAdminClient: () => ({
+        from: (table: string) => {
+          if (table === "accounts") {
+            return {
+              select: () => ({
+                eq: async () => ({
+                  data: null,
+                  error: { message: "accounts lookup failed" },
+                }),
+              }),
+            };
+          }
+
+          throw new Error(`Unexpected table ${table}`);
+        },
+      }),
+    });
+    const response = await app.request(
+      `/api/import/${route}`,
+      { method: "POST", body: makeWriteFormData() },
+      env,
+    );
+    assert.equal(response.status, 500);
+    assert.deepEqual(await response.json(), {
+      code: "database_error",
+      error: "accounts lookup failed",
+      status: "error",
+    });
+  });
+}
+
+// --- End import write route contract tests ---
+
 test("GET /api/recurring-templates returns user-scoped recurring template list", async () => {
   const recurringTemplates = [
     {
@@ -4481,4 +4643,745 @@ test("POST /api/recurring-templates/apply creates this month's recurring transac
       source_hash: insertedRows[0]?.source_hash,
     },
   ]);
+});
+
+// ─── F1: sinopac-stock write happy path ──────────────────────────────────────
+
+test("POST /api/import/sinopac-stock imports Taiwan stock trades and recalculates holdings", async () => {
+  let insertedTrades: Array<Record<string, unknown>> = [];
+  let upsertedHolding: Record<string, unknown> | null = null;
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({ data: [{ id: "account-tw" }], error: null }),
+            }),
+          };
+        }
+
+        if (table === "investment_trades") {
+          return {
+            select: () => ({
+              in: () => ({ data: [], error: null }),
+              eq: () => ({
+                eq: () => ({
+                  order: async () => ({
+                    data: [{ action: "buy", shares: 2, price_per_share: 612, name: "台積電", currency: "TWD" }],
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+            upsert: async (values: Array<Record<string, unknown>>) => {
+              insertedTrades = values;
+              return { error: null };
+            },
+          };
+        }
+
+        if (table === "holdings") {
+          return {
+            upsert: async (value: Record<string, unknown>) => {
+              upsertedHolding = value;
+              return { error: null };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const formData = new FormData();
+  formData.set("account_id", "account-tw");
+  formData.set(
+    "file",
+    new File(
+      ["date,ticker,name,action,shares,price,fee,tax,currency\n2026-03-11,2330,台積電,buy,2,612,20,0,TWD\n"],
+      "sinopac-stock.csv",
+      { type: "text/csv" },
+    ),
+  );
+
+  const response = await app.request("/api/import/sinopac-stock", { method: "POST", body: formData }, env);
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    source: "sinopac-stock",
+    imported: 1,
+    skipped: 0,
+    failed: 0,
+    holdingsRecalculated: 1,
+    runtime: "cloudflare-worker",
+    persistence: "supabase",
+    status: "ok",
+    errors: [],
+  });
+  assert.equal(insertedTrades[0]?.ticker, "2330");
+  assert.equal(insertedTrades[0]?.currency, "TWD");
+  assert.equal(insertedTrades[0]?.source, "sinopac-stock");
+  assert.ok(upsertedHolding, "holdings upsert was called");
+});
+
+// ─── F2: bank-snapshots ───────────────────────────────────────────────────────
+
+test("GET /api/bank-snapshots returns user-scoped snapshot list", async () => {
+  const snapshots = [
+    {
+      id: "snap-1",
+      bank: "sinopac",
+      type: "loan",
+      statement_date: "2026-03-01",
+      data: { remaining: 2327230 },
+      created_at: "2026-03-01T00:00:00Z",
+      updated_at: "2026-03-01T00:00:00Z",
+    },
+  ];
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        assert.equal(table, "bank_snapshots");
+        return {
+          select: () => ({
+            eq: () => ({
+              order: async () => ({ data: snapshots, error: null }),
+            }),
+          }),
+        };
+      },
+    }),
+  });
+
+  const response = await app.request("/api/bank-snapshots", {}, env);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { items: snapshots, status: "ok" });
+});
+
+test("GET /api/bank-snapshots returns 401 when bearer user is missing", async () => {
+  const app = createApp({ resolveAuthenticatedUser: async () => null });
+  const response = await app.request("/api/bank-snapshots", {}, env);
+  assert.equal(response.status, 401);
+});
+
+test("PUT /api/bank-snapshots upserts a snapshot for the authenticated user", async () => {
+  let upserted: Record<string, unknown> | null = null;
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        assert.equal(table, "bank_snapshots");
+        return {
+          upsert: async (value: Record<string, unknown>) => {
+            upserted = value;
+            return { error: null };
+          },
+        };
+      },
+    }),
+  });
+
+  const response = await app.request(
+    "/api/bank-snapshots",
+    {
+      method: "PUT",
+      body: JSON.stringify({ bank: "sinopac", type: "loan", statement_date: "2026-03-01", data: { remaining: 2327230 } }),
+      headers: { "content-type": "application/json" },
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { status: "ok" });
+  assert.equal(upserted?.user_id, "user-1");
+  assert.equal(upserted?.bank, "sinopac");
+  assert.equal(upserted?.type, "loan");
+});
+
+test("PUT /api/bank-snapshots returns 401 when bearer user is missing", async () => {
+  const app = createApp({ resolveAuthenticatedUser: async () => null });
+  const response = await app.request(
+    "/api/bank-snapshots",
+    { method: "PUT", body: JSON.stringify({ bank: "sinopac", type: "loan", statement_date: "2026-03-01", data: {} }), headers: { "content-type": "application/json" } },
+    env,
+  );
+  assert.equal(response.status, 401);
+});
+
+test("DELETE /api/bank-snapshots/:id deletes an owned snapshot", async () => {
+  let deletedId: string | null = null;
+  let deletedUserId: string | null = null;
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        assert.equal(table, "bank_snapshots");
+        return {
+          delete: () => ({
+            eq: (col: string, val: string) => ({
+              eq: async (col2: string, val2: string) => {
+                if (col === "id") deletedId = val;
+                if (col2 === "user_id") deletedUserId = val2;
+                return { error: null };
+              },
+            }),
+          }),
+        };
+      },
+    }),
+  });
+
+  const response = await app.request("/api/bank-snapshots/snap-1", { method: "DELETE" }, env);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { status: "ok" });
+  assert.equal(deletedId, "snap-1");
+  assert.equal(deletedUserId, "user-1");
+});
+
+test("DELETE /api/bank-snapshots/:id returns 401 when bearer user is missing", async () => {
+  const app = createApp({ resolveAuthenticatedUser: async () => null });
+  const response = await app.request("/api/bank-snapshots/snap-1", { method: "DELETE" }, env);
+  assert.equal(response.status, 401);
+});
+
+// ─── F3: categorization-rules ─────────────────────────────────────────────────
+
+test("GET /api/categorization-rules returns user-scoped rule list", async () => {
+  const rules = [
+    {
+      id: "rule-1",
+      user_id: "user-1",
+      scope: "gmail_pdf_sinopac",
+      direction: "expense",
+      normalized_description: "超市",
+      raw_description: "全聯",
+      category: "日常雜貨",
+      updated_at: "2026-03-01T00:00:00Z",
+    },
+  ];
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        assert.equal(table, "categorization_rules");
+        return {
+          select: () => ({
+            eq: () => ({
+              order: async () => ({ data: rules, error: null }),
+            }),
+          }),
+        };
+      },
+    }),
+  });
+
+  const response = await app.request("/api/categorization-rules", {}, env);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { items: rules, status: "ok" });
+});
+
+test("GET /api/categorization-rules returns 401 when bearer user is missing", async () => {
+  const app = createApp({ resolveAuthenticatedUser: async () => null });
+  const response = await app.request("/api/categorization-rules", {}, env);
+  assert.equal(response.status, 401);
+  assert.deepEqual(await response.json(), { code: "unauthorized", error: "Missing or invalid Supabase bearer token.", status: "error" });
+});
+
+test("POST /api/categorization-rules upserts a categorization rule", async () => {
+  const createdRule = {
+    id: "rule-2",
+    user_id: "user-1",
+    scope: "gmail_pdf_sinopac",
+    direction: "expense",
+    normalized_description: "咖啡",
+    raw_description: "路易莎",
+    category: "餐飲",
+    updated_at: "2026-04-01T00:00:00Z",
+  };
+
+  let upserted: Record<string, unknown> | null = null;
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        assert.equal(table, "categorization_rules");
+        return {
+          upsert: (value: Record<string, unknown>) => {
+            upserted = value;
+            return {
+              select: () => ({
+                single: async () => ({ data: createdRule, error: null }),
+              }),
+            };
+          },
+        };
+      },
+    }),
+  });
+
+  const response = await app.request(
+    "/api/categorization-rules",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        scope: "gmail_pdf_sinopac",
+        direction: "expense",
+        normalized_description: "咖啡",
+        raw_description: "路易莎",
+        category: "餐飲",
+      }),
+      headers: { "content-type": "application/json" },
+    },
+    env,
+  );
+
+  assert.equal(response.status, 201);
+  assert.deepEqual(await response.json(), { items: [createdRule], status: "ok" });
+  assert.equal(upserted?.user_id, "user-1");
+  assert.equal(upserted?.category, "餐飲");
+});
+
+test("POST /api/categorization-rules returns 400 when required fields are missing", async () => {
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+  });
+
+  const response = await app.request(
+    "/api/categorization-rules",
+    {
+      method: "POST",
+      body: JSON.stringify({ scope: "gmail_pdf_sinopac" }),
+      headers: { "content-type": "application/json" },
+    },
+    env,
+  );
+
+  assert.equal(response.status, 400);
+  assert.equal((await response.json() as { status: string }).status, "error");
+});
+
+test("DELETE /api/categorization-rules/:id deletes an owned rule", async () => {
+  let deletedId: string | null = null;
+  let deletedUserId: string | null = null;
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        assert.equal(table, "categorization_rules");
+        return {
+          delete: () => ({
+            eq: (col: string, val: string) => ({
+              eq: async (col2: string, val2: string) => {
+                if (col === "id") deletedId = val;
+                if (col2 === "user_id") deletedUserId = val2;
+                return { error: null };
+              },
+            }),
+          }),
+        };
+      },
+    }),
+  });
+
+  const response = await app.request("/api/categorization-rules/rule-1", { method: "DELETE" }, env);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { status: "ok" });
+  assert.equal(deletedId, "rule-1");
+  assert.equal(deletedUserId, "user-1");
+});
+
+test("DELETE /api/categorization-rules/:id returns 401 when bearer user is missing", async () => {
+  const app = createApp({ resolveAuthenticatedUser: async () => null });
+  const response = await app.request("/api/categorization-rules/rule-1", { method: "DELETE" }, env);
+  assert.equal(response.status, 401);
+});
+
+// ─── F4: DELETE /api/transactions (bulk by account_id) ───────────────────────
+
+test("DELETE /api/transactions deletes all transactions for an owned account", async () => {
+  let deletedAccountId: string | null = null;
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({ data: [{ id: "account-1" }], error: null }),
+            }),
+          };
+        }
+        if (table === "transactions") {
+          return {
+            delete: () => ({
+              eq: async (_col: string, val: string) => {
+                deletedAccountId = val;
+                return { error: null };
+              },
+            }),
+          };
+        }
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/transactions?account_id=account-1", { method: "DELETE" }, env);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { items: [], count: 0, status: "ok" });
+  assert.equal(deletedAccountId, "account-1");
+});
+
+test("DELETE /api/transactions returns 400 when account_id is missing", async () => {
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+  });
+  const response = await app.request("/api/transactions", { method: "DELETE" }, env);
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), { code: "validation_error", error: "account_id is required.", status: "error" });
+});
+
+test("DELETE /api/transactions returns 400 when account does not belong to user", async () => {
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({ data: [{ id: "account-other" }], error: null }),
+            }),
+          };
+        }
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/transactions?account_id=account-1", { method: "DELETE" }, env);
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), {
+    code: "validation_error",
+    error: "Account does not belong to the current user.",
+    status: "error",
+  });
+});
+
+// ─── M1+M2: accounts and recurring-templates DELETE contract ─────────────────
+
+test("DELETE /api/recurring-templates/:id deletes an owned template", async () => {
+  let deletedId: string | null = null;
+  let deletedUserId: string | null = null;
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        assert.equal(table, "recurring_templates");
+        return {
+          delete: () => ({
+            eq: (col: string, val: string) => ({
+              eq: async (col2: string, val2: string) => {
+                if (col === "id") deletedId = val;
+                if (col2 === "user_id") deletedUserId = val2;
+                return { error: null };
+              },
+            }),
+          }),
+        };
+      },
+    }),
+  });
+
+  const response = await app.request("/api/recurring-templates/rt-1", { method: "DELETE" }, env);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { status: "ok" });
+  assert.equal(deletedId, "rt-1");
+  assert.equal(deletedUserId, "user-1");
+});
+
+test("DELETE /api/recurring-templates/:id returns 401 when bearer user is missing", async () => {
+  const app = createApp({ resolveAuthenticatedUser: async () => null });
+  const response = await app.request("/api/recurring-templates/rt-1", { method: "DELETE" }, env);
+  assert.equal(response.status, 401);
+  assert.deepEqual(await response.json(), {
+    code: "unauthorized",
+    error: "Missing or invalid Supabase bearer token.",
+    status: "error",
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// PUT /api/accounts/:id
+// ---------------------------------------------------------------------------
+
+test("PUT /api/accounts/:id updates name, currency, broker", async () => {
+  const updatedAccount = {
+    id: "acct-1",
+    user_id: "user-1",
+    name: "Renamed Account",
+    type: "bank",
+    currency: "USD",
+    broker: null,
+    created_at: "2026-01-01T00:00:00Z",
+  };
+
+  let updatedPayload: Record<string, unknown> | null = null;
+  let updatedId: string | null = null;
+  let updatedUserId: string | null = null;
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        assert.equal(table, "accounts");
+        return {
+          update: (payload: Record<string, unknown>) => {
+            updatedPayload = payload;
+            return {
+              eq: (col: string, val: string) => {
+                if (col === "id") updatedId = val;
+                return {
+                  eq: (col2: string, val2: string) => {
+                    if (col2 === "user_id") updatedUserId = val2;
+                    return {
+                      select: () => ({
+                        single: async () => ({ data: updatedAccount, error: null }),
+                      }),
+                    };
+                  },
+                };
+              },
+            };
+          },
+        };
+      },
+    }),
+  });
+
+  const response = await app.request(
+    "/api/accounts/acct-1",
+    {
+      method: "PUT",
+      body: JSON.stringify({ name: "Renamed Account", currency: "USD" }),
+      headers: { "content-type": "application/json" },
+    },
+    env,
+  );
+  assert.equal(response.status, 200);
+  const body = (await response.json()) as { items: unknown[]; count: number; status: string };
+  assert.equal(body.status, "ok");
+  assert.equal(body.count, 1);
+  assert.equal(updatedPayload?.name, "Renamed Account");
+  assert.equal(updatedPayload?.currency, "USD");
+  assert.equal(updatedId, "acct-1");
+  assert.equal(updatedUserId, "user-1");
+});
+
+test("PUT /api/accounts/:id returns 400 when no fields provided", async () => {
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+    createSupabaseAdminClient: () => ({ from: () => ({}) }),
+  });
+
+  const response = await app.request(
+    "/api/accounts/acct-1",
+    {
+      method: "PUT",
+      body: JSON.stringify({}),
+      headers: { "content-type": "application/json" },
+    },
+    env,
+  );
+  assert.equal(response.status, 400);
+  const body = (await response.json()) as { code: string; status: string };
+  assert.equal(body.status, "error");
+  assert.equal(body.code, "validation_error");
+});
+
+test("PUT /api/accounts/:id returns 400 when name is empty string", async () => {
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+    createSupabaseAdminClient: () => ({ from: () => ({}) }),
+  });
+
+  const response = await app.request(
+    "/api/accounts/acct-1",
+    {
+      method: "PUT",
+      body: JSON.stringify({ name: "   " }),
+      headers: { "content-type": "application/json" },
+    },
+    env,
+  );
+  assert.equal(response.status, 400);
+  const body = (await response.json()) as { code: string; status: string };
+  assert.equal(body.status, "error");
+  assert.equal(body.code, "validation_error");
+});
+
+test("PUT /api/accounts/:id returns 401 when bearer user is missing", async () => {
+  const app = createApp({ resolveAuthenticatedUser: async () => null });
+  const response = await app.request(
+    "/api/accounts/acct-1",
+    {
+      method: "PUT",
+      body: JSON.stringify({ name: "x" }),
+      headers: { "content-type": "application/json" },
+    },
+    env,
+  );
+  assert.equal(response.status, 401);
+  assert.deepEqual(await response.json(), {
+    code: "unauthorized",
+    error: "Missing or invalid Supabase bearer token.",
+    status: "error",
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PUT /api/recurring-templates/:id
+// ---------------------------------------------------------------------------
+
+test("PUT /api/recurring-templates/:id updates name and amount", async () => {
+  const updatedTemplate = {
+    id: "rt-1",
+    user_id: "user-1",
+    account_id: "acct-1",
+    name: "Updated Template",
+    category: null,
+    amount: 500,
+    currency: "TWD",
+    cadence: "monthly",
+    anchor_day: null,
+    source_kind: "manual",
+    source_section: null,
+    notes: null,
+    created_at: "2026-01-01T00:00:00Z",
+  };
+
+  let updatedPayload: Record<string, unknown> | null = null;
+  let updatedId: string | null = null;
+  let updatedUserId: string | null = null;
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        assert.equal(table, "recurring_templates");
+        return {
+          update: (payload: Record<string, unknown>) => {
+            updatedPayload = payload;
+            return {
+              eq: (col: string, val: string) => {
+                if (col === "id") updatedId = val;
+                return {
+                  eq: (col2: string, val2: string) => {
+                    if (col2 === "user_id") updatedUserId = val2;
+                    return {
+                      select: () => ({
+                        single: async () => ({ data: updatedTemplate, error: null }),
+                      }),
+                    };
+                  },
+                };
+              },
+            };
+          },
+        };
+      },
+    }),
+  });
+
+  const response = await app.request(
+    "/api/recurring-templates/rt-1",
+    {
+      method: "PUT",
+      body: JSON.stringify({ name: "Updated Template", amount: 500 }),
+      headers: { "content-type": "application/json" },
+    },
+    env,
+  );
+  assert.equal(response.status, 200);
+  const body = (await response.json()) as { items: unknown[]; count: number; status: string };
+  assert.equal(body.status, "ok");
+  assert.equal(body.count, 1);
+  assert.equal(updatedPayload?.name, "Updated Template");
+  assert.equal(updatedPayload?.amount, 500);
+  assert.equal(updatedId, "rt-1");
+  assert.equal(updatedUserId, "user-1");
+});
+
+test("PUT /api/recurring-templates/:id returns 400 when no fields provided", async () => {
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+    createSupabaseAdminClient: () => ({ from: () => ({}) }),
+  });
+
+  const response = await app.request(
+    "/api/recurring-templates/rt-1",
+    {
+      method: "PUT",
+      body: JSON.stringify({}),
+      headers: { "content-type": "application/json" },
+    },
+    env,
+  );
+  assert.equal(response.status, 400);
+  const body = (await response.json()) as { code: string; status: string };
+  assert.equal(body.status, "error");
+  assert.equal(body.code, "validation_error");
+});
+
+test("PUT /api/recurring-templates/:id returns 400 when anchor_day is out of range", async () => {
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "reiko0099@gmail.com" }),
+    createSupabaseAdminClient: () => ({ from: () => ({}) }),
+  });
+
+  const response = await app.request(
+    "/api/recurring-templates/rt-1",
+    {
+      method: "PUT",
+      body: JSON.stringify({ anchor_day: 32 }),
+      headers: { "content-type": "application/json" },
+    },
+    env,
+  );
+  assert.equal(response.status, 400);
+  const body = (await response.json()) as { code: string; status: string };
+  assert.equal(body.status, "error");
+  assert.equal(body.code, "validation_error");
+});
+
+test("PUT /api/recurring-templates/:id returns 401 when bearer user is missing", async () => {
+  const app = createApp({ resolveAuthenticatedUser: async () => null });
+  const response = await app.request(
+    "/api/recurring-templates/rt-1",
+    {
+      method: "PUT",
+      body: JSON.stringify({ name: "x" }),
+      headers: { "content-type": "application/json" },
+    },
+    env,
+  );
+  assert.equal(response.status, 401);
+  assert.deepEqual(await response.json(), {
+    code: "unauthorized",
+    error: "Missing or invalid Supabase bearer token.",
+    status: "error",
+  });
 });

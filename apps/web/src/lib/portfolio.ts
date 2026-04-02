@@ -59,6 +59,44 @@ export async function saveFxRates(
   }
 }
 
+export async function deletePriceSnapshot(
+  ticker: string,
+  date: string,
+): Promise<{ deleted: number; status: "ok" } | { status: "error"; error: string }> {
+  try {
+    const response = await apiFetch(
+      `/api/portfolio/price-snapshots?ticker=${encodeURIComponent(ticker)}&date=${encodeURIComponent(date)}`,
+      { method: "DELETE" },
+    );
+    const json = (await response.json()) as
+      | { deleted: number; status: "ok" }
+      | { code: string; error: string; status: "error" };
+    if (json.status === "error") return { status: "error", error: json.error };
+    return json as { deleted: number; status: "ok" };
+  } catch {
+    return { status: "error", error: "網路錯誤" };
+  }
+}
+
+export async function deleteFxRate(
+  fromCurrency: string,
+  rateDate: string,
+): Promise<{ deleted: number; status: "ok" } | { status: "error"; error: string }> {
+  try {
+    const response = await apiFetch(
+      `/api/portfolio/fx-rates?from_currency=${encodeURIComponent(fromCurrency)}&rate_date=${encodeURIComponent(rateDate)}`,
+      { method: "DELETE" },
+    );
+    const json = (await response.json()) as
+      | { deleted: number; status: "ok" }
+      | { code: string; error: string; status: "error" };
+    if (json.status === "error") return { status: "error", error: json.error };
+    return json as { deleted: number; status: "ok" };
+  } catch {
+    return { status: "error", error: "網路錯誤" };
+  }
+}
+
 export type PriceEntry = { ticker: string; date: string; close_price: number; currency?: string };
 
 export async function savePriceSnapshots(

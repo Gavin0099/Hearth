@@ -21,6 +21,7 @@ function createSupabaseStub(options?: {
     priceSnapshots: [] as any[],
     fxRates: [] as any[],
     jobRuns: [] as any[],
+    jobRunsPrunedCutoffs: [] as string[],
   };
 
   const supabase = {
@@ -98,6 +99,14 @@ function createSupabaseStub(options?: {
                 ? { error: { message: options.jobRunsError } }
                 : { error: null },
             );
+          },
+          delete() {
+            return {
+              lt(column: string, value: string) {
+                if (column === "run_finished_at") state.jobRunsPrunedCutoffs.push(value);
+                return Promise.resolve({ error: null });
+              },
+            };
           },
         };
       }
@@ -213,4 +222,32 @@ test("runDailyUpdate records partial failures without dropping the whole cron su
   assert.equal(state.jobRuns.length, 1);
   assert.equal(state.jobRuns[0].status, "error");
   assert.equal(errors.some((message) => message.includes("accounts fetch error: accounts down")), true);
+});
+
+test("runDailyUpdate prunes job_runs older than 90 days after persisting the run", async () => {
+  const { supabase, state } = createSupabaseStub();
+  const fixedNow = new Date("2026-04-01T06:00:05.000Z");
+
+  const fetchImpl: typeof fetch = async (input) => {
+    const url = String(input);
+    if (url.includes("STOCK_DAY_ALL")) return new Response(JSON.stringify([]), { status: 200 });
+    if (url.includes("open.er-api.com")) {
+      return new Response(
+        JSON.stringify({ result: "success", base_code: "TWD", time_last_update_utc: "Wed, 01 Apr 2026 00:00:00 +0000", rates: {} }),
+        { status: 200 },
+      );
+    }
+    throw new Error(`Unexpected fetch URL: ${url}`);
+  };
+
+  await runDailyUpdate(env, {
+    supabase,
+    fetchImpl,
+    logger: { log: () => {}, error: () => {} },
+    now: () => fixedNow,
+  });
+
+  assert.equal(state.jobRunsPrunedCutoffs.length, 1);
+  const expectedCutoff = new Date(fixedNow.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString();
+  assert.equal(state.jobRunsPrunedCutoffs[0], expectedCutoff);
 });

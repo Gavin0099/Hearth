@@ -679,6 +679,88 @@ portfolioRoutes.post("/fx-rates", async (c) => {
   return c.json<FxRateSaveResponse>({ saved: rows.length, status: "ok" });
 });
 
+type DeleteSnapshotResponse =
+  | { deleted: number; status: "ok" }
+  | { code: "unauthorized" | "validation_error" | "database_error"; error: string; status: "error" };
+
+// DELETE /price-snapshots?ticker=AAPL&date=2026-04-01
+portfolioRoutes.delete("/price-snapshots", async (c) => {
+  const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
+  const user = await resolveAuthenticatedUser(c.req.raw, c.env);
+  if (!user) {
+    return c.json<DeleteSnapshotResponse>(
+      { code: "unauthorized", error: "Missing or invalid Supabase bearer token.", status: "error" },
+      401,
+    );
+  }
+
+  const ticker = String(c.req.query("ticker") ?? "").trim().toUpperCase();
+  const date = String(c.req.query("date") ?? "").trim();
+  if (!ticker || !date) {
+    return c.json<DeleteSnapshotResponse>(
+      { code: "validation_error", error: "ticker and date are required.", status: "error" },
+      400,
+    );
+  }
+
+  // price_snapshots is global (no user_id), so any authenticated user can delete
+  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
+  const supabase = createSupabaseAdminClient(c.env);
+  const { error, count } = await supabase
+    .from("price_snapshots")
+    .delete({ count: "exact" })
+    .eq("ticker", ticker)
+    .eq("snapshot_date", date);
+
+  if (error) {
+    return c.json<DeleteSnapshotResponse>(
+      { code: "database_error", error: error.message, status: "error" },
+      500,
+    );
+  }
+
+  return c.json<DeleteSnapshotResponse>({ deleted: count ?? 0, status: "ok" });
+});
+
+// DELETE /fx-rates?from_currency=USD&rate_date=2026-04-01
+portfolioRoutes.delete("/fx-rates", async (c) => {
+  const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
+  const user = await resolveAuthenticatedUser(c.req.raw, c.env);
+  if (!user) {
+    return c.json<DeleteSnapshotResponse>(
+      { code: "unauthorized", error: "Missing or invalid Supabase bearer token.", status: "error" },
+      401,
+    );
+  }
+
+  const fromCurrency = String(c.req.query("from_currency") ?? "").trim().toUpperCase();
+  const rateDate = String(c.req.query("rate_date") ?? "").trim();
+  if (!fromCurrency || !rateDate) {
+    return c.json<DeleteSnapshotResponse>(
+      { code: "validation_error", error: "from_currency and rate_date are required.", status: "error" },
+      400,
+    );
+  }
+
+  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
+  const supabase = createSupabaseAdminClient(c.env);
+  const { error, count } = await supabase
+    .from("fx_rates")
+    .delete({ count: "exact" })
+    .eq("from_currency", fromCurrency)
+    .eq("to_currency", "TWD")
+    .eq("rate_date", rateDate);
+
+  if (error) {
+    return c.json<DeleteSnapshotResponse>(
+      { code: "database_error", error: error.message, status: "error" },
+      500,
+    );
+  }
+
+  return c.json<DeleteSnapshotResponse>({ deleted: count ?? 0, status: "ok" });
+});
+
 // GET /trade-costs — total fee+tax per ticker from investment_trades
 portfolioRoutes.get("/trade-costs", async (c) => {
   const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");

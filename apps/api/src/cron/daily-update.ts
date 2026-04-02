@@ -183,6 +183,16 @@ export async function runDailyUpdate(
     if (error) {
       logger.error(`[cron] job_runs insert error: ${error.message}`);
     }
+
+    // Retain only the last 90 days of job runs
+    const cutoff = new Date(now().getTime() - 90 * 24 * 60 * 60 * 1000).toISOString();
+    const { error: pruneError } = await supabase
+      .from("job_runs")
+      .delete()
+      .lt("run_finished_at", cutoff);
+    if (pruneError) {
+      logger.error(`[cron] job_runs prune error: ${pruneError.message}`);
+    }
   };
 
   const { data: holdingsData, error: holdingsError } = await supabase

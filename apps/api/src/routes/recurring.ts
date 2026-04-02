@@ -635,3 +635,115 @@ recurringRoutes.post("/apply", async (c) => {
     status: "ok",
   });
 });
+
+recurringRoutes.put("/:id", async (c) => {
+  const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
+  const user = await resolveAuthenticatedUser(c.req.raw, c.env);
+  if (!user) {
+    return c.json<RecurringTemplatesResponse>(
+      { code: "unauthorized", error: "Missing or invalid Supabase bearer token.", status: "error" },
+      401,
+    );
+  }
+
+  let payload: { name?: string; category?: string | null; amount?: number | null; anchor_day?: number | null };
+  try {
+    payload = await c.req.json();
+  } catch {
+    return c.json<RecurringTemplatesResponse>(
+      { code: "validation_error", error: "Invalid JSON body.", status: "error" },
+      400,
+    );
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (payload.name !== undefined) {
+    const name = payload.name.trim();
+    if (!name) {
+      return c.json<RecurringTemplatesResponse>(
+        { code: "validation_error", error: "Recurring template name cannot be empty.", status: "error" },
+        400,
+      );
+    }
+    updates.name = name;
+  }
+  if (payload.category !== undefined) {
+    updates.category = payload.category?.trim() || null;
+  }
+  if (payload.amount !== undefined) {
+    const amount = payload.amount === null ? null : Number(payload.amount);
+    if (amount !== null && !Number.isFinite(amount)) {
+      return c.json<RecurringTemplatesResponse>(
+        { code: "validation_error", error: "amount must be a number when provided.", status: "error" },
+        400,
+      );
+    }
+    updates.amount = amount;
+  }
+  if (payload.anchor_day !== undefined) {
+    const anchorDay = payload.anchor_day === null ? null : Number(payload.anchor_day);
+    if (anchorDay !== null && (!Number.isInteger(anchorDay) || anchorDay < 1 || anchorDay > 31)) {
+      return c.json<RecurringTemplatesResponse>(
+        { code: "validation_error", error: "anchor_day must be between 1 and 31 when provided.", status: "error" },
+        400,
+      );
+    }
+    updates.anchor_day = anchorDay;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return c.json<RecurringTemplatesResponse>(
+      { code: "validation_error", error: "No fields to update.", status: "error" },
+      400,
+    );
+  }
+
+  const id = c.req.param("id");
+  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
+  const supabase = createSupabaseAdminClient(c.env);
+  const { data, error } = await supabase
+    .from("recurring_templates")
+    .update(updates)
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .select("id, user_id, account_id, name, category, amount, currency, cadence, anchor_day, source_kind, source_section, notes, created_at")
+    .single();
+
+  if (error) {
+    return c.json<RecurringTemplatesResponse>(
+      { code: "database_error", error: error.message, status: "error" },
+      500,
+    );
+  }
+
+  return c.json<RecurringTemplatesResponse>({ items: [data as RecurringTemplateRecord], count: 1, status: "ok" });
+});
+
+recurringRoutes.delete("/:id", async (c) => {
+  const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
+  const user = await resolveAuthenticatedUser(c.req.raw, c.env);
+  if (!user) {
+    return c.json<RecurringTemplatesResponse>(
+      { code: "unauthorized", error: "Missing or invalid Supabase bearer token.", status: "error" },
+      401,
+    );
+  }
+
+  const id = c.req.param("id");
+  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
+  const supabase = createSupabaseAdminClient(c.env);
+  const { error } = await supabase
+    .from("recurring_templates")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) {
+    return c.json<RecurringTemplatesResponse>(
+      { code: "database_error", error: error.message, status: "error" },
+      500,
+    );
+  }
+
+  return c.json({ status: "ok" });
+});

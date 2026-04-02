@@ -143,3 +143,98 @@ accountsRoutes.post("/", async (c) => {
     status: "ok",
   });
 });
+
+accountsRoutes.put("/:id", async (c) => {
+  const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
+  const user = await resolveAuthenticatedUser(c.req.raw, c.env);
+  if (!user) {
+    return c.json<AccountsResponse>(
+      { code: "unauthorized", error: "Missing or invalid Supabase bearer token.", status: "error" },
+      401,
+    );
+  }
+
+  let payload: { name?: string; currency?: string; broker?: string | null };
+  try {
+    payload = await c.req.json();
+  } catch {
+    return c.json<AccountsResponse>(
+      { code: "validation_error", error: "Invalid JSON body.", status: "error" },
+      400,
+    );
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (payload.name !== undefined) {
+    const name = payload.name.trim();
+    if (!name) {
+      return c.json<AccountsResponse>(
+        { code: "validation_error", error: "Account name cannot be empty.", status: "error" },
+        400,
+      );
+    }
+    updates.name = name;
+  }
+  if (payload.currency !== undefined) {
+    updates.currency = normalizeCurrency(payload.currency);
+  }
+  if (payload.broker !== undefined) {
+    updates.broker = payload.broker?.trim() || null;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return c.json<AccountsResponse>(
+      { code: "validation_error", error: "No fields to update.", status: "error" },
+      400,
+    );
+  }
+
+  const id = c.req.param("id");
+  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
+  const supabase = createSupabaseAdminClient(c.env);
+  const { data, error } = await supabase
+    .from("accounts")
+    .update(updates)
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .select("id, user_id, name, type, currency, broker, created_at")
+    .single();
+
+  if (error) {
+    return c.json<AccountsResponse>(
+      { code: "database_error", error: error.message, status: "error" },
+      500,
+    );
+  }
+
+  return c.json<AccountsResponse>({ items: [data as AccountRecord], count: 1, status: "ok" });
+});
+
+accountsRoutes.delete("/:id", async (c) => {
+  const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
+  const user = await resolveAuthenticatedUser(c.req.raw, c.env);
+  if (!user) {
+    return c.json<AccountsResponse>(
+      { code: "unauthorized", error: "Missing or invalid Supabase bearer token.", status: "error" },
+      401,
+    );
+  }
+
+  const id = c.req.param("id");
+  const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
+  const supabase = createSupabaseAdminClient(c.env);
+  const { error } = await supabase
+    .from("accounts")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) {
+    return c.json<AccountsResponse>(
+      { code: "database_error", error: error.message, status: "error" },
+      500,
+    );
+  }
+
+  return c.json({ status: "ok" });
+});

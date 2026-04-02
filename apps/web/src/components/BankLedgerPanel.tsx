@@ -82,6 +82,7 @@ export function BankLedgerPanel({ session }: { session: Session | null }) {
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [learnedRules, setLearnedRules] = useState<LearnedCategoryRule[]>([]);
   const autoAppliedRuleKeys = useRef(new Set<string>());
+  const [autoApplyMessage, setAutoApplyMessage] = useState<string | null>(null);
 
   const bankAccounts = accounts;
   const accountNameMap = new Map(bankAccounts.map((account) => [account.id, account.name]));
@@ -296,6 +297,7 @@ export function BankLedgerPanel({ session }: { session: Session | null }) {
         categoryById.has(item.id) ? { ...item, category: categoryById.get(item.id) ?? item.category } : item,
       ),
     );
+    setAutoApplyMessage(`已自動套用 ${pendingMatches.length} 筆分類規則`);
 
     for (const item of pendingMatches) {
       const result = await updateTransaction(item.transaction.id, { category: item.rule.category });
@@ -422,6 +424,18 @@ export function BankLedgerPanel({ session }: { session: Session | null }) {
 
       {loadError && <p>載入失敗：{loadError}</p>}
       {loading && <p>載入中...</p>}
+      {autoApplyMessage && (
+        <p className="auto-apply-notice">
+          {autoApplyMessage}
+          <button
+            className="auto-apply-dismiss"
+            type="button"
+            onClick={() => setAutoApplyMessage(null)}
+          >
+            ×
+          </button>
+        </p>
+      )}
 
       {!loading && bankTransactions.length > 0 && (
         <div className="review-workspace">
