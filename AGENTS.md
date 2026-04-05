@@ -101,6 +101,28 @@ python -m ai-governance-framework.governance_tools.governed_prompt_bridge `
 - `decision_usage_allowed` 全部為 false
 - total_tokens=null 時 source/observability 必須明確填寫
 
+## Session Closeout Obligation
+
+Before ending any session, write `artifacts/session-closeout.txt` with these fields:
+
+```
+TASK_INTENT: <what this session was trying to accomplish>
+WORK_COMPLETED: <specific files changed or tools run — name at least one filename or tool>
+FILES_TOUCHED: <comma-separated list of files, or NONE>
+CHECKS_RUN: <specific commands run, or NONE>
+OPEN_RISKS: <anything left uncertain or partially done>
+NOT_DONE: <explicitly deferred items>
+RECOMMENDED_MEMORY_UPDATE: <what should be persisted to MEMORY.md or daily log>
+```
+
+The stop hook calls `session_end_hook.py` at session end. If `artifacts/session-closeout.txt`
+is missing or insufficient, the runtime records the gap and memory will not update.
+
+If no verifiable work was done, write `WORK_COMPLETED: NONE` — that is a valid closeout.
+Do not skip the file entirely; a missing file is treated as a governance gap, not a clean session.
+
+See `ai-governance-framework/docs/session-closeout-schema.md` for field constraints and examples.
+
 ## Current Adoption Boundary
 
 As of 2026-04-01, `Hearth` has adopted:
