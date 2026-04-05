@@ -122,7 +122,6 @@ If no verifiable work was done, write `WORK_COMPLETED: NONE` — that is a valid
 Do not skip the file entirely; a missing file is treated as a governance gap, not a clean session.
 
 See `ai-governance-framework/docs/session-closeout-schema.md` for field constraints and examples.
-
 ## Current Adoption Boundary
 
 As of 2026-04-01, `Hearth` has adopted:
