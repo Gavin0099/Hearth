@@ -29,6 +29,7 @@
 - `/api/import/preview` should also have direct error-path coverage for owned-account rejection and account-lookup failures; otherwise preview can regress on authorization/data-layer semantics while happy-path parsing still looks healthy.
 - `/api/import/preview` preflight should stay route-tested for unauthorized access plus missing `import_mode` / `account_id`; smoke checks only prove the script wiring, not the exact API contract.
 - Import write routes should mirror preview-route ownership/database semantics; once `readOwnedImportFile` and `resolveOwnedImportContext` are shared, contract drift is most likely to show up as route-specific test gaps rather than implementation divergence.
+- `GET /api/portfolio/net-worth` should not silently ignore `net_worth_snapshots` write failures; otherwise the top-line response looks healthy while the history/chart surface quietly goes stale.
 - `GET /api/portfolio/net-worth` now opportunistically upserts `net_worth_snapshots`; the chart/history slice is only trustworthy if tests also cover that write path plus `/api/portfolio/net-worth-history`.
 - `GET /api/portfolio/trade-costs` aggregates `investment_trades` in application code and must group by `ticker + currency`; otherwise USD/TWD fees get silently mixed into a fake single-currency total.
 - `PortfolioPanel` should fetch `net-worth-history` only after the `net-worth` request that opportunistically writes today's snapshot; parallel fetches can make the chart miss the most recent point.

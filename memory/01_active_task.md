@@ -37,9 +37,12 @@
 - [x] Added direct `/api/import/preview` error-path coverage for unowned accounts and account-lookup failures
 - [x] Added direct `/api/import/preview` preflight coverage for unauthorized, missing `import_mode`, and missing `account_id`
 - [x] Added symmetric import write-route coverage for unowned accounts and account-lookup failures
+- [x] Stopped silently swallowing `net_worth_snapshots` write failures in `GET /api/portfolio/net-worth`
+- [x] Updated `ai-governance-framework` submodule to latest reachable upstream commit (`48fafea`)
+- [x] Ran canonical audit trend validation (Scenario A real consuming repo + Scenario B fixture simulation) and published test report
 - [ ] Keep structured memory and daily logs in sync going forward
 
 ## Context
 - **Recent achievements**: portfolio analytics now include verified `net-worth-history` and `trade-costs` behavior, import dry-run preview goes through the real parser/normalization path for cashflow, excel, stock, and dividend modes, and ops expose verdict-level health instead of raw counts only.
-- **Validation baseline**: `npm.cmd --workspace @hearth/api run build` and `npm.cmd --workspace @hearth/api run test` currently pass at `107/107`; `npm.cmd --workspace @hearth/web run check` and `npm.cmd --workspace @hearth/web run build` were also restored earlier in the current closure cycle.
+- **Validation baseline**: `npm.cmd --workspace @hearth/api run build` and `npm.cmd --workspace @hearth/api run test` currently pass at `170/170`; `npm.cmd --workspace @hearth/web run check` and `npm.cmd --workspace @hearth/web run build` were also restored earlier in the current closure cycle.
 - **Next steps**: keep pushing new `P0 correctness / ops` slices instead of reopening the already-closed A1/B1/A2/C1/C2/D1/E1 batch, and keep structured memory aligned with the real validation state.

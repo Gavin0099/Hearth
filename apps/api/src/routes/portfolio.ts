@@ -207,21 +207,23 @@ portfolioRoutes.get("/net-worth", async (c) => {
 
   const totalNetWorthTwd = cashBankTwd + cashCreditTwd + investmentsTwd;
 
-  // Upsert daily snapshot; ignore errors (table may not exist yet)
+  // Persist today's snapshot so history/chart surfaces stay consistent with the latest net-worth read.
   const todayDate = new Date().toISOString().slice(0, 10);
-  try {
-    await supabase.from("net_worth_snapshots").upsert(
-      {
-        user_id: user.id,
-        snapshot_date: todayDate,
-        total_twd: Math.round(totalNetWorthTwd),
-        cash_bank_twd: Math.round(cashBankTwd),
-        investments_twd: Math.round(investmentsTwd),
-      },
-      { onConflict: "user_id,snapshot_date" },
+  const { error: snapshotError } = await supabase.from("net_worth_snapshots").upsert(
+    {
+      user_id: user.id,
+      snapshot_date: todayDate,
+      total_twd: Math.round(totalNetWorthTwd),
+      cash_bank_twd: Math.round(cashBankTwd),
+      investments_twd: Math.round(investmentsTwd),
+    },
+    { onConflict: "user_id,snapshot_date" },
+  );
+  if (snapshotError) {
+    return c.json<NetWorthResponse>(
+      { code: "database_error", error: snapshotError.message, status: "error" },
+      500,
     );
-  } catch {
-    // Non-critical; don't fail the net-worth response
   }
 
   return c.json<NetWorthResponse>({

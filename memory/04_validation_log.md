@@ -58,6 +58,7 @@
   - `109/109`
   - `112/112`
   - `126/126`
+  - `170/170`
 - Scope covered:
   - `portfolio/trade-costs` response shape aligned with `InvestmentCostsResponse`
   - `portfolio/net-worth` snapshot upsert regression coverage
@@ -77,6 +78,7 @@
   - parser-backed import preview now also has direct error-path coverage for unowned accounts and account lookup failures; API suite moved to `109/109`
   - parser-backed import preview now also has direct preflight coverage for unauthorized, missing `import_mode`, and missing `account_id`; API suite moved to `112/112`
   - all import write routes now also have direct contract coverage for unowned-account rejection and account-lookup `database_error`; API suite moved to `126/126`
+  - `GET /api/portfolio/net-worth` now returns `database_error` when `net_worth_snapshots` persistence fails instead of silently dropping the history write; API suite moved to `170/170`
   - post-deploy smoke import checks now also cover `/api/import/preview` validation wiring
   - post-deploy smoke import checks now also cover stock-trade and dividend import endpoints
 
@@ -87,3 +89,23 @@
 - Observed caveats:
   - nested API test invocation inside the readiness script still hit sandbox `spawn EPERM`
   - web check still reports the pre-existing `tesseract.js` module/type issue in `apps/web/src/lib/pdf-parser.ts`
+
+## 2026-04-13 Canonical Audit Trend Verification
+
+- `git pull --ff-only origin main` (Hearth root)
+- `python ai-governance-framework/governance_tools/session_end_hook.py --project-root . --format json`
+- `Get-Content artifacts/runtime/canonical-audit-log.jsonl | ConvertFrom-Json | Group-Object { $_.signals.Count -gt 0 } | Select-Object Name, Count`
+- `python ai-governance-framework/governance_tools/session_end_hook.py --project-root . --format json | python -c "import sys,json; d=json.load(sys.stdin); print(json.dumps(d['canonical_audit_trend'], indent=2))"`
+- `python governance_tools/session_end_hook.py --project-root tmp/canonical-trend-fixture --format json | python -c "import sys,json; d=json.load(sys.stdin); print(json.dumps(d['canonical_audit_trend'], indent=2)); print(json.dumps(d['canonical_usage_audit'], indent=2))"` (run in `ai-governance-framework`)
+- Observed:
+  - Scenario A (`Hearth`) trend showed `signal_ratio=1.0` with `test_result_artifact_absent` dominating.
+  - Scenario B fixture trend showed `signal_ratio=0.5455` and `adoption_risk=true` across 11 read entries (10 fixture + 1 hook run).
+
+## 2026-04-13 Web Loading Deadlock Hotfix
+
+- `npm.cmd --workspace @hearth/web run check`
+- Result: pass
+- Scope:
+  - wrapped network-throw paths in `apps/web/src/lib/accounts.ts` (`fetchAccounts`)
+  - wrapped network-throw paths in `apps/web/src/lib/portfolio.ts` (`fetchPortfolioHoldings`, `fetchNetWorth`, `fetchPortfolioDividends`, `fetchFxRates`, `fetchNetWorthHistory`, `fetchTradeCosts`)
+  - objective: avoid infinite `loading` UI states when API requests fail before returning JSON

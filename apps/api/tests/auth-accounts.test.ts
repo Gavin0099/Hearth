@@ -1137,6 +1137,80 @@ test("GET /api/portfolio/net-worth returns database_error when price snapshot lo
   });
 });
 
+test("GET /api/portfolio/net-worth returns database_error when snapshot upsert fails", async () => {
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-bank", type: "cash_bank", currency: "TWD" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "transactions") {
+          return {
+            select: () => ({
+              in: async () => ({
+                data: [{ account_id: "account-bank", amount: 20000 }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "holdings") {
+          return {
+            select: () => ({
+              in: () => ({
+                data: [],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "dividends") {
+          return {
+            select: () => ({
+              in: async () => ({
+                data: [],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "net_worth_snapshots") {
+          return {
+            upsert: async () => ({
+              error: { message: "snapshot upsert failed" },
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request("/api/portfolio/net-worth", {}, env);
+  assert.equal(response.status, 500);
+  assert.deepEqual(await response.json(), {
+    code: "database_error",
+    error: "snapshot upsert failed",
+    status: "error",
+  });
+});
+
 test("GET /api/portfolio/net-worth-history returns owned snapshot history", async () => {
   const app = createApp({
     resolveAuthenticatedUser: async () => ({

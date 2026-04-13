@@ -1,0 +1,70 @@
+{
+  "session_id": "session-20260413T065120-73bc83",
+  "closed_at": "2026-04-13T06:51:20.112324+00:00",
+  "runtime_contract": {
+    "task": "session",
+    "rules": [
+      "common"
+    ],
+    "risk": "low",
+    "oversight": "auto",
+    "memory_mode": "stateless"
+  },
+  "checks": {
+    "closeout_status": "closeout_missing",
+    "closeout_file": "C:\\Users\\reiko\\Hearth\\artifacts\\session-closeout.txt",
+    "closeout_presence": "missing",
+    "closeout_schema_validity": "invalid",
+    "closeout_content_sufficiency": "insufficient",
+    "closeout_evidence_consistency": "unchecked",
+    "closeout_memory_tier": "no_update",
+    "closeout_per_layer_results": {
+      "missing_fields": [
+        "TASK_INTENT",
+        "WORK_COMPLETED",
+        "FILES_TOUCHED",
+        "CHECKS_RUN",
+        "OPEN_RISKS",
+        "NOT_DONE",
+        "RECOMMENDED_MEMORY_UPDATE"
+      ],
+      "content_issues": [],
+      "inconsistencies": [],
+      "cross_reference_results": []
+    },
+    "closeout_failure_signals": [
+      {
+        "type": "closeout_file_missing",
+        "affects": [
+          "presence",
+          "schema_validity",
+          "content_sufficiency"
+        ],
+        "guidance": "Write artifacts/session-closeout.txt before session ends. See docs/session-closeout-schema.md."
+      }
+    ],
+    "repo_readiness_level": 0,
+    "repo_readiness_limiting_factor": "agents_base_has_obligation",
+    "repo_closeout_activation_state": "unknown",
+    "repo_activation_recency": null,
+    "repo_activation_gap": "structural_prerequisites_missing"
+  },
+  "architecture_impact_preview": {},
+  "proposal_summary": {},
+  "contract_resolution": {
+    "risk_tier": "unknown"
+  },
+  "domain_contract": {},
+  "public_api_diff": null,
+  "event_log": [],
+  "snapshot": null,
+  "policy": {
+    "decision": "DO_NOT_PROMOTE",
+    "reasons": [
+      "Session is stateless; durable memory is not allowed."
+    ]
+  },
+  "promotion": null,
+  "warnings": [],
+  "errors": []
+}
