@@ -1,4 +1,5 @@
 import { apiFetch } from "./api";
+import { env } from "../env";
 
 export type UserSettings = {
   has_default_pdf_password: boolean;
@@ -42,16 +43,17 @@ const DEFAULT_USER_SETTINGS_SECRETS: UserSettingsSecrets = {
 };
 
 async function readSettingsError(response: Response): Promise<string> {
+  const apiBase = env.apiBaseUrl;
   try {
     const data = await response.json() as { error?: string };
     if (data.error) {
-      return data.error;
+      return `${data.error} (api: ${apiBase})`;
     }
   } catch {
     // Fall through to the generic HTTP error.
   }
 
-  return `user-settings request failed: ${response.status} ${response.statusText}`;
+  return `user-settings request failed: ${response.status} ${response.statusText} (api: ${apiBase})`;
 }
 
 export async function fetchUserSettings(): Promise<UserSettings> {
