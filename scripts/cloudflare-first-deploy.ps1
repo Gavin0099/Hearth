@@ -1,6 +1,6 @@
 param(
   [string]$PagesProjectName = "hearth-web",
-  [string]$ApiBaseUrl = "https://hearth-api.reiko0099.workers.dev",
+  [string]$ApiBaseUrl = "https://hearth-api.meiraybooks.workers.dev",
   [switch]$SkipReadiness,
   [switch]$SkipWhoAmI,
   [switch]$AutoCreatePagesProject,

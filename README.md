@@ -117,5 +117,5 @@ The backfill script only rewrites legacy plaintext `user_settings` PDF password 
 
 ## Current deployed endpoints
 
-- API Worker: `https://hearth-api.reiko0099.workers.dev`
+- API Worker: `https://hearth-api.meiraybooks.workers.dev`
 - Pages deployment URL (latest): `https://ad4d7cc8.hearth-web.pages.dev`

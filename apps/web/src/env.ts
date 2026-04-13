@@ -1,4 +1,4 @@
-const PRODUCTION_API_BASE_URL = "https://hearth-api.reiko0099.workers.dev";
+const PRODUCTION_API_BASE_URL = "https://hearth-api.meiraybooks.workers.dev";
 const LOCAL_API_BASE_URL = "http://127.0.0.1:8787";
 
 function resolveDefaultApiBaseUrl() {
