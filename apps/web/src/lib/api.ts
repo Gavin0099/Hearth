@@ -19,10 +19,16 @@ export async function apiFetch(path: string, init: ApiRequestInit = {}) {
   }
 
   const requestUrl = `${env.apiBaseUrl}${path}`;
-  const firstResponse = await fetch(requestUrl, {
-    ...init,
-    headers,
-  });
+  let firstResponse: Response;
+  try {
+    firstResponse = await fetch(requestUrl, {
+      ...init,
+      headers,
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "Failed to fetch";
+    throw new Error(`${reason} (${requestUrl})`);
+  }
 
   if (!shouldAttachAuth || firstResponse.status !== 401 || !client) {
     return firstResponse;
@@ -37,8 +43,13 @@ export async function apiFetch(path: string, init: ApiRequestInit = {}) {
   const retryHeaders = new Headers(init.headers);
   retryHeaders.set("authorization", `Bearer ${refreshedToken}`);
 
-  return fetch(requestUrl, {
-    ...init,
-    headers: retryHeaders,
-  });
+  try {
+    return await fetch(requestUrl, {
+      ...init,
+      headers: retryHeaders,
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "Failed to fetch";
+    throw new Error(`${reason} (${requestUrl})`);
+  }
 }
