@@ -14,8 +14,16 @@ type AccountsApiResponse =
     };
 
 export async function fetchAccounts() {
-  const response = await apiFetch("/api/accounts");
-  return (await response.json()) as AccountsApiResponse;
+  try {
+    const response = await apiFetch("/api/accounts");
+    return (await response.json()) as AccountsApiResponse;
+  } catch (error) {
+    return {
+      status: "error",
+      error: error instanceof Error ? error.message : "Failed to fetch",
+      code: "network_error",
+    } satisfies AccountsApiResponse;
+  }
 }
 
 export async function createAccount(payload: CreateAccountInput) {

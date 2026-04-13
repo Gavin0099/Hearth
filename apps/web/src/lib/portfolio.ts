@@ -8,34 +8,86 @@ import type {
 } from "@hearth/shared";
 import { apiFetch } from "./api";
 
+function toNetworkErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Failed to fetch";
+}
+
 export async function fetchPortfolioHoldings() {
-  const response = await apiFetch("/api/portfolio/holdings");
-  return (await response.json()) as PortfolioHoldingsResponse;
+  try {
+    const response = await apiFetch("/api/portfolio/holdings");
+    return (await response.json()) as PortfolioHoldingsResponse;
+  } catch (error) {
+    return {
+      status: "error",
+      code: "database_error",
+      error: toNetworkErrorMessage(error),
+    } satisfies Extract<PortfolioHoldingsResponse, { status: "error" }>;
+  }
 }
 
 export async function fetchNetWorth() {
-  const response = await apiFetch("/api/portfolio/net-worth");
-  return (await response.json()) as NetWorthResponse;
+  try {
+    const response = await apiFetch("/api/portfolio/net-worth");
+    return (await response.json()) as NetWorthResponse;
+  } catch (error) {
+    return {
+      status: "error",
+      code: "database_error",
+      error: toNetworkErrorMessage(error),
+    } satisfies Extract<NetWorthResponse, { status: "error" }>;
+  }
 }
 
 export async function fetchPortfolioDividends() {
-  const response = await apiFetch("/api/portfolio/dividends");
-  return (await response.json()) as PortfolioDividendsResponse;
+  try {
+    const response = await apiFetch("/api/portfolio/dividends");
+    return (await response.json()) as PortfolioDividendsResponse;
+  } catch (error) {
+    return {
+      status: "error",
+      code: "database_error",
+      error: toNetworkErrorMessage(error),
+    } satisfies Extract<PortfolioDividendsResponse, { status: "error" }>;
+  }
 }
 
 export async function fetchFxRates() {
-  const response = await apiFetch("/api/portfolio/fx-rates");
-  return (await response.json()) as FxRatesResponse;
+  try {
+    const response = await apiFetch("/api/portfolio/fx-rates");
+    return (await response.json()) as FxRatesResponse;
+  } catch (error) {
+    return {
+      status: "error",
+      code: "database_error",
+      error: toNetworkErrorMessage(error),
+    } satisfies Extract<FxRatesResponse, { status: "error" }>;
+  }
 }
 
 export async function fetchNetWorthHistory(days = 90) {
-  const response = await apiFetch(`/api/portfolio/net-worth-history?days=${days}`);
-  return (await response.json()) as NetWorthHistoryResponse;
+  try {
+    const response = await apiFetch(`/api/portfolio/net-worth-history?days=${days}`);
+    return (await response.json()) as NetWorthHistoryResponse;
+  } catch (error) {
+    return {
+      status: "error",
+      code: "database_error",
+      error: toNetworkErrorMessage(error),
+    } satisfies Extract<NetWorthHistoryResponse, { status: "error" }>;
+  }
 }
 
 export async function fetchTradeCosts() {
-  const response = await apiFetch("/api/portfolio/trade-costs");
-  return (await response.json()) as InvestmentCostsResponse;
+  try {
+    const response = await apiFetch("/api/portfolio/trade-costs");
+    return (await response.json()) as InvestmentCostsResponse;
+  } catch (error) {
+    return {
+      status: "error",
+      code: "database_error",
+      error: toNetworkErrorMessage(error),
+    } satisfies Extract<InvestmentCostsResponse, { status: "error" }>;
+  }
 }
 
 export type FxRateEntry = { from_currency: string; rate_date: string; rate: number };
