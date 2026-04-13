@@ -91,6 +91,7 @@ export function createApp(dependencies: Partial<AppDependencies> = {}) {
       service: "hearth-api",
       status: "ok",
       runtime: "cloudflare-workers",
+      userSettingsSecretConfigured: Boolean(c.env.USER_SETTINGS_SECRET_KEY?.trim()),
       supabaseConfigured: Boolean(
         c.env.SUPABASE_URL && c.env.SUPABASE_ANON_KEY && c.env.SUPABASE_SERVICE_ROLE_KEY,
       ),
