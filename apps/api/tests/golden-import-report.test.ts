@@ -205,6 +205,37 @@ const excelMonthlyGoldenCases: Array<{
       ],
     },
   },
+  {
+    name: "formula-heavy grid imports amount formulas and expands recurring sidebar detail rows",
+    buildBuffer: () =>
+      createWorkbookBuffer([
+        {
+          name: "2026-05",
+          rows: [
+            ["category", "description", "2026/05/01"],
+            ["固定支出", "", ""],
+            ["", "房租", ""],
+            ["餐飲", "早餐", { f: "SUM(80,20)" }],
+          ],
+        },
+      ]),
+    expected: {
+      normalizedCount: 1,
+      skipped: 2,
+      errors: [],
+      warnings: [
+        "[2026-05] ignored recurring/sidebar row: 固定支出",
+        "[2026-05] ignored recurring/sidebar row: 固定支出 / 房租",
+      ],
+      recurringCandidates: [
+        { sheet: "2026-05", kind: "recurring_sidebar", section: "固定支出", label: null },
+        { sheet: "2026-05", kind: "recurring_sidebar", section: "固定支出", label: "房租" },
+      ],
+      firstRows: [
+        { date: "2026-05-01", amount: -100, category: "餐飲", description: "早餐" },
+      ],
+    },
+  },
 ];
 
 for (const fixture of monthlyReportGoldenCases) {

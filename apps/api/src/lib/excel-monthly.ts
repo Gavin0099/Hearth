@@ -25,6 +25,11 @@ type DateContext = {
   month?: number;
 };
 
+type RecurringSectionContext = {
+  section: string;
+  active: boolean;
+};
+
 function normalizeText(value: unknown) {
   return String(value ?? "").trim();
 }
@@ -95,6 +100,61 @@ function normalizeAmount(value: unknown) {
   return negative ? -Math.abs(numeric) : -Math.abs(numeric);
 }
 
+function parseFormulaNumericLiteral(formula: string) {
+  const normalized = formula.trim().replace(/^=/, "");
+  if (!normalized) {
+    return null;
+  }
+
+  const direct = Number(normalized.replace(/,/g, ""));
+  if (Number.isFinite(direct) && direct !== 0) {
+    return direct;
+  }
+
+  const sumMatch = normalized.match(/^SUM\((.+)\)$/i);
+  if (!sumMatch) {
+    return null;
+  }
+
+  const parts = sumMatch[1]
+    .split(/[,;]/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+  if (parts.length === 0) {
+    return null;
+  }
+
+  let total = 0;
+  for (const part of parts) {
+    const numeric = Number(part.replace(/,/g, ""));
+    if (!Number.isFinite(numeric)) {
+      return null;
+    }
+    total += numeric;
+  }
+
+  return total === 0 ? null : total;
+}
+
+function normalizeAmountWithFormula(value: unknown) {
+  const amount = normalizeAmount(value);
+  if (amount !== null) {
+    return amount;
+  }
+
+  const text = normalizeText(value);
+  if (!text.startsWith("=")) {
+    return null;
+  }
+
+  const numeric = parseFormulaNumericLiteral(text);
+  if (numeric === null) {
+    return null;
+  }
+
+  return numeric > 0 ? -numeric : numeric;
+}
+
 function getColumnIndex(headerRow: unknown[], aliases: string[], defaultIndex: number) {
   const normalizedAliases = aliases.map((alias) => alias.trim().toLowerCase());
   const matchedIndex = headerRow.findIndex((cell) =>
@@ -109,7 +169,7 @@ function getColumnIndex(headerRow: unknown[], aliases: string[], defaultIndex: n
 }
 
 function rowHasAmounts(row: unknown[], dateColumns: Array<{ index: number; date: string }>) {
-  return dateColumns.some(({ index }) => normalizeAmount(row[index]) !== null);
+  return dateColumns.some(({ index }) => normalizeAmountWithFormula(row[index]) !== null);
 }
 
 function hasValuesBeforeIndex(row: unknown[], endExclusive: number) {
@@ -138,6 +198,20 @@ function detectSidebarCandidate(
     section: matchedSection,
     label: detail,
   };
+}
+
+function detectRecurringSection(row: unknown[], endExclusive: number) {
+  const leftCells = row.slice(0, endExclusive).map((cell) => normalizeText(cell)).filter(Boolean);
+  return (
+    leftCells.find((cell) =>
+      recurringSectionKeywords.some((keyword) => cell.includes(keyword)),
+    ) ?? null
+  );
+}
+
+function pickRecurringDetailLabel(row: unknown[], endExclusive: number, section: string) {
+  const leftCells = row.slice(0, endExclusive).map((cell) => normalizeText(cell)).filter(Boolean);
+  return leftCells.find((cell) => cell !== section) ?? leftCells[0] ?? null;
 }
 
 function formatSidebarWarning(candidate: Omit<RecurringImportCandidate, "sheet">) {
@@ -248,6 +322,7 @@ function parseCalendarPairColumns(
   const recurringCandidates = new Map<string, RecurringImportCandidate>();
   let skipped = 0;
   let activeCategory: string | null = null;
+  let recurringSectionContext: RecurringSectionContext | null = null;
 
   rows.slice(headerRowIndex + 2).forEach((row, offset) => {
     if (!Array.isArray(row) || isEmptyRow(row)) {
@@ -261,12 +336,18 @@ function parseCalendarPairColumns(
     const leftLabel = leftCells.find(Boolean) ?? "";
     const hasCalendarValues = pairColumns.some(
       ({ itemIndex, amountIndex }) =>
-        normalizeText(row[itemIndex]) !== "" || normalizeAmount(row[amountIndex]) !== null,
+        normalizeText(row[itemIndex]) !== "" || normalizeAmountWithFormula(row[amountIndex]) !== null,
     );
     const sidebarCandidate = detectSidebarCandidate(row, leftBoundary);
+    const recurringSection = detectRecurringSection(row, leftBoundary);
 
     if (leftLabel && !hasCalendarValues) {
       activeCategory = normalizeCategory(leftLabel);
+      if (recurringSection) {
+        recurringSectionContext = { section: recurringSection, active: true };
+      } else if (activeCategory) {
+        recurringSectionContext = null;
+      }
       if (sidebarCandidate) {
         warnings.add(formatSidebarWarning(sidebarCandidate));
         recurringCandidates.set(
@@ -278,10 +359,14 @@ function parseCalendarPairColumns(
       return;
     }
 
+    if (hasCalendarValues) {
+      recurringSectionContext = null;
+    }
+
     let emitted = 0;
     pairColumns.forEach(({ date, itemIndex, amountIndex }) => {
       const description = normalizeText(row[itemIndex]);
-      const amount = normalizeAmount(row[amountIndex]);
+      const amount = normalizeAmountWithFormula(row[amountIndex]);
       if (!description && amount === null) {
         return;
       }
@@ -306,6 +391,21 @@ function parseCalendarPairColumns(
     if (emitted === 0 && hasCalendarValues) {
       errors.push(`line ${line}: row has no importable calendar entries`);
     } else if (!hasCalendarValues && hasValuesBeforeIndex(row, leftBoundary)) {
+      if (recurringSectionContext?.active) {
+        const label = pickRecurringDetailLabel(row, leftBoundary, recurringSectionContext.section);
+        if (label) {
+          const candidate: Omit<RecurringImportCandidate, "sheet"> = {
+            kind: "recurring_sidebar",
+            section: recurringSectionContext.section,
+            label,
+          };
+          warnings.add(formatSidebarWarning(candidate));
+          recurringCandidates.set(
+            `${candidate.section}::${candidate.label ?? ""}`,
+            { ...candidate, sheet: sheetName },
+          );
+        }
+      }
       if (sidebarCandidate) {
         warnings.add(formatSidebarWarning(sidebarCandidate));
         recurringCandidates.set(
@@ -352,6 +452,7 @@ function parseGridColumns(
   const recurringCandidates = new Map<string, RecurringImportCandidate>();
   let skipped = 0;
   let activeCategory: string | null = null;
+  let recurringSectionContext: RecurringSectionContext | null = null;
 
   rows.slice(headerRowIndex + 1).forEach((row, offset) => {
     if (!Array.isArray(row) || isEmptyRow(row)) {
@@ -364,9 +465,15 @@ function parseGridColumns(
     const description = normalizeText(row[descriptionIndex]);
     const hasAmounts = rowHasAmounts(row, dateColumns);
     const sidebarCandidate = detectSidebarCandidate(row, firstDateIndex);
+    const recurringSection = detectRecurringSection(row, firstDateIndex);
 
     if (rawCategory && !description && !hasAmounts) {
       activeCategory = normalizeCategory(rawCategory);
+       if (recurringSection) {
+        recurringSectionContext = { section: recurringSection, active: true };
+      } else if (activeCategory) {
+        recurringSectionContext = null;
+      }
       if (sidebarCandidate) {
         warnings.add(formatSidebarWarning(sidebarCandidate));
         recurringCandidates.set(
@@ -388,7 +495,7 @@ function parseGridColumns(
 
     let emitted = 0;
     dateColumns.forEach(({ index, date }) => {
-      const amount = normalizeAmount(row[index]);
+      const amount = normalizeAmountWithFormula(row[index]);
       if (amount === null) {
         return;
       }
@@ -405,7 +512,26 @@ function parseGridColumns(
       emitted += 1;
     });
 
+    if (emitted > 0) {
+      recurringSectionContext = null;
+    }
+
     if (emitted === 0 && hasValuesBeforeIndex(row, firstDateIndex)) {
+      if (recurringSectionContext?.active) {
+        const label = pickRecurringDetailLabel(row, firstDateIndex, recurringSectionContext.section);
+        if (label && label !== recurringSectionContext.section) {
+          const candidate: Omit<RecurringImportCandidate, "sheet"> = {
+            kind: "recurring_sidebar",
+            section: recurringSectionContext.section,
+            label,
+          };
+          warnings.add(formatSidebarWarning(candidate));
+          recurringCandidates.set(
+            `${candidate.section}::${candidate.label ?? ""}`,
+            { ...candidate, sheet: sheetName },
+          );
+        }
+      }
       if (sidebarCandidate) {
         warnings.add(formatSidebarWarning(sidebarCandidate));
         recurringCandidates.set(
@@ -447,6 +573,18 @@ function parseMonthlySheet(rows: unknown[][], accountId: string, sheetName: stri
 }
 
 function sheetToRows(sheet: XLSX.WorkSheet) {
+  const range = XLSX.utils.decode_range(sheet["!ref"] ?? "A1:A1");
+  for (let rowIndex = range.s.r; rowIndex <= range.e.r; rowIndex += 1) {
+    for (let columnIndex = range.s.c; columnIndex <= range.e.c; columnIndex += 1) {
+      const address = XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex });
+      const cell = sheet[address] as { f?: string; v?: unknown; w?: string } | undefined;
+      if (!cell || !cell.f || cell.v !== undefined || cell.w === undefined) {
+        continue;
+      }
+      sheet[address] = { ...cell, v: `=${cell.f}` };
+    }
+  }
+
   const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
     header: 1,
     raw: true,
