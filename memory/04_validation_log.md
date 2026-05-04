@@ -128,3 +128,8 @@ ode --test apps/api/tests/pdf-credit-card.test.ts -> sandbox spawn EPERM (enviro
 
 - 
 pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+apply flow)
+
+- npm.cmd --workspace @hearth/web run check -> pass
+- python ai-governance-framework/governance_tools/plan_freshness.py --file PLAN.md --format json -> `FRESH` (2026-05-04, 0 days)
+- python ai-governance-framework/governance_tools/adopt_governance.py --target . --refresh -> baseline inventory refreshed
+- python ai-governance-framework/governance_tools/governance_drift_checker.py --repo . --framework-root ai-governance-framework --format json -> pass (all checks ok)

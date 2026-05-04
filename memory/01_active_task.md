@@ -40,7 +40,12 @@
 - [x] Stopped silently swallowing `net_worth_snapshots` write failures in `GET /api/portfolio/net-worth`
 - [x] Updated `ai-governance-framework` submodule to latest reachable upstream commit (`a502b80`)
 - [x] Ran canonical audit trend validation (Scenario A real consuming repo + Scenario B fixture simulation) and published test report
-- [x] Unified credit-card CSV/PDF parser date mapping to posted date / 入帳起息日\n- [x] Expanded `excel-monthly` parser for formula-heavy workbook ingestion\n- [x] Extended recurring candidate -> template flow to carry optional amount\n- [x] Completed initial security-boundary consolidation (`docs/security-boundary.md`)\n- [x] Completed one-click recurring workflow (`ImportPanel`: create candidates -> templates -> apply current month)\n- [ ] Keep structured memory and daily logs in sync going forward
+- [x] Unified credit-card CSV/PDF parser date mapping to posted date / 入帳起息日
+- [x] Expanded `excel-monthly` parser for formula-heavy workbook ingestion
+- [x] Extended recurring candidate -> template flow to carry optional amount
+- [x] Completed initial security-boundary consolidation (`docs/security-boundary.md`)
+- [x] Completed one-click recurring workflow (`ImportPanel`: create candidates -> templates -> apply current month)
+- [x] Synced PLAN freshness/inventory and structured memory after the latest governance refresh
 
 ## Context
 - **Recent achievements**: portfolio analytics now include verified `net-worth-history` and `trade-costs` behavior, import dry-run preview goes through the real parser/normalization path for cashflow, excel, stock, and dividend modes, and ops expose verdict-level health instead of raw counts only.

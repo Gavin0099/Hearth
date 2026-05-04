@@ -11,16 +11,16 @@
 # ── PROVENANCE ────────────────────────────────────────────────────────────────
 schema_version: "1"
 baseline_version: 1.0.0
-source_commit: c0a8e66a3cfe0418ecf7b6479d0db13dd95dc277
-framework_root: C:\Users\reiko\Hearth\ai-governance-framework
-initialized_at: 2026-05-04T08:34:35Z
+source_commit: 2b9e5ccb267e972746063055e054b83a2fd5426a
+framework_root: C:\Users\reiko\Hearth
+initialized_at: 2026-05-04T08:43:32Z
 initialized_by: governance_tools/adopt_governance.py
 
 # ── INTEGRITY ─────────────────────────────────────────────────────────────────
 # sha256.<file>: hash recorded at init/refresh time; "protected" files are hash-verified
 # overridable.<file>: protected = must not change | overridable = repo may extend freely
 sha256.AGENTS.base.md: 838a89cece87a4b14146fad13ca9ef6b66299595067c40a883a0b9c6b18f56df
-sha256.PLAN.md: 7e92f002aab61c5705ec3eb78c14fdb8b4a4f316be7c61cff03e3c778e87bbae
+sha256.PLAN.md: e241a2f9c6cc36ceac0d6005589497ee9a12729b9b70c2404e7bbcf26c7e0972
 sha256.contract.yaml: 5ec7bb43d0ae54aeb7c0a56943591596dd5c7ff40a0f85645961b8b74b61229e
 sha256.AGENTS.md: 019475208c3f78a25c80a0d9814e6046ff5762e512fb3e2808d3a392ab2cb976
 overridable.AGENTS.base.md: protected
@@ -46,10 +46,10 @@ contract_required_fields:
 # plan_section_inventory: ## headings detected in PLAN.md at adoption/refresh time.
 #   Drift checker surfaces these for visibility but never fails on missing inventory items.
 plan_section_inventory:
-  - "## 📋 專案目標"
-  - "## 🏗️ 當前階段"
-  - "## 🔥 本輪聚焦"
-  - "## 📦 Phase 詳細規劃"
-  - "## 🎯 當前決策"
-  - "## 🚫 現階段不要做"
-  - "## 📝 變更歷史"
+  - "## ?? 撠??格?"
+  - "## ??儭??嗅??挾"
+  - "## ? ?祈憚?"
+  - "## ? Phase 閰喟敦閬?"
+  - "## ? ?嗅?瘙箇?"
+  - "## ? ?暸?畾萎?閬?"
+  - "## ?? 霈甇瑕"

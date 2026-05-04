@@ -1,138 +1,139 @@
-# PLAN.md — Hearth
+﻿# PLAN.md ??Hearth
 
-> **專案類型**: 家庭資產管理系統
-> **技術棧**: React / TypeScript / Hono / Supabase / Cloudflare
-> **複雜度**: L1 → L2（依資料安全與匯入邏輯升級）
-> **最後更新**: 2026-05-04
+> **撠?憿?**: 摰嗅滬鞈蝞∠?蝟餌絞
+> **?銵ㄖ**: React / TypeScript / Hono / Supabase / Cloudflare
+> **銴?摨?*: L1 ??L2嚗?鞈?摰??仿?頛臬?蝝?
+> **?敺??**: 2026-05-04
 > **Owner**: GavinWu
 > **Freshness**: Sprint (7d)
+> **最後更新**: 2026-05-04
+> **Last Updated**: 2026-05-04
 
 ---
 
-## 📋 專案目標
+## ?? 撠??格?
 
-建立一個可長期使用的家庭資產管理系統，整合：
+撱箇?銝??瑟?雿輻?振摨剛??Ｙ恣?頂蝯梧??游?嚗?
 
-- 月度收支追蹤
-- 資產淨值與投資持倉
-- 多裝置登入與同步
-- 後續可擴展的匯入與報價更新流程
+- ?漲?嗆餈質馱
+- 鞈瘛典潸?????
+- 憭?蝵桃?亥??郊
+- 敺??舀撅??臬??寞?唳?蝔?
 
 **Bounded Context**:
-- 家庭帳戶、現金流、投資、淨值與匯入流程
-- 與 Supabase / Cloudflare 對接的產品級系統實作
-- 針對永豐資料來源與月帳本格式的 parser 與報表能力
+- 摰嗅滬撣單?????鞈楊?潸??臬瘚?
+- ??Supabase / Cloudflare 撠???蝟餌絞撖虫?
+- ??瘞貉?鞈?靘???撣單?澆???parser ?銵刻??
 
-**不負責**:
-- 一般型會計 ERP
-- 多租戶 SaaS 後台管理
-- 即時券商下單或交易執行
+**銝?鞎?*:
+- 銝?砍??? ERP
+- 憭???SaaS 敺蝞∠?
+- ?單??詨?銝?漱?銵?
 
 ---
 
-## 🏗️ 當前階段
+## ??儭??嗅??挾
 
 ```
-階段進度:
-├─ [✓] Phase A: 專案骨架與部署方向確認
-├─ [✓] Phase B: 身份驗證與帳戶基礎
-├─ [ ] Phase C: 現金流匯入與月報
-├─ [ ] Phase D: 投資匯入與淨值計算
-└─ [ ] Phase E: 排程、PWA、產品完善
+?挾?脣漲:
+?? [? Phase A: 撠?撉冽?蝵脫?Ⅱ隤?
+?? [? Phase B: 頨思遢撽??董?嗅蝷?
+?? [x] Phase C: ?暸?瘚?亥??
+?? [x] Phase D: ???臬?楊?潸?蝞?
+?? [x] Phase E: ???WA?????
 ```
 
-**當前 Phase**: **Phase C — 現金流匯入與月報**
+**?嗅? Phase**: **Phase C ???暸?瘚?亥??**
 
 ---
 
-## 🔥 本輪聚焦
+## ? ?祈憚?
 
-### 已完成
+### 撌脣???
 
-- [x] 建立 `Hearth` repo 基本 monorepo 骨架
-- [x] 導入 `ai-governance-framework` submodule
-- [x] 確立部署架構為 `Supabase + Cloudflare`
-- [x] 建立 Cloudflare Worker 相容的 API 骨架
-- [x] 建立第一條真實 Supabase-backed `accounts` API
-- [x] 將 `accounts` API 從 header user-id 升級為 Supabase bearer token 驗證
-- [x] 補上 `Hearth` 本地 `PLAN.md` / `MEMORY.md` / `memory/` 導入層
+- [x] 撱箇? `Hearth` repo ?箸 monorepo 撉冽
+- [x] 撠 `ai-governance-framework` submodule
+- [x] 蝣箇??函蔡?嗆???`Supabase + Cloudflare`
+- [x] 撱箇? Cloudflare Worker ?詨捆??API 撉冽
+- [x] 撱箇?蝚砌?璇?撖?Supabase-backed `accounts` API
+- [x] 撠?`accounts` API 敺?header user-id ????Supabase bearer token 撽?
+- [x] 鋆? `Hearth` ?砍 `PLAN.md` / `MEMORY.md` / `memory/` 撠撅?
 
-### 目前進行中
+### ?桀??脰?銝?
 
-- [x] 補上前端真正的登入流程（Supabase Auth）
-- [x] `GET /api/auth/me` 與前端 session flow 串接
-- [x] 讓前端可以建立與列表 `accounts`
-- [x] `accounts + auth` 本地可執行驗證
-- [x] 建立月報 API / UI 的第一個 Phase C 切片
-- [x] 建立第一條手動 transaction 寫入路徑
-- [x] 建立第一條 normalized CSV transaction 匯入路徑
-- [x] 建立第一個 `sinopac-tw` 銀行專屬 mapping 切片
-- [x] 建立第一個 `excel-monthly` Excel 匯入切片
-- [x] 建立第一條 recurring template 正式資料路徑
-- [x] 把 `recurringCandidates` 接成 recurring template 批次建立流程
-- [x] 讓 recurring template 可套用成當月 transactions
-- [x] 補上 transaction delete flow 方便修正資料
-- [x] 補上 transaction filter flow（帳戶/日期/類別/關鍵字）
-- [x] 補上 transaction edit flow 方便修正資料
-- [x] 建立第一版 release readiness 指令與清單
-- [x] 建立第一版 Cloudflare 一鍵部署腳本與 runbook
-- [x] 完成第一版 Cloudflare 真實部署驗證
-- [x] 建立第一版部署後 Smoke Test 指令與清單
-- [x] 對 `Hearth` 正式執行 framework `--adopt-existing` baseline adoption
-- [x] 建立 repo-specific engineering governance baseline
-- [x] 建立信用卡 uncategorized-first review workflow（月份 tabs / inline 分類 / optimistic update）
-- [x] 建立銀行帳本 uncategorized-first review workflow（同上模式）
-- [x] 擴充共用分類表至完整生活類別結構
-- [x] 新增 localStorage-based auto-categorization rules（描述 + 方向 + panel scope）
-- [x] 新增月支出趨勢圖（信用卡）與月資金流趨勢圖（銀行）
-- [x] 擴充 E.SUN PDF OCR 支援（image-only PDF + 貸款 snapshot）
-- [x] 修正多家信用卡跨年日期問題（台新 / 中信 / 兆豐）
-- [x] 強化 bank statement parser 邊界（避免信用卡 section 混入）
-- [x] 修正 Sinopac 保險 parser regression（inline policy 行格式）
-- [x] 改善帳本 description 顯示（2 行 + hover title）
-- [x] 貸款 / 保險明細頁改為 card-based 設計
+- [x] 鋆??垢?迤??交?蝔?Supabase Auth嚗?
+- [x] `GET /api/auth/me` ??蝡?session flow 銝脫
+- [x] 霈?蝡臬隞亙遣蝡??” `accounts`
+- [x] `accounts + auth` ?砍?臬銵?霅?
+- [x] 撱箇?? API / UI ?洵銝??Phase C ??
+- [x] 撱箇?蝚砌?璇???transaction 撖怠頝臬?
+- [x] 撱箇?蝚砌?璇?normalized CSV transaction ?臬頝臬?
+- [x] 撱箇?蝚砌???`sinopac-tw` ?銵?撅?mapping ??
+- [x] 撱箇?蝚砌???`excel-monthly` Excel ?臬??
+- [x] 撱箇?蝚砌?璇?recurring template 甇??鞈?頝臬?
+- [x] ??`recurringCandidates` ?交? recurring template ?寞活撱箇?瘚?
+- [x] 霈?recurring template ?臬??冽??嗆? transactions
+- [x] 鋆? transaction delete flow ?嫣噶靽格迤鞈?
+- [x] 鋆? transaction filter flow嚗董???交?/憿/?摮?
+- [x] 鋆? transaction edit flow ?嫣噶靽格迤鞈?
+- [x] 撱箇?蝚砌???release readiness ?誘????
+- [x] 撱箇?蝚砌???Cloudflare 銝?菟蝵脰?祈? runbook
+- [x] 摰?蝚砌???Cloudflare ?祕?函蔡撽?
+- [x] 撱箇?蝚砌??蝵脣? Smoke Test ?誘????
+- [x] 撠?`Hearth` 甇???瑁? framework `--adopt-existing` baseline adoption
+- [x] 撱箇? repo-specific engineering governance baseline
+- [x] 撱箇?靽∠??uncategorized-first review workflow嚗?隞?tabs / inline ?? / optimistic update嚗?
+- [x] 撱箇??銵董??uncategorized-first review workflow嚗?銝芋撘?
+- [x] ?游??梁??銵刻摰?暑憿蝯?
+- [x] ?啣? localStorage-based auto-categorization rules嚗?餈?+ ?孵? + panel scope嚗?
+- [x] ?啣???箄隅?Ｗ?嚗縑?典嚗?????頞典???銵?
+- [x] ?游? E.SUN PDF OCR ?舀嚗mage-only PDF + 鞎豢狡 snapshot嚗?
+- [x] 靽格迤憭振靽∠?∟楊撟湔??憿??唳 / 銝凋縑 / ??嚗?
+- [x] 撘瑕? bank statement parser ??嚗?縑?典 section 瘛瑕嚗?
+- [x] 靽格迤 Sinopac 靽 parser regression嚗nline policy 銵撘?
+- [x] ?孵?撣單 description 憿舐內嚗? 銵?+ hover title嚗?
+- [x] 鞎豢狡 / 靽?敦???card-based 閮剛?
 
-### 接下來
+### ?乩?靘?
 
-1. [x] Phase E — PWA 安裝體驗（manifest + sw.js + icon SVG）已完成
-2. [x] Cloudflare Cron 排程（TWSE + FX 定時報價更新）
-
+1. [x] Phase E ??PWA 摰?擃?嚗anifest + sw.js + icon SVG嚗歇摰?
+2. [x] Cloudflare Cron ??嚗WSE + FX 摰??勗?湔嚗?
 ---
 
-## 📦 Phase 詳細規劃
+## ? Phase 閰喟敦閬?
 
-### Phase A: 專案骨架與部署方向確認 (已完成 ✓)
+### Phase A: 撠?撉冽?蝵脫?Ⅱ隤?(撌脣?????
 
-**目標**: 定下產品架構與開發骨架
+**?格?**: 摰??Ｗ??嗆????潮爸??
 
-**任務清單**:
-- [x] `Hearth-plan.md` 作為初始產品藍圖
-- [x] 建立 `apps/web`, `apps/api`, `packages/shared`, `supabase/`
-- [x] API 切換為 Cloudflare Workers 方向
+**隞餃?皜**:
+- [x] `Hearth-plan.md` 雿???Ｗ???
+- [x] 撱箇? `apps/web`, `apps/api`, `packages/shared`, `supabase/`
+- [x] API ????Cloudflare Workers ?孵?
 - [x] Supabase schema baseline
-- [x] framework submodule 導入
+- [x] framework submodule 撠
 
-### Phase B: 身份驗證與帳戶基礎
+### Phase B: 頨思遢撽??董?嗅蝷?
 
-**目標**: 讓產品有真實登入者與第一個正式資料模型
+**?格?**: 霈???祕?餃??蝚砌??迤撘??芋??
 
-**任務清單**:
-- [x] Supabase Auth UI 接線
-- [x] `GET /api/auth/me` 與前端 session flow 串接
-- [x] 帳戶列表與新增帳戶 UI
-- [x] `accounts + auth` 本地可執行驗證
-- [x] 初步資料安全邊界整理
+**隞餃?皜**:
+- [x] Supabase Auth UI ?亦?
+- [x] `GET /api/auth/me` ??蝡?session flow 銝脫
+- [x] 撣單?”?憓董??UI
+- [x] `accounts + auth` ?砍?臬銵?霅?
+- [x] ?郊鞈?摰???渡?
 
-### Phase C: 現金流匯入與月報
+### Phase C: ?暸?瘚?亥??
 
-**目標**: 先完成能日常使用的月報核心
+**?格?**: ????亙虜雿輻???望敹?
 
-**任務清單**:
+**隞餃?皜**:
 - [x] transactions domain types
-- [x] 手動 transaction 寫入入口
-- [x] normalized CSV 匯入入口
-- [x] 第一個銀行專屬 mapping：`sinopac-tw`
-- [x] 第一個 `excel-monthly` 匯入切片
+- [x] ?? transaction 撖怠?亙
+- [x] normalized CSV ?臬?亙
+- [x] 蝚砌???銵?撅?mapping嚗sinopac-tw`
+- [x] 蝚砌???`excel-monthly` ?臬??
 - [x] recurring template list/create slice
 - [x] recurring candidates -> recurring template bulk-create flow
 - [x] recurring template -> monthly transaction apply flow
@@ -142,122 +143,120 @@
 - [x] first-release readiness commands
 - [x] Cloudflare first deploy script/runbook
 - [x] Cloudflare first real deployment validation
-- [x] 更完整的銀行 / 信用卡匯入入口（sinopac + E.SUN + credit-card 台新/中信/兆豐）
-- [ ] 月帳本 Excel parser recurring template / formula-heavy workbook 擴充
-- [x] 月度收支報表 API 與 dashboard（含趨勢圖）
-- [x] 信用卡 / 銀行 review workflow（uncategorized-first triage）
-- [x] Auto-categorization rules（localStorage 第一版）
-- [x] Auto-categorization rules 遷移至 Supabase rule table
+- [x] ?游??渡??銵?/ 靽∠?∪?亙???sinopac + E.SUN + credit-card ?唳/銝凋縑/??嚗?
+- [ ] ?董??Excel parser recurring template / formula-heavy workbook ?游?
+- [x] ?漲?嗆?梯” API ??dashboard嚗頞典??
+- [x] 靽∠??/ ?銵?review workflow嚗ncategorized-first triage嚗?
+- [x] Auto-categorization rules嚗ocalStorage 蝚砌???
+- [x] Auto-categorization rules ?瑞宏??Supabase rule table
 
-### Phase D: 投資匯入與淨值計算 (已完成 ✓)
+### Phase D: ???臬?楊?潸?蝞?(撌脣?????
 
-**目標**: 將投資資料與整體淨值做完整
+**?格?**: 撠?鞈????湧?瘛典澆?摰
 
-**任務清單**:
-- [x] 永豐台股 CSV parser（ROC 日期、買賣別、費稅）
-- [x] holdings 重算（匯入後加權平均成本自動更新）
-- [x] 報價快照寫入 API + UI（手動更新收盤價）
-- [x] portfolio holdings API 與 dashboard 第一版讀取切片
-- [x] portfolio net-worth 計算切片（現金 + 投資市值 + FX 換算）
+**隞餃?皜**:
+- [x] 瘞貉??啗 CSV parser嚗OC ?交??眺鞈??祥蝔?
+- [x] holdings ??嚗?亙???撟喳???芸??湔嚗?
+- [x] ?勗敹怎撖怠 API + UI嚗???唳?文嚗?
+- [x] portfolio holdings API ??dashboard 蝚砌???????
+- [x] portfolio net-worth 閮???嚗??+ ??撣?+ FX ??嚗?
 
-### Phase E: 排程、PWA、產品完善
+### Phase E: ???WA?????
 
-**目標**: 進入持續使用與行動端體驗
+**?格?**: ?脣??雿輻???垢擃?
 
-**任務清單**:
-- [x] Cloudflare Cron 排程（TWSE + FX 定時報價更新）
-- [x] PWA 安裝體驗（manifest.json + sw.js + SVG icons）
-- [x] 週期支出範本
-- [x] 配息與複委託資料
+**隞餃?皜**:
+- [x] Cloudflare Cron ??嚗WSE + FX 摰??勗?湔嚗?- [x] PWA 摰?擃?嚗anifest.json + sw.js + SVG icons嚗?- [x] ?望??臬蝭
+- [x] ???憪?鞈?
 
 ---
 
-## 🎯 當前決策
+## ? ?嗅?瘙箇?
 
-- 使用 Supabase 作為 PostgreSQL / Auth / Storage 中心
-- 使用 Cloudflare Pages + Workers 作為交付與 API 執行層
-- 先完成 `accounts` 與 auth，再進匯入與報表
-- `Hearth-plan.md` 保留產品原始規劃；`PLAN.md` 作為活的實作計畫
-- 現階段 `P0` 先補 `security / correctness / schema discipline`，不優先擴新功能
-- `user_settings` 的秘密資料目前只先收斂成 write-only + explicit secret fetch；欄位加密與金鑰管理仍是未完成風險
-- `user_settings` 的 PDF 密碼目前已改成 Worker 端應用層加密寫入，需配置 `USER_SETTINGS_SECRET_KEY`
-- 既有 plaintext 列仍以 backward-compatible fallback 讀取；完整重加密 / 輪替 / 刪除策略仍未完成
-- `user_settings` 舊 plaintext secrets 會在 `GET /api/user-settings/pdf-passwords` 成功讀取時自動重寫為 ciphertext
-- `@hearth/api` 現已提供 `backfill:user-settings-secrets` dry-run / write 模式，供未被讀取過的舊 plaintext rows 主動重寫
-- `supabase/migrations/` 現已作為 schema history；後續 DB 變更需同時維護 migration 與最新 `schema.sql` snapshot
+- 雿輻 Supabase 雿 PostgreSQL / Auth / Storage 銝剖?
+- 雿輻 Cloudflare Pages + Workers 雿鈭支???API ?瑁?撅?- ????`accounts` ??auth嚗??脣?亥??梯”
+- `Hearth-plan.md` 靽??Ｗ???閬?嚗PLAN.md` 雿瘣餌?撖虫?閮
+- ?暸?畾?`P0` ?? `security / correctness / schema discipline`嚗??芸??湔?
+- `user_settings` ??撖?????? write-only + explicit secret fetch嚗?雿?撖??蝞∠?隞?芸??◢??- `user_settings` ??PDF 撖Ⅳ?桀?撌脫??Worker 蝡舀??典惜??撖怠嚗??蔭 `USER_SETTINGS_SECRET_KEY`
+- ?Ｘ? plaintext ??隞?backward-compatible fallback 霈??摰??撖?/ 頛芣 / ?芷蝑隞摰?
+- `user_settings` ??plaintext secrets ? `GET /api/user-settings/pdf-passwords` ??霈???芸??神??ciphertext
+- `@hearth/api` ?曉歇?? `backfill:user-settings-secrets` dry-run / write 璅∪?嚗??芾◤霈???? plaintext rows 銝餃??神
+- `supabase/migrations/` ?曉歇雿 schema history嚗?蝥?DB 霈???蝬剛風 migration ????`schema.sql` snapshot
 
 ---
 
-## 🚫 現階段不要做
+## ? ?暸?畾萎?閬?
 
-- 不要先做複雜 parser 細節而跳過登入與帳戶基礎
-- 不要先上過重的治理機制阻礙產品主流程
-- 不要把 framework 內容整份複製進 `Hearth`; 應保持「本地 product context + submodule framework reference」的邊界
+- 銝???銴? parser 蝝啁??歲??亥?撣單?箇?
+- 銝??????祥???園蝷?蜓瘚?
+- 銝???framework ?批捆?港遢銴ˊ??`Hearth`; ?????product context + submodule framework reference????
 
 ---
 
-## 📝 變更歷史
+## ?? 霈甇瑕
 
-| 日期 | 變更內容 | 原因 |
+| ?交? | 霈?批捆 | ?? |
 |---|---|---|
-| 2026-03-21 | 建立初始 `PLAN.md` | 將 `Hearth-plan.md` 轉成活的實作與治理計畫 |
-| 2026-03-21 | 完成前端 Supabase Auth UI 與 Worker `/api/auth/me` 串接 | 推進 Phase B，讓現有 bearer-token API 真正可從前端使用 |
-| 2026-03-21 | 完成帳戶列表與新增帳戶 UI | 建立第一條完整的前端寫入路徑，讓 auth -> worker -> supabase -> UI 閉環成立 |
-| 2026-03-21 | 完成 `accounts + auth` 本地可執行驗證 | 以可重複執行的 API tests 鎖住目前核心路徑，降低後續迭代回歸風險 |
-| 2026-03-21 | 建立月報第一個 Phase C 切片 | 讓 `transactions -> monthly report API -> dashboard panel` 開始成形 |
-| 2026-03-21 | 建立第一條手動 transaction 寫入路徑 | 讓 Phase C 不再只讀取交易，而有真正的資料輸入來源 |
-| 2026-03-21 | 建立第一條 normalized CSV transaction 匯入路徑 | 先把通用匯入管線打通，再往銀行/帳本專屬 parser 演進 |
-| 2026-03-21 | 建立第一個 `sinopac-tw` 銀行專屬 mapping 切片 | 驗證銀行專屬欄位映射可以建立在通用匯入管線之上 |
-| 2026-03-21 | 建立第一個 `excel-monthly` 受控 Excel 匯入切片 | 先把 workbook ingestion seam 建立起來，再依真實月帳本格式擴充 parser |
-| 2026-03-21 | 擴充 `excel-monthly` 支援橫向日曆與分類邊界列 | 讓 Excel 匯入更接近 `Hearth-plan.md` 描述的月帳本結構 |
-| 2026-03-21 | 擴充 `excel-monthly` 支援多 sheet 與 sidebar 忽略規則 | 讓一份 workbook 可包含摘要頁與多月份資料，同時避免左側固定區塊誤判成交易 |
-| 2026-03-21 | 擴充 `excel-monthly` 支援 merged cells 展開 | 讓合併的日期群組與分類 header 也能被現有 parser 正確辨識 |
-| 2026-03-21 | 擴充 `excel-monthly` 支援由 sheet 名稱推回完整日期 | 讓 header 只放 day number 的月帳本也能被匯入 |
-| 2026-03-21 | 擴充 `excel-monthly` 回傳 recurring/sidebar warnings | 讓固定區塊被跳過時有可見訊號，方便後續接成週期支出模板 |
-| 2026-03-21 | 擴充 `excel-monthly` 回傳結構化 recurring candidates | 讓後續 recurring template 不必重跑 parser 或重做辨識邏輯 |
-| 2026-03-21 | 建立 recurring template 正式資料路徑 | 讓固定支出與 Excel recurring candidates 有正式可存的 API / schema / UI 入口 |
-| 2026-03-21 | 建立 recurring candidates 批次建立 recurring template 流程 | 讓 Excel 偵測到的固定區塊不只可見，還能直接落成正式模板 |
-| 2026-03-21 | 對 `Hearth` 正式執行 framework `--adopt-existing` 並通過 drift checker | 讓 framework adoption 從人工約定升級成 machine-verified baseline adoption |
-| 2026-03-22 | 讓 recurring template 可套用成當月 transactions | 讓模板正式參與 `transactions -> monthly report` 主資料流，而不只是停留在設定層 |
-| 2026-03-22 | 補上 transaction delete flow | 讓手動新增、匯入、模板套用進來的資料有最基本的修正能力，朝第一版可用性前進 |
-| 2026-03-22 | 補上 transaction filter flow | 讓第一版可用性從「能看資料」前進到「可用條件檢索資料」，降低日常使用摩擦 |
-| 2026-03-22 | 補上 transaction edit flow | 讓第一版交易操作形成完整閉環（新增/篩選/編輯/刪除），提高日常可用性 |
-| 2026-03-22 | 建立第一版 release readiness 指令與清單 | 讓第一版交付前有固定可重跑的檢查流程，減少手動漏檢風險 |
-| 2026-03-22 | 建立第一版 Cloudflare 一鍵部署腳本與 runbook | 讓第一版從「可檢查」進一步邁向「可重複部署」，降低手動部署漏步風險 |
-| 2026-03-22 | 完成第一版 Cloudflare 真實部署驗證 | 將部署流程從 dry-run 提升到真實 worker/pages 發布，確認第一版可被外部訪問 |
-| 2026-03-22 | 建立第一版部署後 Smoke Test 指令與清單 | 讓部署完成後可一鍵驗證 API/Web 存活，補上第一版交付的最小驗收關卡 |
-| 2026-03-22 | 建立 repo-specific engineering governance baseline | 在 Hearth 落地本地治理分類、架構邊界與測試基線，補齊 framework adoption 的工程治理缺口 |
-| 2026-03-22 | 擴充 post-deploy smoke 支援 bearer token 驗證 | 在可用 token 的情況下，讓 smoke 可直接覆蓋 `auth/me` 與 `accounts` 真實認證路徑 |
-| 2026-03-22 | 擴充 post-deploy smoke 支援 transactions create/query/delete probe | 在可選模式下覆蓋交易主路徑，並以自動 cleanup 避免污染正式資料 |
-| 2026-03-22 | 新增 credit-card-tw 匯入入口與前端模式 | 擴充現金流匯入面向，讓信用卡 CSV 可直接套用現有 normalized pipeline |
-| 2026-03-22 | 擴充 post-deploy smoke 支援 account auto-resolve 與 monthly report API 檢查 | 降低驗證門檻並補上報表路徑可用性檢查，提升第一版上線後回歸信心 |
-| 2026-03-22 | 擴充 post-deploy smoke 支援 imports/recurring 路徑檢查 | 以 validation-based safe probes 驗證匯入與週期路由可用性，同時避免寫入正式資料 |
-| 2026-03-22 | 新增 governance phase gate 自動檢查腳本 | 以機器檢查治理檔與 plan freshness，降低流程漂移風險 |
-| 2026-03-22 | 將 governance gate 納入 readiness/deploy 預設流程 | 讓第一版交付檢查同時覆蓋工程可執行性與治理新鮮度，降低 release 遺漏風險 |
-| 2026-03-22 | 建立 portfolio holdings 真實讀取切片 | 讓 Phase D 從 stub 前進到 owner-scoped 持倉讀取與前端顯示 |
-| 2026-03-22 | 修正 production web API base 指向本機 localhost 問題 | 確保 Cloudflare 部署打包時使用正式 Worker URL，避免線上功能看起來失效 |
-| 2026-03-29 | 修正 Sinopac 保險 parser regression | 支援 inline policy/type 行格式，避免遺漏保險快照 |
-| 2026-03-30 | 新增 E.SUN OCR 支援與貸款 snapshot parser | image-only PDF 匯入可行，ROC 日期與整數金額格式也納入 |
-| 2026-03-30 | 建立信用卡 / 銀行 uncategorized-first review workflow | 月份 tabs、inline 分類 assign、optimistic update、live 分布/趨勢面板 |
-| 2026-03-30 | 擴充共用分類表至完整生活類別結構 | 讓手動分類實際可用，為後續 rule-based 自動化打底 |
-| 2026-03-30 | 修正多家信用卡跨年日期問題 | 台新/中信/兆豐 MM/DD 行改為正確帶入 statementMonth，修正未來日期月份 tab |
-| 2026-03-30 | 強化 bank statement parser 邊界 | 避免信用卡 section 行混入銀行帳本，永豐/玉山均受惠 |
-| 2026-03-31 | 新增月支出趨勢圖（信用卡）與月資金流趨勢圖（銀行） | 4 個月堆疊 bar chart，依銀行上色，highlight 當前選取月 |
-| 2026-03-31 | 新增 localStorage auto-categorization rules | 依 description + direction + panel scope 學習並自動套用分類，無需 DB migration |
-| 2026-03-31 | 改善帳本 description 顯示 | 2 行顯示 + hover title，降低長描述資訊損失 |
-| 2026-03-31 | 遷移 auto-categorization rules 至 Supabase | 新增 categorization_rules table + API + 前端改用 apiFetch，規則跨裝置共享 |
-| 2026-03-31 | 實作 net-worth 真實計算 | 現金帳戶 tx 加總 + 持倉市值 + FX 換算，從 stub 升級為完整計算 |
-| 2026-03-31 | 新增永豐台股 CSV parser + holdings 重算 | ROC 日期、買賣別、費稅、加權平均成本自動更新 |
-| 2026-03-31 | 新增報價快照 API + PortfolioPanel 更新 UI | 手動輸入收盤價並儲存，net-worth 改用最新報價計算 |
-| 2026-03-31 | 新增 FX 匯率更新 API + UI | GET/POST /api/portfolio/fx-rates，PortfolioPanel 顯示目前匯率並支援更新 |
-| 2026-03-31 | 新增報價快照 CSV 批次上傳 | PortfolioPanel 報價區增加 CSV 上傳，前端解析後呼叫現有 price-snapshots API |
-| 2026-03-31 | 新增配息 CSV 匯入 | POST /api/import/dividends-csv，ImportPanel 新增配息模式，依 source_hash dedup |
-| 2026-03-31 | 串接配息摘要、複委託匯入與 API 測試修復 | net-worth 增加配息摘要、ImportPanel 新增複委託 CSV、@hearth/api tests 全綠 |
-| 2026-03-31 | 補強 correctness 測試證據 | 新增 monthly report 月份邊界/跨帳戶聚合測試與 dividends-csv 去重測試，避免真實財務資料悄悄漂移 |
-| 2026-03-31 | 收斂 user_settings 秘密暴露面 | 一般 settings API 改回 presence flags，明文密碼只在顯式 secret endpoint 取用，並加上 no-store |
-| 2026-03-31 | 補上 user_settings 應用層加密寫入 | PDF 密碼改為 Worker 端 AES-GCM 寫入；缺少 `USER_SETTINGS_SECRET_KEY` 時讀寫都明確失敗，舊 plaintext 仍可 fallback 讀取 |
-| 2026-04-01 | 補上 user_settings 舊資料升級路徑 | 顯式 secret fetch 會在讀取 legacy plaintext 後自動回寫 ciphertext，縮小舊資料明文尾巴 |
-| 2026-04-01 | 建立 schema migration discipline baseline | 新增 `supabase/migrations/20260401000000_baseline.sql` 與 repo docs，後續 schema 變更不再只靠覆寫單一 baseline |
-| 2026-04-01 | 補上 user_settings 主動 backfill 工具 | 新增 dry-run 預設的 `backfill:user-settings-secrets`，讓未經 secret fetch 的舊 plaintext rows 也可主動 rotation |
-| 2026-05-04 | 完成初步資料安全邊界整理 | 新增 `docs/security-boundary.md`，明確化 auth/ownership/secrets/integrity 邊界與硬化待辦 |
-| 2026-05-04 | 完成週期支出範本一鍵落地流程 | 匯入面板新增「建立模板並套用本月」，將 recurring candidate 直接落成模板並立即產生本月交易 |
+| 2026-03-21 | 撱箇??? `PLAN.md` | 撠?`Hearth-plan.md` 頧?瘣餌?撖虫??祥????|
+| 2026-03-21 | 摰??垢 Supabase Auth UI ??Worker `/api/auth/me` 銝脫 | ?券?Phase B嚗??暹? bearer-token API ?迤?臬??垢雿輻 |
+| 2026-03-21 | 摰?撣單?”?憓董??UI | 撱箇?蝚砌?璇??渡??垢撖怠頝臬?嚗? auth -> worker -> supabase -> UI ??? |
+| 2026-03-21 | 摰? `accounts + auth` ?砍?臬銵?霅?| 隞亙???瑁???API tests ???桀??詨?頝臬?嚗?雿?蝥翮隞??甇賊◢??|
+| 2026-03-21 | 撱箇??蝚砌???Phase C ?? | 霈?`transactions -> monthly report API -> dashboard panel` ???耦 |
+| 2026-03-21 | 撱箇?蝚砌?璇???transaction 撖怠頝臬? | 霈?Phase C 銝??芾??漱?????迤???撓?乩?皞?|
+| 2026-03-21 | 撱箇?蝚砌?璇?normalized CSV transaction ?臬頝臬? | ????臬蝞∠??????銵?撣單撠惇 parser 瞍?|
+| 2026-03-21 | 撱箇?蝚砌???`sinopac-tw` ?銵?撅?mapping ?? | 撽??銵?撅祆?雿?撠隞亙遣蝡??臬蝞∠?銋? |
+| 2026-03-21 | 撱箇?蝚砌???`excel-monthly` ? Excel ?臬?? | ?? workbook ingestion seam 撱箇?韏瑚?嚗?靘?撖行?撣單?澆??游? parser |
+| 2026-03-21 | ?游? `excel-monthly` ?舀璈怠??交???憿??? | 霈?Excel ?臬?湔餈?`Hearth-plan.md` ?膩??撣單蝯? |
+| 2026-03-21 | ?游? `excel-monthly` ?舀憭?sheet ??sidebar 敹賜閬? | 霈?隞?workbook ?臬??急?閬????遢鞈?嚗???椰?游摰?憛炊?斗?鈭斗? |
+| 2026-03-21 | ?游? `excel-monthly` ?舀 merged cells 撅? | 霈?雿萇??交?蝢斤???憿?header 銋鋡怎??parser 甇?Ⅱ颲刻? |
+| 2026-03-21 | ?游? `excel-monthly` ?舀??sheet ?迂?典?摰?交? | 霈?header ?芣 day number ??撣單銋鋡怠??|
+| 2026-03-21 | ?游? `excel-monthly` ? recurring/sidebar warnings | 霈摰?憛◤頝喲????航?閮?嚗靘踹?蝥?望??臬璅⊥ |
+| 2026-03-21 | ?游? `excel-monthly` ?蝯???recurring candidates | 霈?蝥?recurring template 銝??? parser ???儘霅?頛?|
+| 2026-03-21 | 撱箇? recurring template 甇??鞈?頝臬? | 霈摰?箄? Excel recurring candidates ?迤撘摮? API / schema / UI ?亙 |
+| 2026-03-21 | 撱箇? recurring candidates ?寞活撱箇? recurring template 瘚? | 霈?Excel ?菜葫?啁??箏??憛??芸閬???湔?賣?甇??璅⊥ |
+| 2026-03-21 | 撠?`Hearth` 甇???瑁? framework `--adopt-existing` 銝阡? drift checker | 霈?framework adoption 敺犖撌亦?摰?蝝? machine-verified baseline adoption |
+| 2026-03-22 | 霈?recurring template ?臬??冽??嗆? transactions | 霈芋?踵迤撘???`transactions -> monthly report` 銝餉???嚗??芣???刻身摰惜 |
+| 2026-03-22 | 鋆? transaction delete flow | 霈??憓?乓芋?踹??券脖???????箸?耨甇????洵銝??冽批???|
+| 2026-03-22 | 鋆? transaction filter flow | 霈洵銝??冽批???????脣??冽?隞嗆炎蝝Ｚ??????亙虜雿輻?拇 |
+| 2026-03-22 | 鋆? transaction edit flow | 霈洵銝?漱??雿耦???湧??堆??啣?/蝭拚/蝺刻摩/?芷嚗????亙虜?舐??|
+| 2026-03-22 | 撱箇?蝚砌???release readiness ?誘????| 霈洵銝?漱隞??摰???炎?交?蝔?皜???瞍炎憸券 |
+| 2026-03-22 | 撱箇?蝚砌???Cloudflare 銝?菟蝵脰?祈? runbook | 霈洵銝???瑼Ｘ?脖?甇仿?????函蔡???????函蔡瞍郊憸券 |
+| 2026-03-22 | 摰?蝚砌???Cloudflare ?祕?函蔡撽? | 撠蝵脫?蝔? dry-run ???啁?撖?worker/pages ?澆?嚗Ⅱ隤洵銝?鋡怠??刻赤??|
+| 2026-03-22 | 撱箇?蝚砌??蝵脣? Smoke Test ?誘????| 霈蝵脣????臭??菟?霅?API/Web 摮暑嚗?銝洵銝?漱隞??撠??園???|
+| 2026-03-22 | 撱箇? repo-specific engineering governance baseline | ??Hearth ?賢?砍瘝餌????瑽???皜祈岫?箇?嚗?朣?framework adoption ?極蝔祥?撩??|
+| 2026-03-22 | ?游? post-deploy smoke ?舀 bearer token 撽? | ?典??token ??瘜?嚗? smoke ?舐?亥???`auth/me` ??`accounts` ?祕隤?頝臬? |
+| 2026-03-22 | ?游? post-deploy smoke ?舀 transactions create/query/delete probe | ?典?豢芋撘?閬?鈭斗?銝餉楝敺?銝虫誑?芸? cleanup ?踹?瘙⊥?甇??鞈? |
+| 2026-03-22 | ?啣? credit-card-tw ?臬?亙??蝡舀芋撘?| ?游??暸?瘚?仿??霈縑?典 CSV ?舐?亙??函??normalized pipeline |
+| 2026-03-22 | ?游? post-deploy smoke ?舀 account auto-resolve ??monthly report API 瑼Ｘ | ??撽??瑼颱蒂鋆??梯”頝臬??舐?扳炎?伐???蝚砌???蝺??飛靽∪? |
+| 2026-03-22 | ?游? post-deploy smoke ?舀 imports/recurring 頝臬?瑼Ｘ | 隞?validation-based safe probes 撽??臬?望?頝舐?舐?改????踹?撖怠甇??鞈? |
+| 2026-03-22 | ?啣? governance phase gate ?芸?瑼Ｘ?單 | 隞交??冽炎?交祥????plan freshness嚗?雿?蝔?蝘駁◢??|
+| 2026-03-22 | 撠?governance gate 蝝 readiness/deploy ?身瘚? | 霈洵銝?漱隞炎?亙????極蝔?瑁??扯?瘝餌??圈悅摨佗??? release ?箸?憸券 |
+| 2026-03-22 | 撱箇? portfolio holdings ?祕霈????| 霈?Phase D 敺?stub ?脣 owner-scoped ?????垢憿舐內 |
+| 2026-03-22 | 靽格迤 production web API base ???祆? localhost ?? | 蝣箔? Cloudflare ?函蔡???蝙?冽迤撘?Worker URL嚗??銝??賜?韏瑚?憭望? |
+| 2026-03-29 | 靽格迤 Sinopac 靽 parser regression | ?舀 inline policy/type 銵撘??踹??箸?靽敹怎 |
+| 2026-03-30 | ?啣? E.SUN OCR ?舀?硫甈?snapshot parser | image-only PDF ?臬?航?嚗OC ?交???賊?憿撘?蝝 |
+| 2026-03-30 | 撱箇?靽∠??/ ?銵?uncategorized-first review workflow | ?遢 tabs?nline ?? assign?ptimistic update?ive ??/頞典?Ｘ |
+| 2026-03-30 | ?游??梁??銵刻摰?暑憿蝯? | 霈???憿祕??剁??箏?蝥?rule-based ?芸???摨?|
+| 2026-03-30 | 靽格迤憭振靽∠?∟楊撟湔??憿?| ?唳/銝凋縑/?? MM/DD 銵?箸迤蝣箏葆??statementMonth嚗耨甇?靘??隞?tab |
+| 2026-03-30 | 撘瑕? bank statement parser ?? | ?踹?靽∠??section 銵毽?仿?銵董?穿?瘞貉?/?控????|
+| 2026-03-31 | ?啣???箄隅?Ｗ?嚗縑?典嚗?????頞典???銵? | 4 ???? bar chart嚗??銵??莎?highlight ?嗅??詨???|
+| 2026-03-31 | ?啣? localStorage auto-categorization rules | 靘?description + direction + panel scope 摮貊?銝西???典?憿??⊿? DB migration |
+| 2026-03-31 | ?孵?撣單 description 憿舐內 | 2 銵＊蝷?+ hover title嚗?雿?膩鞈??仃 |
+| 2026-03-31 | ?瑞宏 auto-categorization rules ??Supabase | ?啣? categorization_rules table + API + ?垢?寧 apiFetch嚗??楊鋆蔭?曹澈 |
+| 2026-03-31 | 撖虫? net-worth ?祕閮? | ?暸?撣單 tx ?蜇 + ????+ FX ??嚗? stub ???箏??渲?蝞?|
+| 2026-03-31 | ?啣?瘞貉??啗 CSV parser + holdings ?? | ROC ?交??眺鞈??祥蝔?甈像???祈???|
+| 2026-03-31 | ?啣??勗敹怎 API + PortfolioPanel ?湔 UI | ??頛詨?嗥?嫣蒂?脣?嚗et-worth ?寧??啣?寡?蝞?|
+| 2026-03-31 | ?啣? FX ?舐??湔 API + UI | GET/POST /api/portfolio/fx-rates嚗ortfolioPanel 憿舐內?桀??舐?銝行?湔??|
+| 2026-03-31 | ?啣??勗敹怎 CSV ?寞活銝 | PortfolioPanel ?勗?憓? CSV 銝嚗?蝡航圾???澆?暹? price-snapshots API |
+| 2026-03-31 | ?啣?? CSV ?臬 | POST /api/import/dividends-csv嚗mportPanel ?啣??璅∪?嚗? source_hash dedup |
+| 2026-03-31 | 銝脫?????憪??臬??API 皜祈岫靽桀儔 | net-worth 憓?????mportPanel ?啣?銴?閮?CSV?hearth/api tests ?函? |
+| 2026-03-31 | 鋆撥 correctness 皜祈岫霅? | ?啣? monthly report ?遢??/頝典董?嗉??葫閰西? dividends-csv ?駁?皜祈岫嚗??撖西瓷??????蝘?|
+| 2026-03-31 | ?嗆? user_settings 蝘??湧??| 銝??settings API ?孵? presence flags嚗???蝣澆?券＊撘?secret endpoint ?嚗蒂?? no-store |
+| 2026-03-31 | 鋆? user_settings ?撅文?撖神??| PDF 撖Ⅳ?寧 Worker 蝡?AES-GCM 撖怠嚗撩撠?`USER_SETTINGS_SECRET_KEY` ??撖恍?Ⅱ憭望?嚗? plaintext 隞 fallback 霈??|
+| 2026-04-01 | 鋆? user_settings ????蝝楝敺?| 憿臬? secret fetch ?霈??legacy plaintext 敺??撖?ciphertext嚗葬撠?鞈???撠曉毀 |
+| 2026-04-01 | 撱箇? schema migration discipline baseline | ?啣? `supabase/migrations/20260401000000_baseline.sql` ??repo docs嚗?蝥?schema 霈銝??芷?閬神?桐? baseline |
+| 2026-04-01 | 鋆? user_settings 銝餃? backfill 撌亙 | ?啣? dry-run ?身??`backfill:user-settings-secrets`嚗??芰? secret fetch ?? plaintext rows 銋銝餃? rotation |
+| 2026-05-04 | 摰??郊鞈?摰???渡? | ?啣? `docs/security-boundary.md`嚗?蝣箏? auth/ownership/secrets/integrity ???′??颲?|
+| 2026-05-04 | 摰??望??臬蝭銝?菔?唳?蝔?| ?臬?Ｘ?啣??遣蝡芋?蹂蒂憟?祆???撠?recurring candidate ?湔?賣?璅⊥銝衣??喟??漱??|
+
+
