@@ -40,10 +40,11 @@
 - [x] Stopped silently swallowing `net_worth_snapshots` write failures in `GET /api/portfolio/net-worth`
 - [x] Updated `ai-governance-framework` submodule to latest reachable upstream commit (`a502b80`)
 - [x] Ran canonical audit trend validation (Scenario A real consuming repo + Scenario B fixture simulation) and published test report
-- [x] Unified credit-card CSV/PDF parser date mapping to posted date / 入帳起息日\n- [x] Expanded `excel-monthly` parser for formula-heavy workbook ingestion\n- [x] Extended recurring candidate -> template flow to carry optional amount\n- [ ] Keep structured memory and daily logs in sync going forward
+- [x] Unified credit-card CSV/PDF parser date mapping to posted date / 入帳起息日\n- [x] Expanded `excel-monthly` parser for formula-heavy workbook ingestion\n- [x] Extended recurring candidate -> template flow to carry optional amount\n- [x] Completed initial security-boundary consolidation (`docs/security-boundary.md`)\n- [ ] Keep structured memory and daily logs in sync going forward
 
 ## Context
 - **Recent achievements**: portfolio analytics now include verified `net-worth-history` and `trade-costs` behavior, import dry-run preview goes through the real parser/normalization path for cashflow, excel, stock, and dividend modes, and ops expose verdict-level health instead of raw counts only.
 - **Validation baseline**: `npm.cmd --workspace @hearth/api run build` and `npm.cmd --workspace @hearth/api run test` currently pass at `170/170`; `npm.cmd --workspace @hearth/web run check` and `npm.cmd --workspace @hearth/web run build` were also restored earlier in the current closure cycle.
 - **Next steps**: keep pushing new `P0 correctness / ops` slices instead of reopening the already-closed A1/B1/A2/C1/C2/D1/E1 batch, and keep structured memory aligned with the real validation state.
+
 

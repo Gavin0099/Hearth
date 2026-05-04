@@ -121,7 +121,7 @@
 - [x] `GET /api/auth/me` 與前端 session flow 串接
 - [x] 帳戶列表與新增帳戶 UI
 - [x] `accounts + auth` 本地可執行驗證
-- [ ] 初步資料安全邊界整理
+- [x] 初步資料安全邊界整理
 
 ### Phase C: 現金流匯入與月報
 
@@ -259,3 +259,4 @@
 | 2026-04-01 | 補上 user_settings 舊資料升級路徑 | 顯式 secret fetch 會在讀取 legacy plaintext 後自動回寫 ciphertext，縮小舊資料明文尾巴 |
 | 2026-04-01 | 建立 schema migration discipline baseline | 新增 `supabase/migrations/20260401000000_baseline.sql` 與 repo docs，後續 schema 變更不再只靠覆寫單一 baseline |
 | 2026-04-01 | 補上 user_settings 主動 backfill 工具 | 新增 dry-run 預設的 `backfill:user-settings-secrets`，讓未經 secret fetch 的舊 plaintext rows 也可主動 rotation |
+| 2026-05-04 | 完成初步資料安全邊界整理 | 新增 `docs/security-boundary.md`，明確化 auth/ownership/secrets/integrity 邊界與硬化待辦 |
