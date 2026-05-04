@@ -59,3 +59,50 @@ A task is done when:
 - Architecture boundaries remain intact
 - Evidence matches the declared risk level
 - PLAN.md and memory/ reflect the new state
+
+## Session Closeout Obligation
+
+Writing `artifacts/session-closeout.txt` before session end is a **governance
+obligation**, not a suggestion.
+
+The stop hook always calls `session_end` at session end. If the closeout artifact
+is missing or insufficient, the runtime records `closeout_missing` or
+`closeout_insufficient` in the verdict. Memory will not update. The gap is
+auditable and visible to reviewers.
+
+### Required fields
+
+All fields must be present. Vague values are flagged as insufficient.
+
+```
+TASK_INTENT: <one sentence — declared goal of this session>
+WORK_COMPLETED: <what was actually done — verifiable claims only>
+FILES_TOUCHED: <comma-separated file list, or NONE>
+CHECKS_RUN: <specific commands or checks run, or NONE>
+OPEN_RISKS: <what might be wrong or incomplete, or NONE>
+NOT_DONE: <what was not completed this session, or NONE>
+RECOMMENDED_MEMORY_UPDATE: <what memory/ file should change and why, or NO_UPDATE>
+```
+
+### Rules
+
+- `WORK_COMPLETED` must contain verifiable claims. Do not write "made improvements"
+  or "worked on things" — these are vague and will be rejected as insufficient.
+- `CHECKS_RUN` must name specific commands if non-`NONE`.
+- If there was no material progress, write `WORK_COMPLETED: NONE` — do not
+  fabricate completions.
+- `NOT_DONE` and `OPEN_RISKS` are the most important fields. AI agents tend to
+  omit failures. Do not.
+
+### Observable anchor requirement
+
+`WORK_COMPLETED` and `CHECKS_RUN` must contain an observable anchor:
+a filename (`word.ext`) or a known tool name (pytest, session_end_hook, etc.).
+A sentence with no such anchor is treated as vague content even if it looks specific.
+
+### If you cannot write the closeout
+
+Write it anyway with `WORK_COMPLETED: NONE` and explain in `OPEN_RISKS` why
+the session produced no verifiable output. This is a valid closeout.
+
+See `docs/session-closeout-schema.md` for examples and field constraints.

@@ -3,7 +3,7 @@
 > **專案類型**: 家庭資產管理系統
 > **技術棧**: React / TypeScript / Hono / Supabase / Cloudflare
 > **複雜度**: L1 → L2（依資料安全與匯入邏輯升級）
-> **最後更新**: 2026-03-31
+> **最後更新**: 2026-05-04
 > **Owner**: GavinWu
 > **Freshness**: Sprint (7d)
 

@@ -109,3 +109,17 @@
   - wrapped network-throw paths in `apps/web/src/lib/accounts.ts` (`fetchAccounts`)
   - wrapped network-throw paths in `apps/web/src/lib/portfolio.ts` (`fetchPortfolioHoldings`, `fetchNetWorth`, `fetchPortfolioDividends`, `fetchFxRates`, `fetchNetWorthHistory`, `fetchTradeCosts`)
   - objective: avoid infinite `loading` UI states when API requests fail before returning JSON
+
+## 2026-05-04
+
+- git pull --ff-only origin main (Hearth root) -> already up to date
+- git -C ai-governance-framework fetch --all --prune + checkout origin/main -> moved to 502b80`n- 
+pm.cmd --workspace @hearth/api run build -> pass
+- 
+pm.cmd --workspace @hearth/web run check -> pass
+- 
+ode --test apps/api/tests/pdf-credit-card.test.ts -> sandbox spawn EPERM (environment limitation)
+- Scope covered:
+  - credit-card posted-date import semantics across CSV/PDF parsers
+  - formula-heavy excel-monthly parsing + recurring sidebar detail extraction
+  - recurring template creation from candidates now carries mount`n
