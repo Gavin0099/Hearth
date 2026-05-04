@@ -357,7 +357,7 @@ function parseSinopacLine(line: string, statementYear?: number, statementMonth?:
 
   return buildTransaction(
     statementYear,
-    match.groups.consume,
+    match.groups.posted,
     description,
     detail.amountToken,
     undefined,
@@ -387,7 +387,7 @@ function extractEsunDetail(line: string) {
   );
   if (twoAmountMatch?.groups) {
     return {
-      dateToken: twoAmountMatch.groups.consume,
+      dateToken: twoAmountMatch.groups.posted,
       description: twoAmountMatch.groups.description,
       currencyToken: twoAmountMatch.groups.currency2,
       amountToken: twoAmountMatch.groups.amount2,
@@ -399,7 +399,7 @@ function extractEsunDetail(line: string) {
   );
   if (oneAmountMatch?.groups) {
     return {
-      dateToken: oneAmountMatch.groups.consume,
+      dateToken: oneAmountMatch.groups.posted,
       description: oneAmountMatch.groups.description,
       currencyToken: oneAmountMatch.groups.currency,
       amountToken: oneAmountMatch.groups.amount,
@@ -486,7 +486,7 @@ function extractCathayDetail(line: string) {
   );
   if (!match?.groups) return null;
   return {
-    dateToken: match.groups.consume,
+    dateToken: match.groups.posted,
     description: match.groups.description,
     currencyToken: undefined as string | undefined,
     amountToken: match.groups.amount,
@@ -591,7 +591,7 @@ function extractTaishinDetail(line: string) {
   );
   if (twoAmountMatch?.groups) {
     return {
-      dateToken: twoAmountMatch.groups.consume,
+      dateToken: twoAmountMatch.groups.posted,
       description: twoAmountMatch.groups.description,
       currencyToken: twoAmountMatch.groups.currency2,
       amountToken: twoAmountMatch.groups.amount2,
@@ -606,7 +606,7 @@ function extractTaishinDetail(line: string) {
   );
   if (oneAmountMatch?.groups) {
     return {
-      dateToken: oneAmountMatch.groups.consume,
+      dateToken: oneAmountMatch.groups.posted,
       description: oneAmountMatch.groups.description,
       currencyToken: oneAmountMatch.groups.currency,
       amountToken: oneAmountMatch.groups.amount,
@@ -685,7 +685,7 @@ function parseCtbcLine(line: string, statementYear?: number, statementMonth?: nu
   if (!match?.groups) return null;
 
   const detail = {
-    dateToken: match.groups.consume,
+    dateToken: match.groups.posted,
     description: match.groups.description,
     amountToken: match.groups.amount,
   };
@@ -848,7 +848,7 @@ function parseCtbcPdfText(text: string) {
     }
     if (!description) continue; // skip if no description found nearby
 
-    const tx = buildTransaction(statementYear, m.groups.consume, description, m.groups.amount, undefined, statementMonth);
+    const tx = buildTransaction(statementYear, m.groups.posted, description, m.groups.amount, undefined, statementMonth);
     if (tx) transactions.push(tx);
   }
 
@@ -915,7 +915,7 @@ function parseMegaLine(line: string, statementYear?: number, statementMonth?: nu
   if (/^[A-Z]{3}\d/.test(description)) return null;
   if (containsAdjacentDateTokens(description)) return null;
 
-  return buildTransaction(statementYear, match.groups.consume, description, detail.amountToken, undefined, statementMonth);
+  return buildTransaction(statementYear, match.groups.posted, description, detail.amountToken, undefined, statementMonth);
 }
 
 function isMegaDescriptionCandidate(line: string) {
@@ -975,7 +975,7 @@ function parseMegaPdfText(text: string) {
         const restTokens = noDescMatch.groups.rest.trim().split(/\s+/).filter(Boolean);
         const amountToken = restTokens[restTokens.length - 1];
         if (amountToken) {
-          const tx = buildTransaction(statementYear, noDescMatch.groups.consume, description, amountToken, undefined, statementMonth);
+          const tx = buildTransaction(statementYear, noDescMatch.groups.posted, description, amountToken, undefined, statementMonth);
           if (tx) {
             transactions.push(tx);
             continue;

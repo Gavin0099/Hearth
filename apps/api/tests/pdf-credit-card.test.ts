@@ -37,55 +37,55 @@ test("parseSinopacPdfTransactions handles purchases, cashback, installments, and
       currency: "TWD",
     },
     {
-      date: "2025-12-22",
+      date: "2026-02-13",
       description: "6-2 \u671f\uff1a\u5e33\u55ae\u5206\u671f \u5229\u606f",
       amount: -130,
       currency: "TWD",
     },
     {
-      date: "2025-12-26",
+      date: "2026-03-02",
       description: "6-2 \u671f\uff1a\u9060\u96c4\u58fd\u671f\u4fdd\u55ae 9 7 0",
       amount: -5635,
       currency: "TWD",
     },
     {
-      date: "2026-02-03",
+      date: "2026-02-06",
       description: "A-\u512a\u98df\u4e00\u53e3 \u54c1\u9ebb\u8fa3\u81ed\u8c46\u8150 \u6a39\u6797\u5e97",
       amount: -218,
       currency: "TWD",
     },
     {
-      date: "2026-02-04",
+      date: "2026-02-09",
       description: "APPLE.COM/BILL 0800095988 IE",
       amount: -470,
       currency: "TWD",
     },
     {
-      date: "2026-02-19",
+      date: "2026-02-24",
       description: "A- Blizzard KR19457868 Irvine US",
       amount: -564,
       currency: "TWD",
     },
     {
-      date: "2026-02-04",
+      date: "2026-02-09",
       description: "\u9023\u52a0*\u9023\u52a0*Coupang",
       amount: 630,
       currency: "TWD",
     },
     {
-      date: "2026-02-10",
+      date: "2026-02-12",
       description: "OPENAI *CHATGPT SUBSCR OPENAI.COM US",
       amount: -663,
       currency: "TWD",
     },
     {
-      date: "2026-02-10",
+      date: "2026-02-12",
       description: "OPENAI *CHATGPT SUBSCR \u570b\u5916\u4ea4\u6613\u670d\u52d9\u8cbb",
       amount: -10,
       currency: "TWD",
     },
     {
-      date: "2026-02-11",
+      date: "2026-02-12",
       description: "CLAUDE.AI SUBSCRIPTION ANTHROPIC.COM US",
       amount: -6302,
       currency: "TWD",
@@ -101,7 +101,7 @@ test("parseSinopacPdfTransactions keeps current installment amount when statemen
 
   assert.deepEqual(parseSinopacPdfTransactions(text), [
     {
-      date: "2025-12-26",
+      date: "2026-03-02",
       description: "6- 2 期 : 遠雄續期保費9705",
       amount: -5635,
       currency: "TWD",
@@ -135,31 +135,31 @@ test("parseEsunPdfTransactions limits parsing to detail sections and handles cas
       currency: "TWD",
     },
     {
-      date: "2025-12-25",
+      date: "2026-03-07",
       description: "\u704c\u6e89\u773c\u79d1\u8a3a\u6240-\u53f0\u5317 \u520606\u671f\u4e4b\u7b2c03\u671f",
       amount: -16333,
       currency: "TWD",
     },
     {
-      date: "2026-02-11",
+      date: "2026-02-25",
       description: "\u60a0\u904a\u5361\u81ea\u52d5\u52a0\u503c\u91d1\u984d\uff0d\u53f0\u5317\u6377\u904b\u5927\u576a\u6797",
       amount: -500,
       currency: "TWD",
     },
     {
-      date: "2026-02-12",
+      date: "2026-02-23",
       description: "\u6a02\u8cfc\u8766\u76ae\uff0d\u65b0\u52a0\u5761\u5546\u8766\u76ae\u6578\u4f4d",
       amount: -1369,
       currency: "TWD",
     },
     {
-      date: "2026-02-28",
+      date: "2026-03-04",
       description: "\u6a02\u8cfc\u8766\u76ae\uff0d s m i l e f i x",
       amount: -259,
       currency: "TWD",
     },
     {
-      date: "2026-02-24",
+      date: "2026-03-02",
       description: "\u85cd\u65b0\u2014\u65b9\u683c\u5b50 v o c u s",
       amount: -50,
       currency: "TWD",
@@ -179,25 +179,25 @@ test("parseTaishinPdfTransactions handles ROC full-date rows with trailing count
 
   assert.deepEqual(parseTaishinPdfTransactions(text), [
     {
-      date: "2026-02-14",
+      date: "2026-02-24",
       description: "迪加-全家便利TAIPEI",
       amount: -119,
       currency: "TWD",
     },
     {
-      date: "2026-02-14",
+      date: "2026-02-24",
       description: "連加*連加*統一-超商TAIPEI",
       amount: -87,
       currency: "TWD",
     },
     {
-      date: "2026-02-27",
+      date: "2026-03-03",
       description: "連加*連加*統一-超商TAIPEI",
       amount: -198,
       currency: "TWD",
     },
     {
-      date: "2026-03-14",
+      date: "2026-03-16",
       description: "連加-全家便利TAIPEI",
       amount: -84,
       currency: "TWD",
@@ -215,13 +215,13 @@ test("parseTaishinPdfTransactions applies previous-year heuristic for MM/DD rows
 
   assert.deepEqual(parseTaishinPdfTransactions(text), [
     {
-      date: "2025-12-27",
+      date: "2026-01-02",
       description: "連加*連加*統一-超商TAIPEI",
       amount: -198,
       currency: "TWD",
     },
     {
-      date: "2026-02-14",
+      date: "2026-02-24",
       description: "迪加-全家便利TAIPEI",
       amount: -119,
       currency: "TWD",
@@ -248,67 +248,67 @@ test("parseCtbcPdfTransactions handles ROC full-date rows with amount before car
 
   assert.deepEqual(parseCtbcPdfTransactions(text), [
     {
-      date: "2025-12-20",
+      date: "2025-12-23",
       description: "STEAM PURCHASE",
       amount: -326,
       currency: "TWD",
     },
     {
-      date: "2025-12-20",
+      date: "2025-12-23",
       description: "國外交易手續費",
       amount: -5,
       currency: "TWD",
     },
     {
-      date: "2025-12-29",
+      date: "2026-01-02",
       description: "STEAM PURCHASE",
       amount: -141,
       currency: "TWD",
     },
     {
-      date: "2025-12-29",
+      date: "2026-01-02",
       description: "國外交易手續費",
       amount: -2,
       currency: "TWD",
     },
     {
-      date: "2026-01-03",
+      date: "2026-01-06",
       description: "STEAM PURCHASE",
       amount: 113,
       currency: "TWD",
     },
     {
-      date: "2026-01-03",
+      date: "2026-01-06",
       description: "STEAM PURCHASE",
       amount: 132,
       currency: "TWD",
     },
     {
-      date: "2026-01-03",
+      date: "2026-01-05",
       description: "STEAMGAMES.COM 4259522",
       amount: -209,
       currency: "TWD",
     },
     {
-      date: "2026-01-04",
+      date: "2026-01-05",
       description: "國外交易手續費",
       amount: -3,
       currency: "TWD",
     },
     {
-      date: "2026-01-04",
+      date: "2026-01-06",
       description: "STEAMGAMES.COM 4259522",
       amount: -119,
       currency: "TWD",
     },
     {
-      date: "2026-01-04",
+      date: "2026-01-06",
       description: "國外交易手續費",
       amount: -2,
       currency: "TWD",
     },
     {
-      date: "2026-01-09",
+      date: "2026-01-12",
       description: "統一-超商-央和",
       amount: -297,
       currency: "TWD",
@@ -326,13 +326,13 @@ test("parseCtbcPdfTransactions applies previous-year heuristic for MM/DD rows in
 
   assert.deepEqual(parseCtbcPdfTransactions(text), [
     {
-      date: "2025-12-20",
+      date: "2025-12-23",
       description: "STEAM PURCHASE",
       amount: -326,
       currency: "TWD",
     },
     {
-      date: "2026-02-09",
+      date: "2026-02-12",
       description: "統一-超商-央和",
       amount: -297,
       currency: "TWD",
@@ -348,19 +348,19 @@ test("parseCtbcPdfTransactions falls back to full-text scan when rows are not se
 
   assert.deepEqual(parseCtbcPdfTransactions(text), [
     {
-      date: "2025-12-20",
+      date: "2025-12-23",
       description: "STEAM PURCHASE",
       amount: -326,
       currency: "TWD",
     },
     {
-      date: "2025-12-20",
+      date: "2025-12-23",
       description: "國外交易手續費",
       amount: -5,
       currency: "TWD",
     },
     {
-      date: "2026-01-09",
+      date: "2026-01-12",
       description: "統一-超商-央和",
       amount: -297,
       currency: "TWD",
@@ -380,7 +380,7 @@ test("parseMegaPdfTransactions handles full ROC year dates with fullwidth descri
 
   assert.deepEqual(parseMegaPdfTransactions(text), [
     {
-      date: "2026-03-10",
+      date: "2026-03-12",
       description: "Ｇｏｇｏｒｏ Ｎｅｔｗｏｒｋ TAOYUAN",
       amount: -499,
       currency: "TWD",
@@ -406,7 +406,7 @@ Gogoro電池資費回饋
 
   assert.deepEqual(parseMegaPdfTransactions(text), [
     {
-      date: "2026-03-10",
+      date: "2026-03-12",
       description: "Ｇｏｇｏｒｏ Ｎｅｔｗｏｒｋ TAOYUAN",
       amount: -499,
       currency: "TWD",
@@ -434,13 +434,13 @@ test("parseCtbcPdfTransactions recovers transaction rows from noisy token stream
 
   assert.deepEqual(parseCtbcPdfTransactions(text), [
     {
-      date: "2026-04-03",
+      date: "2026-04-05",
       description: "OPENAI *CHATGPT SUBSCR",
       amount: -660,
       currency: "TWD",
     },
     {
-      date: "2026-04-09",
+      date: "2026-04-10",
       description: "國外交易手續費",
       amount: -10,
       currency: "TWD",

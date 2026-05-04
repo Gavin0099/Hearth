@@ -2491,6 +2491,96 @@ test("POST /api/import/credit-card-tw maps minimal credit card csv rows into tra
   ]);
 });
 
+test("POST /api/import/credit-card-tw prefers posted date over transaction date", async () => {
+  let insertedRows: Array<Record<string, unknown>> = [];
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "transactions") {
+          return {
+            select: () => ({
+              in: async () => ({
+                data: [],
+                error: null,
+              }),
+            }),
+            upsert: async (values: Array<Record<string, unknown>>) => {
+              insertedRows = values;
+              return { error: null };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set(
+    "file",
+    new File(
+      [
+        "消費日,入帳起息日,金額,摘要,幣別,交易類型\n2026/03/31,2026/04/02,500,超商,TWD,一般消費\n",
+      ],
+      "credit-card-posted-date.csv",
+      { type: "text/csv" },
+    ),
+  );
+
+  const response = await app.request(
+    "/api/import/credit-card-tw",
+    {
+      method: "POST",
+      body: formData,
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    source: "credit-card-tw",
+    imported: 1,
+    skipped: 0,
+    failed: 0,
+    runtime: "cloudflare-worker",
+    persistence: "supabase",
+    status: "ok",
+    errors: [],
+    warnings: [],
+    recurringCandidates: [],
+  });
+  assert.deepEqual(insertedRows, [
+    {
+      account_id: "account-1",
+      date: "2026-04-02",
+      amount: -500,
+      currency: "TWD",
+      category: "其他",
+      description: "超商",
+      source: "credit_card_tw",
+      source_hash: insertedRows[0]?.source_hash,
+    },
+  ]);
+});
+
 test("POST /api/import/transactions-csv skips duplicate rows by source hash", async () => {
   let insertedRows: Array<Record<string, unknown>> = [];
   const existingHash = buildTransactionSourceHash({

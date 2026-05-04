@@ -3,7 +3,8 @@ import { parseCsv } from "./csv";
 
 type CreditCardRow = Record<string, string>;
 
-const dateAliases = ["交易日期", "消費日", "入帳日", "date"];
+const postingDateAliases = ["入帳起息日", "入帳日", "posted_date"];
+const dateAliases = ["交易日期", "消費日", "date"];
 const amountAliases = ["金額", "交易金額", "amount"];
 const descriptionAliases = ["摘要", "特店名稱", "商店名稱", "說明", "description"];
 const currencyAliases = ["幣別", "currency"];
@@ -84,7 +85,7 @@ export function parseCreditCardTransactionsCsv(text: string, accountId: string) 
       return;
     }
 
-    const date = getValue(row, dateAliases).replace(/\//g, "-");
+    const date = getValue(row, postingDateAliases.concat(dateAliases)).replace(/\//g, "-");
     const description = getValue(row, descriptionAliases);
     const rawAmount = getValue(row, amountAliases);
     const rawCurrency = getValue(row, currencyAliases) || "TWD";
