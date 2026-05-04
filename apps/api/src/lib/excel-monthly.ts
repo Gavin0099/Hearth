@@ -193,10 +193,15 @@ function detectSidebarCandidate(
   }
 
   const detail = leftCells.find((cell) => cell !== matchedSection) ?? null;
+  const amount = row
+    .slice(0, endExclusive)
+    .map((cell) => normalizeAmountWithFormula(cell))
+    .find((value): value is number => value !== null) ?? null;
   return {
     kind: "recurring_sidebar",
     section: matchedSection,
     label: detail,
+    amount,
   };
 }
 
@@ -214,10 +219,20 @@ function pickRecurringDetailLabel(row: unknown[], endExclusive: number, section:
   return leftCells.find((cell) => cell !== section) ?? leftCells[0] ?? null;
 }
 
+function pickRecurringDetailAmount(row: unknown[], endExclusive: number) {
+  return row
+    .slice(0, endExclusive)
+    .map((cell) => normalizeAmountWithFormula(cell))
+    .find((value): value is number => value !== null) ?? null;
+}
+
 function formatSidebarWarning(candidate: Omit<RecurringImportCandidate, "sheet">) {
+  const amountHint = candidate.amount !== null && candidate.amount !== undefined
+    ? ` (${candidate.amount})`
+    : "";
   return candidate.label
-    ? `ignored recurring/sidebar row: ${candidate.section} / ${candidate.label}`
-    : `ignored recurring/sidebar row: ${candidate.section}`;
+    ? `ignored recurring/sidebar row: ${candidate.section} / ${candidate.label}${amountHint}`
+    : `ignored recurring/sidebar row: ${candidate.section}${amountHint}`;
 }
 
 function parseSheetDateContext(sheetName: string): DateContext {
@@ -398,6 +413,7 @@ function parseCalendarPairColumns(
             kind: "recurring_sidebar",
             section: recurringSectionContext.section,
             label,
+            amount: pickRecurringDetailAmount(row, leftBoundary),
           };
           warnings.add(formatSidebarWarning(candidate));
           recurringCandidates.set(
@@ -524,6 +540,7 @@ function parseGridColumns(
             kind: "recurring_sidebar",
             section: recurringSectionContext.section,
             label,
+            amount: pickRecurringDetailAmount(row, firstDateIndex),
           };
           warnings.add(formatSidebarWarning(candidate));
           recurringCandidates.set(

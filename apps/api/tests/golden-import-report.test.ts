@@ -228,8 +228,8 @@ const excelMonthlyGoldenCases: Array<{
         "[2026-05] ignored recurring/sidebar row: 固定支出 / 房租",
       ],
       recurringCandidates: [
-        { sheet: "2026-05", kind: "recurring_sidebar", section: "固定支出", label: null },
-        { sheet: "2026-05", kind: "recurring_sidebar", section: "固定支出", label: "房租" },
+        { sheet: "2026-05", kind: "recurring_sidebar", section: "固定支出", label: null, amount: null },
+        { sheet: "2026-05", kind: "recurring_sidebar", section: "固定支出", label: "房租", amount: null },
       ],
       firstRows: [
         { date: "2026-05-01", amount: -100, category: "餐飲", description: "早餐" },

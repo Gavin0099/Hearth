@@ -3,6 +3,7 @@ export type RecurringImportCandidate = {
   section: string;
   label: string | null;
   kind: "recurring_sidebar";
+  amount?: number | null;
 };
 
 export type TransactionCsvImportResult = {

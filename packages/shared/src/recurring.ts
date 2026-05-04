@@ -42,6 +42,7 @@ export type CreateRecurringTemplatesFromCandidatesInput = {
     section: string;
     label: string | null;
     kind: "recurring_sidebar";
+    amount?: number | null;
   }>;
 };
 

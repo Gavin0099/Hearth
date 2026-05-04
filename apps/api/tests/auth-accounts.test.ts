@@ -3285,6 +3285,7 @@ test("POST /api/import/excel-monthly aggregates parsable rows across multiple mo
         kind: "recurring_sidebar",
         section: "週期支出",
         label: "幼稚園",
+        amount: null,
       },
     ],
   });
@@ -4656,6 +4657,131 @@ test("POST /api/recurring-templates/from-import-candidates skips duplicates alre
       anchor_day: null,
       source_kind: "excel_sidebar",
       source_section: "週期支出",
+      notes: "Imported from Excel sheet: March",
+    },
+  ]);
+});
+
+test("POST /api/recurring-templates/from-import-candidates carries candidate amount into template", async () => {
+  let insertedRows: Array<Record<string, unknown>> = [];
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "recurring_templates") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [],
+                error: null,
+              }),
+            }),
+            insert: (values: Array<Record<string, unknown>>) => {
+              insertedRows = values;
+              return {
+                select: async () => ({
+                  data: [
+                    {
+                      id: "rt-6",
+                      user_id: "user-1",
+                      account_id: "account-1",
+                      name: "房租",
+                      category: "固定支出",
+                      amount: -18000,
+                      currency: "TWD",
+                      cadence: "monthly",
+                      anchor_day: null,
+                      source_kind: "excel_sidebar",
+                      source_section: "固定支出",
+                      notes: "Imported from Excel sheet: March",
+                      created_at: "2026-03-21T00:00:00Z",
+                    },
+                  ],
+                  error: null,
+                }),
+              };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const response = await app.request(
+    "/api/recurring-templates/from-import-candidates",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        account_id: "account-1",
+        candidates: [
+          {
+            sheet: "March",
+            kind: "recurring_sidebar",
+            section: "固定支出",
+            label: "房租",
+            amount: -18000,
+          },
+        ],
+      }),
+      headers: {
+        "content-type": "application/json",
+      },
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    count: 1,
+    items: [
+      {
+        id: "rt-6",
+        user_id: "user-1",
+        account_id: "account-1",
+        name: "房租",
+        category: "固定支出",
+        amount: -18000,
+        currency: "TWD",
+        cadence: "monthly",
+        anchor_day: null,
+        source_kind: "excel_sidebar",
+        source_section: "固定支出",
+        notes: "Imported from Excel sheet: March",
+        created_at: "2026-03-21T00:00:00Z",
+      },
+    ],
+    skipped: 0,
+    status: "ok",
+  });
+  assert.deepEqual(insertedRows, [
+    {
+      user_id: "user-1",
+      account_id: "account-1",
+      name: "房租",
+      category: "固定支出",
+      amount: -18000,
+      currency: "TWD",
+      cadence: "monthly",
+      anchor_day: null,
+      source_kind: "excel_sidebar",
+      source_section: "固定支出",
       notes: "Imported from Excel sheet: March",
     },
   ]);

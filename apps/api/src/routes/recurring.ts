@@ -376,12 +376,18 @@ recurringRoutes.post("/from-import-candidates", async (c) => {
     }
 
     existingKeys.add(key);
+    const numericCandidateAmount =
+      candidate.amount === null || candidate.amount === undefined ? null : Number(candidate.amount);
+    const candidateAmount =
+      numericCandidateAmount !== null && Number.isFinite(numericCandidateAmount)
+        ? numericCandidateAmount
+        : null;
     rowsToInsert.push({
       user_id: user.id,
       account_id: payload.account_id,
       name,
       category: sourceSection,
-      amount: null,
+      amount: candidateAmount,
       currency: "TWD",
       cadence: "monthly",
       anchor_day: null,
