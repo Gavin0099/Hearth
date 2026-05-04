@@ -12,7 +12,7 @@ import {
   importTransactionsCsv,
   previewImportFile,
 } from "../lib/imports";
-import { createRecurringTemplatesFromCandidates } from "../lib/recurring";
+import { applyRecurringTemplates, createRecurringTemplatesFromCandidates } from "../lib/recurring";
 
 type ImportPanelProps = {
   session: Session | null;
@@ -40,6 +40,7 @@ export function ImportPanel({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [latestRecurringCandidates, setLatestRecurringCandidates] = useState<RecurringImportCandidate[]>([]);
   const [isCreatingRecurring, setIsCreatingRecurring] = useState(false);
+  const [isCreatingAndApplyingRecurring, setIsCreatingAndApplyingRecurring] = useState(false);
 
   type FilePreview = {
     name: string;
@@ -231,6 +232,49 @@ export function ImportPanel({
     onRecurringTemplatesCreated();
   }
 
+  async function handleCreateAndApplyRecurringTemplates() {
+    if (latestRecurringCandidates.length === 0) {
+      return;
+    }
+
+    setIsCreatingAndApplyingRecurring(true);
+    const createResult = await createRecurringTemplatesFromCandidates({
+      account_id: selectedAccountId,
+      candidates: latestRecurringCandidates,
+    });
+
+    if (createResult.status === "error") {
+      setIsCreatingAndApplyingRecurring(false);
+      setMessage(`建立週期模板失敗: ${createResult.error}`);
+      return;
+    }
+
+    const now = new Date();
+    const applyResult = await applyRecurringTemplates({
+      year: now.getFullYear(),
+      month: now.getMonth() + 1,
+    });
+    setIsCreatingAndApplyingRecurring(false);
+
+    if (applyResult.status === "error") {
+      setMessage(
+        `已建立 ${createResult.count} 筆週期模板，但套用本月失敗: ${applyResult.error}`,
+      );
+      onRecurringTemplatesCreated();
+      return;
+    }
+
+    setMessage(
+      [
+        `已建立 ${createResult.count} 筆週期模板（跳過 ${createResult.skipped ?? 0} 筆）。`,
+        `本月新增 ${applyResult.count} 筆週期交易（跳過 ${applyResult.skipped} 筆既有資料）。`,
+      ].join(" "),
+    );
+    setLatestRecurringCandidates([]);
+    onRecurringTemplatesCreated();
+    onImported();
+  }
+
   return (
     <article className="panel">
       <h2>資料匯入</h2>
@@ -378,11 +422,19 @@ export function ImportPanel({
               <p>可直接建立週期模板的候選: {latestRecurringCandidates.length} 筆。</p>
               <button
                 className="action-button"
-                disabled={isCreatingRecurring}
+                disabled={isCreatingRecurring || isCreatingAndApplyingRecurring}
                 onClick={() => void handleCreateRecurringTemplates()}
                 type="button"
               >
                 {isCreatingRecurring ? "建立模板中..." : "從候選建立週期模板"}
+              </button>
+              <button
+                className="action-button"
+                disabled={isCreatingRecurring || isCreatingAndApplyingRecurring}
+                onClick={() => void handleCreateAndApplyRecurringTemplates()}
+                type="button"
+              >
+                {isCreatingAndApplyingRecurring ? "建立並套用中..." : "建立模板並套用本月"}
               </button>
             </>
           ) : null}

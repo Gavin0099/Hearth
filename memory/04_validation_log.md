@@ -125,3 +125,6 @@ ode --test apps/api/tests/pdf-credit-card.test.ts -> sandbox spawn EPERM (enviro
   - recurring template creation from candidates now carries mount`n
 
 - python ai-governance-framework/governance_tools/governance_drift_checker.py --repo . --framework-root ai-governance-framework --format json -> pass (all checks ok)
+
+- 
+pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+apply flow)

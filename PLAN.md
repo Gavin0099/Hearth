@@ -167,7 +167,7 @@
 **任務清單**:
 - [x] Cloudflare Cron 排程（TWSE + FX 定時報價更新）
 - [x] PWA 安裝體驗（manifest.json + sw.js + SVG icons）
-- [ ] 週期支出範本
+- [x] 週期支出範本
 - [x] 配息與複委託資料
 
 ---
@@ -260,3 +260,4 @@
 | 2026-04-01 | 建立 schema migration discipline baseline | 新增 `supabase/migrations/20260401000000_baseline.sql` 與 repo docs，後續 schema 變更不再只靠覆寫單一 baseline |
 | 2026-04-01 | 補上 user_settings 主動 backfill 工具 | 新增 dry-run 預設的 `backfill:user-settings-secrets`，讓未經 secret fetch 的舊 plaintext rows 也可主動 rotation |
 | 2026-05-04 | 完成初步資料安全邊界整理 | 新增 `docs/security-boundary.md`，明確化 auth/ownership/secrets/integrity 邊界與硬化待辦 |
+| 2026-05-04 | 完成週期支出範本一鍵落地流程 | 匯入面板新增「建立模板並套用本月」，將 recurring candidate 直接落成模板並立即產生本月交易 |
