@@ -56,13 +56,22 @@
 - [x] Gmail OAuth `access_type=offline`：解決每小時強制重登問題
 - [x] Gmail 帳單查詢改用 90 天日期視窗（移除 `has:attachment`，maxResults 提升至 12）
 
+### 已完成（本輪追加）
+- [x] Items 1&2：PortfolioPanel 顯示 job_run 狀態 + 手動觸發「立即更新股價/匯率」
+- [x] Item 3：未驗證銀行帳戶對帳單顯示明確提示（等 PDF 樣本）
+- [x] Item 4：服務端 Gmail cron（gmail-sync.ts + wrangler cron + gmail_sync_queue + 佇列 UI）
+- [x] `ai-governance-framework` 升級至 v1.2.0+post（c5152c1），drift check 17/17 PASS
+
 ### 本輪重點（進行中）
-- [ ] **Gmail 真實驗證**：重新登入一次，確認永豐 5 月帳單通知可見且通知信正確顯示「無 PDF 附件」
+- [ ] **部署操作（手動）**：執行 Supabase migration `20260507000000_add_gmail_server_sync.sql`
+- [ ] **部署操作（手動）**：Cloudflare Dashboard 設定 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`
+- [ ] **驗證**：重新登入 app 一次，確認 provider_refresh_token 被捕獲並儲存
+- [ ] **Gmail 真實驗證**：確認永豐 5 月帳單可見、通知信顯示「無 PDF 附件」
+- [ ] **Item 3 續作**：等用戶提供 國泰/中信/台新/兆豐 PDF 樣本 → 新增 bank parsers
 - [ ] **安全邊界強化（Phase F-1）**：
   - [ ] RLS hardening map：逐表列出 RLS 狀態與對應路由
   - [ ] Route-by-route auth 矩陣：auth + ownership + validation + failure code
   - [ ] Secret lifecycle policy：PDF 密碼 rotation cadence 與 plaintext 消滅目標
-- [ ] **Memory 晉升**：Gmail OAuth pattern、查詢策略晉升至 `memory/03_knowledge_base.md`
 
 ---
 
@@ -124,3 +133,5 @@
 | 2026-05-04 | 治理同步修正 | 修復 PLAN freshness/section inventory，更新 memory 與 validation log |
 | 2026-05-07 | 治理框架升級 | ai-governance-framework v1.2.1 full adopt，AGENTS.md governance key sections，git hooks，token run checklist |
 | 2026-05-07 | Gmail OAuth 修正 | access_type=offline 解決重登問題；移除 has:attachment，改用 90 天日期視窗 |
+| 2026-05-07 | 股價/匯率/Gmail 排程功能 | Items 1-4：PortfolioPanel cron status UI、trigger API、server-side Gmail cron、queue UI |
+| 2026-05-07 | 治理框架升級至 c5152c1 | v1.2.0+post，drift check 17/17 PASS（expansion_boundary 也通過） |
