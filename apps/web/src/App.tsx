@@ -16,6 +16,7 @@ import { OpsPanel } from "./components/OpsPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { TransactionsPanel } from "./components/TransactionsPanel";
 import { getCurrentSession, signInWithGoogle, signOut } from "./lib/auth";
+import { apiFetch } from "./lib/api";
 import { getSupabaseBrowserClient } from "./lib/supabase";
 
 type AppView = "home" | "ledger" | "bank" | "loan" | "insurance" | "settings";
@@ -66,11 +67,19 @@ export function App() {
 
     const {
       data: { subscription },
-    } = client.auth.onAuthStateChange((_event, nextSession) => {
+    } = client.auth.onAuthStateChange((event, nextSession) => {
       if (!isMounted) return;
       setSession(nextSession);
       setAuthError(null);
       setAuthLoading(false);
+
+      if (event === "SIGNED_IN" && nextSession?.provider_refresh_token) {
+        void apiFetch("/api/user-settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ gmail_refresh_token: nextSession.provider_refresh_token }),
+        });
+      }
     });
 
     return () => {

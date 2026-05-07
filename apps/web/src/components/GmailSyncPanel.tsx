@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import type { AccountRecord, ParsedPdfTransaction } from "@hearth/shared";
 import {
@@ -12,6 +12,7 @@ import { importTransactionsCsv } from "../lib/imports";
 import type { PdfTextExtractionSource } from "../lib/pdf-parser";
 import { fetchUserSettingsSecrets } from "../lib/user-settings";
 import { saveBankSnapshot } from "../lib/bank-snapshots";
+import { getSupabaseBrowserClient } from "../lib/supabase";
 
 type GmailSyncPanelProps = {
   session: Session | null;
@@ -23,6 +24,17 @@ type SyncState =
   | { status: "loading"; message: string }
   | { status: "error"; message: string }
   | { status: "done"; message: string };
+
+type QueueItem = {
+  id: string;
+  bank: string;
+  email_id: string;
+  email_subject: string;
+  email_date: string;
+  attachment_id: string;
+  attachment_filename: string;
+  status: string;
+};
 
 const GMAIL_ENABLED_BANKS = ["sinopac", "esun", "cathay", "taishin", "ctbc", "mega"] as const satisfies BankKey[];
 
@@ -183,9 +195,16 @@ function looksLikeMissingTransactionText(bank: BankKey, lines: string[]) {
   return hasCoverSummaryToken || (!hasTransactionHeader && transactionLikeLineCount === 0);
 }
 
-function buildParseFailureMessage(bank: BankKey, text: string) {
+// 已驗證格式的銀行帳戶（活存）對帳單
+const VERIFIED_BANK_STATEMENT_PARSERS: BankKey[] = ["sinopac", "esun"];
+
+function buildParseFailureMessage(bank: BankKey, text: string, isBankStatement = false) {
   const previewLines = extractPreviewLines(text);
   const preview = previewLines.join(" | ").slice(0, 280);
+
+  if (isBankStatement && !VERIFIED_BANK_STATEMENT_PARSERS.includes(bank)) {
+    return `${BANK_DISPLAY_NAMES[bank]} 銀行帳戶對帳單格式尚未驗證（目前只確認永豐、玉山格式相容）。若有 PDF 樣本請提供以新增支援。前幾行內容：${preview || "（空白）"}`;
+  }
 
   if (looksLikeMissingTransactionText(bank, previewLines)) {
     return `${BANK_DISPLAY_NAMES[bank]} PDF 已讀取，但目前只抽到首頁摘要或客服資訊，沒有抓到可用的交易文字層。這不是單純密碼錯誤，現有文字 parser 無法直接匯入這份 PDF。前幾行內容：${preview || "（空白）"}`;
@@ -283,6 +302,147 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
   const [state, setState] = useState<SyncState>({ status: "idle" });
   const [emails, setEmails] = useState<GmailBillEmail[]>([]);
   const [accounts, setAccounts] = useState<AccountRecord[]>([]);
+  const [pendingQueue, setPendingQueue] = useState<QueueItem[]>([]);
+  const [queueRunning, setQueueRunning] = useState(false);
+
+  useEffect(() => {
+    if (!session) {
+      setPendingQueue([]);
+      return;
+    }
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) return;
+    void supabase
+      .from("gmail_sync_queue")
+      .select("id, bank, email_id, email_subject, email_date, attachment_id, attachment_filename, status")
+      .eq("status", "pending")
+      .order("email_date", { ascending: false })
+      .limit(50)
+      .then(({ data }) => {
+        setPendingQueue(data ?? []);
+      });
+  }, [session]);
+
+  async function handleProcessQueue() {
+    const accessToken = session?.provider_token;
+    if (!accessToken) {
+      setState({ status: "error", message: "目前沒有 Gmail 授權，請重新登入後再試。" });
+      return;
+    }
+    setQueueRunning(true);
+    let importedTotal = 0;
+    let skippedTotal = 0;
+    const supabase = getSupabaseBrowserClient()!;
+    const markQueue = (id: string, status: string) =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase.from("gmail_sync_queue") as any).update({ status, processed_at: new Date().toISOString() }).eq("id", id);
+    const pdfParser = await loadPdfParser();
+    const settings = await fetchUserSettingsSecrets();
+    const accountsResult = await fetchAccounts();
+    if (accountsResult.status === "error") {
+      setState({ status: "error", message: accountsResult.error });
+      setQueueRunning(false);
+      return;
+    }
+    const freshAccounts = accountsResult.items;
+    setAccounts(freshAccounts);
+
+    for (const item of pendingQueue) {
+      const bank = item.bank as BankKey;
+      setState({ status: "loading", message: `處理 ${BANK_DISPLAY_NAMES[bank] ?? bank}｜${item.email_subject}...` });
+      try {
+        const defaultPw = settings.default_pdf_password ?? "";
+        const password =
+          bank === "sinopac" ? (settings.sinopac_pdf_password ?? defaultPw)
+          : bank === "esun" ? (settings.esun_pdf_password ?? defaultPw)
+          : bank === "taishin" ? (settings.taishin_pdf_password ?? defaultPw)
+          : defaultPw;
+
+        const bytes = await downloadAttachment(item.email_id, item.attachment_id, accessToken);
+        const extraction = await pdfParser.extractPdfText(bytes, password, bank);
+        const text = extraction.text;
+
+        if (!text.trim()) {
+          await markQueue(item.id, "error");
+          continue;
+        }
+
+        const isBankStatement =
+          item.email_subject.includes("綜合對帳單") ||
+          item.email_subject.includes("存款對帳單") ||
+          item.attachment_filename.includes("綜合對帳單") ||
+          item.attachment_filename.toLowerCase().includes("statement");
+
+        const parsed = isBankStatement
+          ? parseBankStatementTransactions(pdfParser, bank, text)
+          : parseCreditCardTransactions(pdfParser, bank, text);
+
+        if (parsed.length === 0) {
+          await markQueue(item.id, "skipped");
+          continue;
+        }
+
+        if (isBankStatement) {
+          const bySection = new Map<string, typeof parsed>();
+          for (const tx of parsed) {
+            const key = `${tx.currency ?? "TWD"}__${tx.subAccount ?? ""}`;
+            if (!bySection.has(key)) bySection.set(key, []);
+            bySection.get(key)!.push(tx);
+          }
+          for (const txList of bySection.values()) {
+            const currency = txList[0].currency ?? "TWD";
+            const subAccount = txList[0].subAccount;
+            const targetAccountId = resolveImportAccountId(bank, freshAccounts, currency, subAccount);
+            if (!targetAccountId) continue;
+            const csvLines = [
+              "date,amount,currency,category,description",
+              ...txList.map((tx) => `${tx.date},${tx.amount},${tx.currency},,${tx.description.replace(/,/g, " ")}`),
+            ].join("\n");
+            const result = await importTransactionsCsv(
+              targetAccountId,
+              new File([csvLines], `queue-bank-${currency}.csv`, { type: "text/csv" }),
+              `gmail_bank_${bank}` as Parameters<typeof importTransactionsCsv>[2],
+            );
+            if (result.status === "ok") {
+              importedTotal += result.imported;
+              skippedTotal += result.skipped;
+            }
+          }
+        } else {
+          const emailSendDate = item.email_date ? new Date(item.email_date) : new Date();
+          const billingMonth = `${emailSendDate.getFullYear()}-${String(emailSendDate.getMonth() + 1).padStart(2, "0")}-01`;
+          const billedParsed = parsed.map((tx) => ({ ...tx, date: billingMonth }));
+          const accountId = resolveImportAccountId(bank, freshAccounts);
+          if (!accountId) {
+            await markQueue(item.id, "skipped");
+            continue;
+          }
+          const csvLines = [
+            "date,amount,currency,category,description",
+            ...billedParsed.map((tx) => `${tx.date},${tx.amount},${tx.currency},,${tx.description.replace(/,/g, " ")}`),
+          ].join("\n");
+          const result = await importTransactionsCsv(
+            accountId,
+            new File([csvLines], "queue-import.csv", { type: "text/csv" }),
+            `gmail_pdf_${bank}` as Parameters<typeof importTransactionsCsv>[2],
+          );
+          if (result.status === "ok") {
+            importedTotal += result.imported;
+            skippedTotal += result.skipped;
+          }
+        }
+
+        await markQueue(item.id, "processed");
+      } catch {
+        await markQueue(item.id, "error");
+      }
+    }
+
+    setPendingQueue([]);
+    setQueueRunning(false);
+    setState({ status: "done", message: `佇列處理完成，新增 ${importedTotal} 筆，略過 ${skippedTotal} 筆。` });
+    onImported();
+  }
 
   async function handleConnect() {
     setState({ status: "loading", message: "載入帳戶中..." });
@@ -437,7 +597,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         setState({
           status: "error",
           message:
-            buildParseFailureMessage(email.bank, text) +
+            buildParseFailureMessage(email.bank, text, isBankStatement) +
             (extraction.attemptedOcr
               ? buildOcrDebugSuffix(extraction.debug?.ocrCandidates)
               : ""),
@@ -619,6 +779,20 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
     <article className="panel">
       <h2>Gmail 帳單同步</h2>
       <p>自動抓取永豐、玉山、國泰、台新、中信、兆豐帳單（信用卡＋綜合對帳單），匯入後以銀行標籤區分，不需要逐封指定帳戶。</p>
+
+      {pendingQueue.length > 0 && (
+        <div style={{ marginBottom: "12px", padding: "8px", background: "var(--color-surface-alt, #f5f5f5)", borderRadius: "6px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <span>伺服器已偵測到 <strong>{pendingQueue.length}</strong> 封待匯入帳單</span>
+          <button
+            className="action-button secondary"
+            onClick={() => void handleProcessQueue()}
+            disabled={queueRunning || state.status === "loading"}
+            type="button"
+          >
+            {queueRunning ? "匯入中..." : "一鍵匯入佇列"}
+          </button>
+        </div>
+      )}
 
       <button
         className="action-button"

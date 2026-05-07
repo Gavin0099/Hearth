@@ -20,6 +20,7 @@ import {
   saveFxRates,
   savePriceSnapshots,
 } from "../lib/portfolio";
+import { fetchLatestJobRun, triggerDailyUpdate, type DailyUpdateReport } from "../lib/ops";
 
 type PortfolioPanelProps = {
   session: Session | null;
@@ -138,6 +139,9 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
   const [tradeCosts, setTradeCosts] = useState<InvestmentCostRecord[]>([]);
   const [deletingPriceTicker, setDeletingPriceTicker] = useState<string | null>(null);
   const [deletingFxCurrency, setDeletingFxCurrency] = useState<string | null>(null);
+  const [lastJobRun, setLastJobRun] = useState<{ finishedAt: string; status: string; report: DailyUpdateReport | null } | null>(null);
+  const [autoUpdateRunning, setAutoUpdateRunning] = useState(false);
+  const [autoUpdateMessage, setAutoUpdateMessage] = useState<string | null>(null);
 
   const tradeCostTotalsByCurrency = tradeCosts.reduce<Record<string, { fee: number; tax: number; trades: number }>>(
     (acc, item) => {
@@ -167,13 +171,18 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
       setHistory([]);
       setFxRates([]);
       setTradeCosts([]);
-      const [holdingsResult, netWorthResult, dividendsResult, fxResult, costsResult] = await Promise.all([
+      const [holdingsResult, netWorthResult, dividendsResult, fxResult, costsResult, jobRunResult] = await Promise.all([
         fetchPortfolioHoldings(),
         fetchNetWorth(),
         fetchPortfolioDividends(),
         fetchFxRates(),
         fetchTradeCosts(),
+        fetchLatestJobRun("daily-update"),
       ]);
+      if (!cancelled && jobRunResult.status === "ok" && jobRunResult.item) {
+        const r = jobRunResult.item.report as DailyUpdateReport | null;
+        setLastJobRun({ finishedAt: jobRunResult.item.run_finished_at, status: jobRunResult.item.status, report: r });
+      }
       if (cancelled) return;
 
       if (holdingsResult.status === "error") {
@@ -209,6 +218,37 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
       cancelled = true;
     };
   }, [session, refreshKey]);
+
+  async function handleTriggerDailyUpdate() {
+    setAutoUpdateRunning(true);
+    setAutoUpdateMessage(null);
+    try {
+      const result = await triggerDailyUpdate();
+      if (result.status === "ok") {
+        const { priceSnapshots, fxRates: fx } = result.report;
+        const parts: string[] = [];
+        if (priceSnapshots.attempted > 0) {
+          parts.push(`股價：更新 ${priceSnapshots.upserted}/${priceSnapshots.attempted} 筆`);
+        }
+        if (fx.attempted > 0) {
+          parts.push(`匯率：更新 ${fx.upserted}/${fx.attempted} 筆`);
+        }
+        const errors = [...priceSnapshots.errors, ...fx.errors];
+        if (errors.length > 0) {
+          setAutoUpdateMessage(`部分錯誤：${errors.slice(0, 2).join("；")}`);
+        } else {
+          setAutoUpdateMessage(parts.length > 0 ? `更新完成。${parts.join("，")}` : "更新完成（無需更新的資料）。");
+        }
+        setLastJobRun({ finishedAt: new Date().toISOString(), status: errors.length > 0 ? "error" : "ok", report: result.report });
+      } else {
+        setAutoUpdateMessage(`錯誤：${result.error}`);
+      }
+    } catch (error) {
+      setAutoUpdateMessage(error instanceof Error ? error.message : "更新失敗");
+    } finally {
+      setAutoUpdateRunning(false);
+    }
+  }
 
   async function handleSavePrices() {
     const entries = Object.entries(priceInputs)
@@ -471,9 +511,37 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
                 </div>
               </section>
 
+              {/* 自動更新狀態 */}
+              <section className="auto-update-status">
+                <h3>股價 / 匯率自動更新</h3>
+                <p style={{ fontSize: "0.875rem", color: "var(--color-muted, #888)" }}>
+                  每個工作日 14:00（台灣時間）自動抓取台股收盤價與外幣匯率。
+                </p>
+                {lastJobRun ? (
+                  <p style={{ fontSize: "0.875rem" }}>
+                    上次更新：{new Date(lastJobRun.finishedAt).toLocaleString("zh-TW")}
+                    {" "}
+                    <span style={{ color: lastJobRun.status === "ok" ? "var(--color-success, #22c55e)" : "var(--color-error, #ef4444)" }}>
+                      {lastJobRun.status === "ok" ? "✓ 成功" : "✗ 有錯誤"}
+                    </span>
+                  </p>
+                ) : (
+                  <p style={{ fontSize: "0.875rem", color: "var(--color-muted, #888)" }}>尚無更新記錄。</p>
+                )}
+                <button
+                  className="action-button secondary"
+                  disabled={autoUpdateRunning}
+                  onClick={() => void handleTriggerDailyUpdate()}
+                  type="button"
+                >
+                  {autoUpdateRunning ? "更新中..." : "立即更新股價 / 匯率"}
+                </button>
+                {autoUpdateMessage ? <p style={{ fontSize: "0.875rem" }}>{autoUpdateMessage}</p> : null}
+              </section>
+
               {/* 更新報價 */}
               <section className="price-update">
-                <h3>更新報價</h3>
+                <h3>手動更新報價</h3>
                 <label>
                   報價日期
                   <input

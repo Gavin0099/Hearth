@@ -38,3 +38,48 @@ export async function fetchOpsSummary(
   const response = await apiFetch(`/api/ops/job-runs/summary?${params.toString()}`);
   return (await response.json()) as JobRunSummaryResponse;
 }
+
+export type JobRunLatestResponse =
+  | {
+      item: {
+        id: string;
+        job_name: string;
+        run_started_at: string;
+        run_finished_at: string;
+        status: string;
+        report: unknown;
+        created_at: string;
+      } | null;
+      healthy: boolean;
+      reason: string;
+      checked_at: string;
+      status: "ok";
+    }
+  | { code: string; error: string; status: "error" };
+
+export type DailySectionReport = {
+  attempted: number;
+  upserted: number;
+  skipped: number;
+  errors: string[];
+};
+
+export type DailyUpdateReport = {
+  priceSnapshots: DailySectionReport;
+  fxRates: DailySectionReport;
+};
+
+export type TriggerDailyUpdateResponse =
+  | { report: DailyUpdateReport; status: "ok" }
+  | { code: string; error: string; status: "error" };
+
+export async function fetchLatestJobRun(jobName = "daily-update"): Promise<JobRunLatestResponse> {
+  const params = new URLSearchParams({ job_name: jobName });
+  const response = await apiFetch(`/api/ops/job-runs/latest?${params.toString()}`);
+  return (await response.json()) as JobRunLatestResponse;
+}
+
+export async function triggerDailyUpdate(): Promise<TriggerDailyUpdateResponse> {
+  const response = await apiFetch("/api/ops/trigger-daily-update", { method: "POST" });
+  return (await response.json()) as TriggerDailyUpdateResponse;
+}

@@ -10,6 +10,7 @@ export const USER_SETTINGS_SECRET_FIELDS = [
   "sinopac_pdf_password",
   "esun_pdf_password",
   "taishin_pdf_password",
+  "gmail_refresh_token",
 ] as const;
 
 export type UserSettingsSecretField = (typeof USER_SETTINGS_SECRET_FIELDS)[number];

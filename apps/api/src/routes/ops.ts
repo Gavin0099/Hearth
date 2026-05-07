@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { ApiEnv } from "../types";
+import { runDailyUpdate } from "../cron/daily-update";
 
 type JobRunRecord = {
   id: string;
@@ -353,4 +354,21 @@ opsRoutes.get("/job-runs/summary", async (c) => {
     totals,
     status: "ok",
   });
+});
+
+opsRoutes.post("/trigger-daily-update", async (c) => {
+  const { errorResponse } = await resolveOpsContext(c);
+  if (errorResponse) {
+    return errorResponse as Response;
+  }
+
+  try {
+    const report = await runDailyUpdate(c.env);
+    return c.json({ report, status: "ok" });
+  } catch (error) {
+    return c.json(
+      { code: "internal_error", error: error instanceof Error ? error.message : String(error), status: "error" },
+      500,
+    );
+  }
 });

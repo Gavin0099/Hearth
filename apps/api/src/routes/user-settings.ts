@@ -154,6 +154,7 @@ userSettingsRoutes.put("/", async (c) => {
     clear_taishin_pdf_password?: boolean;
     gmail_connected?: boolean;
     gmail_last_sync_at?: string | null;
+    gmail_refresh_token?: string | null;
   }>();
 
   const payload: Record<string, unknown> = {
@@ -166,6 +167,7 @@ userSettingsRoutes.put("/", async (c) => {
     body.sinopac_pdf_password,
     body.esun_pdf_password,
     body.taishin_pdf_password,
+    body.gmail_refresh_token,
   ].some((value) => value !== undefined);
 
   if (wantsPasswordWrite) {
@@ -217,6 +219,12 @@ userSettingsRoutes.put("/", async (c) => {
 
   if (body.gmail_last_sync_at !== undefined) {
     payload.gmail_last_sync_at = body.gmail_last_sync_at;
+  }
+
+  if (body.gmail_refresh_token !== undefined) {
+    payload.gmail_refresh_token = body.gmail_refresh_token === null
+      ? null
+      : await encryptSecretValue(body.gmail_refresh_token, c.env);
   }
 
   const supabase = createSupabaseAdminClient(c.env);
