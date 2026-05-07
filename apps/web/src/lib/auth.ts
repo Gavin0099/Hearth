@@ -13,6 +13,10 @@ export async function signInWithGoogle() {
     options: {
       redirectTo: env.authRedirectUrl,
       scopes: "https://www.googleapis.com/auth/gmail.readonly",
+      queryParams: {
+        access_type: "offline",
+        prompt: "consent",
+      },
     },
   });
 

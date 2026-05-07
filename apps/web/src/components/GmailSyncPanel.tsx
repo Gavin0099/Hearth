@@ -632,21 +632,32 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         <>
           <p>找到 {emails.length} 封帳單。</p>
           <ul className="gmail-email-list">
-            {emails.map((email) => (
-              <li key={email.id} className="gmail-email-item">
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
-                  <span>{BANK_DISPLAY_NAMES[email.bank]} - {email.subject}</span>
-                </div>
-                <button
-                  className="action-button secondary"
-                  onClick={() => void handleSync(email)}
-                  disabled={state.status === "loading"}
-                  type="button"
-                >
-                  匯入
-                </button>
-              </li>
-            ))}
+            {emails.map((email) => {
+              const hasPdf = email.attachments.some(
+                (a) => a.mimeType === "application/pdf" || a.filename.endsWith(".pdf"),
+              );
+              return (
+                <li key={email.id} className="gmail-email-item">
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
+                    <span>{BANK_DISPLAY_NAMES[email.bank]} - {email.subject}</span>
+                    {!hasPdf && (
+                      <span style={{ fontSize: "0.8em", color: "var(--color-muted, #888)" }}>
+                        通知信，無 PDF 附件
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    className="action-button secondary"
+                    onClick={() => void handleSync(email)}
+                    disabled={state.status === "loading" || !hasPdf}
+                    type="button"
+                    title={!hasPdf ? "此信無 PDF 附件，無法匯入" : undefined}
+                  >
+                    匯入
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </>
       )}

@@ -66,10 +66,13 @@ export type GmailBillEmail = {
 export async function fetchBillEmails(
   accessToken: string,
   bank: BankKey,
-  maxResults = 4,
+  maxResults = 12,
 ): Promise<GmailBillEmail[]> {
   const sender = BANK_SENDERS[bank];
-  const query = encodeURIComponent(`from:${sender} has:attachment`);
+  const afterDate = new Date();
+  afterDate.setDate(afterDate.getDate() - 90);
+  const after = `${afterDate.getFullYear()}/${String(afterDate.getMonth() + 1).padStart(2, "0")}/${String(afterDate.getDate()).padStart(2, "0")}`;
+  const query = encodeURIComponent(`from:${sender} after:${after}`);
   const list = await gmailFetch(
     `/messages?q=${query}&maxResults=${maxResults}`,
     accessToken,
