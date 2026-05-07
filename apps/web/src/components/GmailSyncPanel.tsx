@@ -568,11 +568,16 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
           return;
         }
 
-        setState({ status: "loading", message: `準備匯入 ${parsed.length} 筆交易...` });
+        // Override posted dates → billing month (email 寄出月 = 繳款月)
+        const emailSendDate = email.date ? new Date(email.date) : new Date();
+        const billingMonth = `${emailSendDate.getFullYear()}-${String(emailSendDate.getMonth() + 1).padStart(2, "0")}-01`;
+        const billedParsed = parsed.map((tx) => ({ ...tx, date: billingMonth }));
+
+        setState({ status: "loading", message: `準備匯入 ${billedParsed.length} 筆交易...` });
 
         const csvLines = [
           "date,amount,currency,category,description",
-          ...parsed.map(
+          ...billedParsed.map(
             (tx) => `${tx.date},${tx.amount},${tx.currency},,${tx.description.replace(/,/g, " ")}`,
           ),
         ].join("\n");
