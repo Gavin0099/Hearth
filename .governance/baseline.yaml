@@ -11,9 +11,9 @@
 # ── PROVENANCE ────────────────────────────────────────────────────────────────
 schema_version: "1"
 baseline_version: 1.0.0
-source_commit: 05e65d8f9ad6ff65390c11d643119dfaff54b615
+source_commit: 002f2b80c9746a55675f7a94eef07a683395686b
 framework_root: C:\Users\reiko\Hearth\ai-governance-framework
-initialized_at: 2026-05-06T07:56:42Z
+initialized_at: 2026-05-07T03:05:30Z
 initialized_by: governance_tools/adopt_governance.py
 
 # ── INTEGRITY ─────────────────────────────────────────────────────────────────
@@ -22,7 +22,7 @@ initialized_by: governance_tools/adopt_governance.py
 sha256.AGENTS.base.md: f3daf5037a36606d546dc8d621dbb32963c6e3067f419187e4afd6f2d6dc14a7
 sha256.PLAN.md: e52cc760c60f523a7968f3b760ed6bced75ba8003609a991e789c0ec7535089c
 sha256.contract.yaml: 5ec7bb43d0ae54aeb7c0a56943591596dd5c7ff40a0f85645961b8b74b61229e
-sha256.AGENTS.md: 019475208c3f78a25c80a0d9814e6046ff5762e512fb3e2808d3a392ab2cb976
+sha256.AGENTS.md: e3077ca5d5b058df8909be09a1bfb16f320e0ef81aa26065ad296215a9b83c89
 overridable.AGENTS.base.md: protected
 overridable.PLAN.md: overridable
 overridable.contract.yaml: overridable

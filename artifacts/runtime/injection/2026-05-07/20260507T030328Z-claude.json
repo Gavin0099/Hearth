@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-05-07T03:03:28.438149+00:00",
+  "contract_injected": true,
+  "contract_hash": "5b666d1138bec868bd1975263b4467446d38c1e52b32b7c20dafadd3489646f9",
+  "scope": "fix",
+  "level": "L1",
+  "lang": "TypeScript",
+  "contract_fields": {
+    "LANG": "TypeScript",
+    "LEVEL": "L1",
+    "SCOPE": "fix",
+    "PLAN": "Gmail OAuth re-login and bill sync fix",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md",
+    "CONTEXT": "fix provider_token expiry with access_type=offline; remove has:attachment filter",
+    "PRESSURE": "SAFE"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L1\nSCOPE = fix\nPLAN = Gmail OAuth re-login and bill sync fix\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md\nCONTEXT = fix provider_token expiry with access_type=offline; remove has:attachment filter\nPRESSURE = SAFE\n\nFix Gmail OAuth re-login loop and missing recent bill emails\n"
+}

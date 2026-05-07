@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-05-07T03:02:53.662888+00:00",
+  "contract_injected": true,
+  "contract_hash": "3923a3edfe10ae57f8d6bd295463bdaa001d400b7694575c5ef2f05a7ae24a6f",
+  "scope": "fix",
+  "level": "L1",
+  "lang": "TypeScript",
+  "contract_fields": {
+    "LANG": "TypeScript",
+    "LEVEL": "L1",
+    "SCOPE": "fix",
+    "PLAN": "Gmail OAuth re-login + bill sync missing emails fix",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, apps/web/src/lib/auth.ts, apps/web/src/lib/gmail.ts, apps/web/src/components/GmailSyncPanel.tsx",
+    "CONTEXT": "fix provider_token expiry with access_type=offline; remove has:attachment filter; add 90-day window",
+    "PRESSURE": "SAFE (L1 import UX, no parser semantic change)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L1\nSCOPE = fix\nPLAN = Gmail OAuth re-login + bill sync missing emails fix\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, apps/web/src/lib/auth.ts, apps/web/src/lib/gmail.ts, apps/web/src/components/GmailSyncPanel.tsx\nCONTEXT = fix provider_token expiry with access_type=offline; remove has:attachment filter; add 90-day window\nPRESSURE = SAFE (L1 import UX, no parser semantic change)\n\nFix Gmail OAuth re-login loop and missing recent bill emails (e"
+}

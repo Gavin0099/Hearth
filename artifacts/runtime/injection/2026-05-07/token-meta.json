@@ -1,0 +1,30 @@
+{
+  "date": "2026-05-07",
+  "repo": "Hearth",
+  "provider": "claude",
+  "runs": [
+    {
+      "timestamp": "2026-05-07T03:02:43Z",
+      "artifact_path": "artifacts/runtime/injection/2026-05-07/20260507T030243Z-claude.json",
+      "task_type": "chore/governance-upgrade",
+      "total_tokens": null,
+      "token_source_summary": "claude_code_internal",
+      "token_observability_level": "none",
+      "decision_usage_allowed": false
+    },
+    {
+      "timestamp": "2026-05-07T03:03:28Z",
+      "artifact_path": "artifacts/runtime/injection/2026-05-07/20260507T030328Z-claude.json",
+      "task_type": "fix/gmail-oauth-billing",
+      "total_tokens": null,
+      "token_source_summary": "claude_code_internal",
+      "token_observability_level": "none",
+      "decision_usage_allowed": false
+    }
+  ],
+  "end_of_day_check": {
+    "no_missing_artifact_paths": true,
+    "all_decision_usage_allowed_false": true,
+    "null_token_source_explicit": true
+  }
+}

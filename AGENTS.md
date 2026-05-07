@@ -63,6 +63,44 @@ Use those files as the canonical source for repo-level risk classification, exec
 - Promote durable lessons from daily notes into `MEMORY.md`
 - Do not claim framework adoption is complete unless the local plan/memory workflow is actually being maintained
 
+## Token Run Checklist (每次任務必做)
+
+每次 AI-assisted 任務前後依序執行：
+
+### Before Task — 產生 injection artifact
+```powershell
+cd Hearth
+python -m ai-governance-framework.governance_tools.governed_prompt_bridge `
+  --provider claude `
+  --lang <TypeScript|Python|...> `
+  --level <L0|L1|L2> `
+  --scope <fix|feat|chore|review> `
+  --plan "<task summary>" `
+  --loaded "AGENTS.md, PLAN.md, governance/AGENT.md" `
+  --context "<what you're doing; NOT what you're NOT doing>" `
+  --pressure "<SAFE|ELEVATED> (<scope note>)" `
+  --prompt "<one-line task description>" `
+  --artifact-root "artifacts/runtime/injection" `
+  --format text
+```
+
+### Per Run — 最少記錄 5 項
+寫入當日 `artifacts/runtime/injection/YYYY-MM-DD/token-meta.json`：
+1. `repo` = Hearth
+2. `timestamp` = artifact timestamp
+3. `task_type` = `<scope>/<short-label>`
+4. token fields（Claude Code 固定值）：
+   - `total_tokens`: null
+   - `token_source_summary`: "claude_code_internal"
+   - `token_observability_level`: "none"
+   - `decision_usage_allowed`: false
+5. `artifact_path` = injection artifact 路徑
+
+### End-of-Day Check
+- 所有 artifact_path 都存在
+- `decision_usage_allowed` 全部為 false
+- total_tokens=null 時 source/observability 必須明確填寫
+
 ## Current Adoption Boundary
 
 As of 2026-04-01, `Hearth` has adopted:

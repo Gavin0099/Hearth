@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-05-07T03:02:43.018076+00:00",
+  "contract_injected": true,
+  "contract_hash": "b156ae7789faa0c9b1637d7fbac6a45d4abb32bc4a1ec9a7592775c53259aac0",
+  "scope": "chore",
+  "level": "L0",
+  "lang": "TypeScript/Python",
+  "contract_fields": {
+    "LANG": "TypeScript/Python",
+    "LEVEL": "L0",
+    "SCOPE": "chore",
+    "PLAN": "ai-governance-framework v1.2.0 full adopt",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, governance/ARCHITECTURE.md",
+    "CONTEXT": "upgrade framework submodule -> run adopt_governance -> install hooks -> add governance keys to AGENTS.md",
+    "PRESSURE": "SAFE"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript/Python\nLEVEL = L0\nSCOPE = chore\nPLAN = ai-governance-framework v1.2.0 full adopt\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, governance/ARCHITECTURE.md\nCONTEXT = upgrade framework submodule -> run adopt_governance -> install hooks -> add governance keys to AGENTS.md\nPRESSURE = SAFE\n\nPull latest ai-governance-framework and fully import into Hearth\n"
+}
