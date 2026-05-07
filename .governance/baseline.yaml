@@ -11,9 +11,9 @@
 # ── PROVENANCE ────────────────────────────────────────────────────────────────
 schema_version: "1"
 baseline_version: 1.0.0
-source_commit: 9574afad82e38976efe654f5640ab3dbf32f3910
+source_commit: a62a2b44df4a9c461cf929cdd05cb58dd12c4c6a
 framework_root: C:\Users\reiko\Hearth\ai-governance-framework
-initialized_at: 2026-05-07T03:14:53Z
+initialized_at: 2026-05-07T10:42:49Z
 initialized_by: governance_tools/adopt_governance.py
 
 # ── INTEGRITY ─────────────────────────────────────────────────────────────────
