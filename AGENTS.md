@@ -72,3 +72,39 @@ As of 2026-04-01, `Hearth` has adopted:
 - structured `memory/01~04` schema plus daily notes
 - explicit repo-level governance entrypoint
 - ongoing synchronization between structured memory, daily logs, and plan updates
+
+---
+
+## Repo-Specific Risk Levels
+<!-- governance:key=risk_levels -->
+
+- HIGH (L2): transaction amount/sign/category/date handling; source-hash dedupe; auth boundary / account ownership scoping / RLS paths; `supabase/migrations/`; recurring apply logic; monthly report aggregation; deploy/runtime config affecting production correctness
+- MEDIUM (L1): UI behavior changes that do not alter financial calculation logic; API ergonomics; import UX without parser semantic change
+- LOW (L0): docs-only wording; comment/formatting-only with no behavior impact
+
+## Must-Test Paths
+<!-- governance:key=must_test_paths -->
+
+- `packages/shared/src/parsers/` — any parser change needs unit + integration tests
+- `apps/api/src/routes/transactions*` — transaction write paths need auth + data-integrity tests
+- `supabase/migrations/` — schema changes need rollback evidence
+- `apps/api/src/routes/recurring*` — recurring apply logic needs idempotency tests
+- monthly report aggregation — needs numerical regression tests
+
+## L1 → L2 Escalation Triggers
+<!-- governance:key=escalation_triggers -->
+
+- Multiple viable product behaviors with different financial semantics trade-offs
+- Scope touches both parser semantics and persistence logic simultaneously
+- Changes overlap with unrelated pending work in the same areas
+- Test evidence cannot convincingly cover changed financial-correctness risk surface
+- Any change to ownership checks (`user_id` + account join scoping)
+
+## Repo-Specific Forbidden Behaviors
+<!-- governance:key=forbidden_behaviors -->
+
+- Do not weaken dedupe rules without explicit migration/backfill plan
+- Do not write directly to production DB from tests
+- Do not commit `.env` files
+- Do not treat `supabase/schema.sql` as migration source; use `supabase/migrations/` as canonical history
+- Do not skip `user_id` scoping on any financial data query

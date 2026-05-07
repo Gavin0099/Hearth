@@ -46,6 +46,9 @@
 - [x] Completed initial security-boundary consolidation (`docs/security-boundary.md`)
 - [x] Completed one-click recurring workflow (`ImportPanel`: create candidates -> templates -> apply current month)
 - [x] Synced PLAN freshness/inventory and structured memory after the latest governance refresh
+- [x] Upgraded `ai-governance-framework` to v1.2.0 (`78984f4`); full adopt (framework.lock.json, governance docs, rule packs, hooks, AGENTS.md governance keys)
+- [x] Fixed Gmail OAuth re-login loop: added `access_type=offline` to get persistent refresh token
+- [x] Fixed Gmail bill sync missing recent emails: removed `has:attachment` filter, added 90-day date range, maxResults=12
 
 ## Context
 - **Recent achievements**: portfolio analytics now include verified `net-worth-history` and `trade-costs` behavior, import dry-run preview goes through the real parser/normalization path for cashflow, excel, stock, and dividend modes, and ops expose verdict-level health instead of raw counts only.
