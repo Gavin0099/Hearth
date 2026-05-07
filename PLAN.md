@@ -3,7 +3,7 @@
 > **專案名稱**: Hearth 家庭財務管理
 > **技術棧**: React / TypeScript / Hono / Supabase / Cloudflare
 > **風險等級**: L1-L2（以 correctness / security 為優先）
-> **最後更新**: 2026-05-04
+> **最後更新**: 2026-05-07
 > **Owner**: GavinWu
 > **Freshness**: Sprint (7d)
 
@@ -42,8 +42,9 @@
 
 ---
 
-## 🔥 本輪聚焦
+## 🔥 本輪聚焦（Sprint 2026-05-07）
 
+### 已完成（本輪帶入）
 - [x] 信用卡匯入日期統一改用「入帳起息日 / posted date」
 - [x] 全信用卡 PDF/CSV parser 套用相同日期語意
 - [x] `excel-monthly` 強化（formula-heavy / recurring sidebar）
@@ -51,6 +52,17 @@
 - [x] 匯入面板新增一鍵「建立模板並套用本月」
 - [x] 初步資料安全邊界文件化（`docs/security-boundary.md`）
 - [x] 治理基線與 memory 同步
+- [x] `ai-governance-framework` 升級至 v1.2.1（full adopt + token run checklist）
+- [x] Gmail OAuth `access_type=offline`：解決每小時強制重登問題
+- [x] Gmail 帳單查詢改用 90 天日期視窗（移除 `has:attachment`，maxResults 提升至 12）
+
+### 本輪重點（進行中）
+- [ ] **Gmail 真實驗證**：重新登入一次，確認永豐 5 月帳單通知可見且通知信正確顯示「無 PDF 附件」
+- [ ] **安全邊界強化（Phase F-1）**：
+  - [ ] RLS hardening map：逐表列出 RLS 狀態與對應路由
+  - [ ] Route-by-route auth 矩陣：auth + ownership + validation + failure code
+  - [ ] Secret lifecycle policy：PDF 密碼 rotation cadence 與 plaintext 消滅目標
+- [ ] **Memory 晉升**：Gmail OAuth pattern、查詢策略晉升至 `memory/03_knowledge_base.md`
 
 ---
 
@@ -110,3 +122,5 @@
 | 2026-05-04 | Excel recurring/formula 擴充 | 支援 formula-heavy workbook 與 recurring sidebar 候選擷取 |
 | 2026-05-04 | 一鍵 recurring 套用流程 | 匯入面板新增 create-and-apply 一鍵流程 |
 | 2026-05-04 | 治理同步修正 | 修復 PLAN freshness/section inventory，更新 memory 與 validation log |
+| 2026-05-07 | 治理框架升級 | ai-governance-framework v1.2.1 full adopt，AGENTS.md governance key sections，git hooks，token run checklist |
+| 2026-05-07 | Gmail OAuth 修正 | access_type=offline 解決重登問題；移除 has:attachment，改用 90 天日期視窗 |

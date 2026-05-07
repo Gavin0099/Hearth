@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-05-07T03:15:12.148967+00:00",
+  "contract_injected": true,
+  "contract_hash": "50ff2dc8706fec121685d4b22095b784565cd1d56073432366c0b72e4031c81d",
+  "scope": "chore",
+  "level": "L0",
+  "lang": "TypeScript/Python",
+  "contract_fields": {
+    "LANG": "TypeScript/Python",
+    "LEVEL": "L0",
+    "SCOPE": "chore",
+    "PLAN": "build verification + PLAN.md sprint update",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md",
+    "CONTEXT": "verify web build passes after gmail changes; update PLAN.md with new sprint focus",
+    "PRESSURE": "SAFE"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript/Python\nLEVEL = L0\nSCOPE = chore\nPLAN = build verification + PLAN.md sprint update\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md\nCONTEXT = verify web build passes after gmail changes; update PLAN.md with new sprint focus\nPRESSURE = SAFE\n\nRun A+C: build verify then update PLAN.md next sprint\n"
+}

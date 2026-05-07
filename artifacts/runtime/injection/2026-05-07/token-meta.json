@@ -22,6 +22,16 @@
       "decision_usage_allowed": false
     }
   ],
+    {
+      "timestamp": "2026-05-07T03:15:12Z",
+      "artifact_path": "artifacts/runtime/injection/2026-05-07/20260507T031512Z-claude.json",
+      "task_type": "chore/build-verify-plan-update",
+      "total_tokens": null,
+      "token_source_summary": "claude_code_internal",
+      "token_observability_level": "none",
+      "decision_usage_allowed": false
+    }
+  ],
   "end_of_day_check": {
     "no_missing_artifact_paths": true,
     "all_decision_usage_allowed_false": true,
