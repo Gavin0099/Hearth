@@ -822,9 +822,9 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         {state.status === "loading" ? "載入中..." : "搜尋 Gmail 帳單"}
       </button>
 
-      {state.status === "loading" && <p>{state.message}</p>}
-      {state.status === "error" && <p>錯誤：{state.message}</p>}
-      {state.status === "done" && <p>{state.message}</p>}
+      {state.status === "loading" && <p className="panel-message--muted">{state.message}</p>}
+      {state.status === "error" && <p className="panel-message panel-message--error">錯誤：{state.message}</p>}
+      {state.status === "done" && <p className="panel-message">{state.message}</p>}
 
       {emails.length > 0 && (
         <>

@@ -153,8 +153,8 @@ export function MonthlyReportPanel({ session, refreshKey }: MonthlyReportPanelPr
         </div>
       ) : null}
 
-      {state.status === "loading" ? <p>正在彙整...</p> : null}
-      {state.status === "error" ? <p>月報載入失敗: {state.message}</p> : null}
+      {state.status === "loading" ? <p className="panel-message--muted">正在彙整...</p> : null}
+      {state.status === "error" ? <p className="panel-message panel-message--error">月報載入失敗: {state.message}</p> : null}
 
       {state.status === "success" ? (() => {
         const { summary } = state.report;

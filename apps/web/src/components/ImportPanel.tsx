@@ -279,8 +279,8 @@ export function ImportPanel({
     <article className="panel">
       <h2>資料匯入</h2>
       {!session ? <p>登入後可以匯入標準化交易 CSV。</p> : null}
-      {state.status === "loading" ? <p>正在載入可用帳戶...</p> : null}
-      {state.status === "error" ? <p>匯入面板載入失敗: {state.message}</p> : null}
+      {state.status === "loading" ? <p className="panel-message--muted">正在載入可用帳戶...</p> : null}
+      {state.status === "error" ? <p className="panel-message panel-message--error">匯入面板載入失敗: {state.message}</p> : null}
       {state.status === "success" ? (
         <>
           <p>
