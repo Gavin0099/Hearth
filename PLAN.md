@@ -67,7 +67,7 @@
 - [ ] **部署操作（手動）**：Cloudflare Dashboard 設定 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`
 - [ ] **驗證**：重新登入 app 一次，確認 provider_refresh_token 被捕獲並儲存
 - [ ] **Gmail 真實驗證**：確認永豐 5 月帳單可見、通知信顯示「無 PDF 附件」
-- [ ] **Item 3 續作**：等用戶提供 國泰/中信/台新/兆豐 PDF 樣本 → 新增 bank parsers
+- [ ] **Item 3 續作（先縮範圍）**：只收斂 玉山/永豐 銀行帳戶 PDF 樣本回歸（見 `docs/bank-statement-sample-checklist-esun-sinopac.md`）
 - [ ] **安全邊界強化（Phase F-1）**：
   - [ ] RLS hardening map：逐表列出 RLS 狀態與對應路由
   - [ ] Route-by-route auth 矩陣：auth + ownership + validation + failure code
@@ -136,3 +136,4 @@
 | 2026-05-07 | 股價/匯率/Gmail 排程功能 | Items 1-4：PortfolioPanel cron status UI、trigger API、server-side Gmail cron、queue UI |
 | 2026-05-07 | 治理框架升級至 c5152c1 | v1.2.0+post，drift check 17/17 PASS（expansion_boundary 也通過） |
 | 2026-05-16 | readiness gate 強化 | first-release-readiness 改為 fail-fast；修正 3 個 API 測試期望並恢復 173/173；codeonly readiness PASS |
+| 2026-05-16 | 銀行樣本範圍收斂 | Item 3 續作先聚焦玉山/永豐，新增專用樣本回歸 checklist |
