@@ -11,9 +11,9 @@
     "LEVEL": "L1",
     "SCOPE": "fix",
     "PLAN": "Gmail OAuth re-login and bill sync fix",
-    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md",
     "CONTEXT": "fix provider_token expiry with access_type=offline; remove has:attachment filter",
     "PRESSURE": "SAFE"
   },
-  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L1\nSCOPE = fix\nPLAN = Gmail OAuth re-login and bill sync fix\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md\nCONTEXT = fix provider_token expiry with access_type=offline; remove has:attachment filter\nPRESSURE = SAFE\n\nFix Gmail OAuth re-login loop and missing recent bill emails\n"
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L1\nSCOPE = fix\nPLAN = Gmail OAuth re-login and bill sync fix\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md\nCONTEXT = fix provider_token expiry with access_type=offline; remove has:attachment filter\nPRESSURE = SAFE\n\nFix Gmail OAuth re-login loop and missing recent bill emails\n"
 }
