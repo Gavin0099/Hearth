@@ -85,6 +85,7 @@ body {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .app-nav-tab {
@@ -406,6 +407,7 @@ textarea:focus-visible {
 .home-kpi-card span {
   color: #7f7164;
   font-size: 0.84rem;
+  line-height: 1.45;
 }
 
 .action-button {
@@ -607,6 +609,7 @@ textarea:focus-visible {
   font-size: 0.88rem;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
+  min-height: 36px;
 }
 
 .ui-tabs-trigger[data-state="active"] {
@@ -876,6 +879,12 @@ textarea:focus-visible {
   font: inherit;
   background: #fffdf9;
   color: #241b15;
+}
+
+input,
+select,
+textarea {
+  min-height: 40px;
 }
 
 /* ── Monthly Report Panel ─────────────────────────────────────────── */
@@ -2121,6 +2130,69 @@ tr:hover .ledger-delete-btn {
   .app-shell {
     width: min(100vw - 24px, 1120px);
     padding-top: 28px;
+  }
+
+  .app-header {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 14px;
+  }
+
+  .app-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    margin: 0 -2px;
+    scrollbar-width: thin;
+  }
+
+  .app-nav-tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 8px 14px;
+  }
+
+  .auth-compact {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .home-overview,
+  .home-primary-workspace,
+  .home-secondary-workspace {
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .home-hero-card,
+  .home-kpi-card,
+  .panel {
+    border-radius: 18px;
+  }
+
+  .panel {
+    padding: 18px;
+  }
+
+  .home-kpi-card strong {
+    font-size: 1rem;
+  }
+
+  .month-nav {
+    gap: 0.35rem;
+  }
+
+  .month-nav .action-button {
+    min-height: 32px;
+    min-width: 32px;
+    padding: 2px 8px;
+  }
+
+  .month-label {
+    min-width: 5.2rem;
   }
 
   .review-header,

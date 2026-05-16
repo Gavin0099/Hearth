@@ -179,3 +179,10 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
     - improved home typography rhythm and atmospheric background layering
     - added panel/KPI depth-on-hover
     - added staged section enter motion with `prefers-reduced-motion` fallback
+- `npm --workspace @hearth/web run check` -> pass
+- `npm --workspace @hearth/web run build` -> pass
+- Scope covered:
+  - UI Step 5 mobile/accessibility pass:
+    - mobile header/nav layout and horizontal tab scrolling improved
+    - touch target sizing and panel spacing adjusted for handheld use
+    - focus/interaction consistency retained while keeping existing logic unchanged

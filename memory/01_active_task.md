@@ -57,11 +57,12 @@
 - [x] Completed UI foundation Step 1+2 baseline: Warm Finance Console design tokens + shadcn-style primitive layer (`Button/Card/Badge/Tabs/Dialog/Skeleton`) with Radix tabs/dialog base
 - [x] Completed UI Step 3 baseline: home information architecture now separates primary workflow (Gmail sync/import) from secondary analytics panels
 - [x] Completed UI Step 4 first visual polish slice: typography hierarchy + panel depth + staged home-enter motion with reduced-motion accessibility fallback
+- [x] Completed UI Step 5 baseline: mobile/accessibility pass for nav flow, touch targets, and small-screen spacing consistency
 
 ## Context
 - **Recent achievements**: portfolio analytics now include verified `net-worth-history` and `trade-costs` behavior, import dry-run preview goes through the real parser/normalization path for cashflow, excel, stock, and dividend modes, and ops expose verdict-level health instead of raw counts only.
 - **Validation baseline**: `npm run readiness:first:strict` now passes end-to-end; `npm --workspace @hearth/api run test` passes at `173/173`; `npm --workspace @hearth/web run check` and `npm --workspace @hearth/web run build` pass with largest JS chunk reduced below warning threshold.
-- **Next steps**: proceed to UI Step 5 responsive/accessibility pass (mobile nav/card spacing audit + keyboard focus consistency audit) before wider component-by-component restyling.
+- **Next steps**: start selective component restyling pass (Gmail/Import panel internals first) to align detailed form/table surfaces with the updated home visual system.
 
 
 
