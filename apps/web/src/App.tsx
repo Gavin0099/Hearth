@@ -1,23 +1,50 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { env } from "./env";
-import { AccountsPanel } from "./components/AccountsPanel";
 import { AuthPanel } from "./components/AuthPanel";
-import { BankLedgerPanel } from "./components/BankLedgerPanel";
-import { CreditCardLedgerPanel } from "./components/CreditCardLedgerPanel";
-import { GmailSyncPanel } from "./components/GmailSyncPanel";
-import { ImportPanel } from "./components/ImportPanel";
-import { InsurancePanel } from "./components/InsurancePanel";
-import { LoanPanel } from "./components/LoanPanel";
-import { MonthlyReportPanel } from "./components/MonthlyReportPanel";
-import { PortfolioPanel } from "./components/PortfolioPanel";
-import { RecurringTemplatesPanel } from "./components/RecurringTemplatesPanel";
-import { OpsPanel } from "./components/OpsPanel";
-import { SettingsPanel } from "./components/SettingsPanel";
-import { TransactionsPanel } from "./components/TransactionsPanel";
 import { getCurrentSession, signInWithGoogle, signOut } from "./lib/auth";
 import { apiFetch } from "./lib/api";
 import { getSupabaseBrowserClient } from "./lib/supabase";
+
+const AccountsPanel = lazy(() =>
+  import("./components/AccountsPanel").then((module) => ({ default: module.AccountsPanel })),
+);
+const BankLedgerPanel = lazy(() =>
+  import("./components/BankLedgerPanel").then((module) => ({ default: module.BankLedgerPanel })),
+);
+const CreditCardLedgerPanel = lazy(() =>
+  import("./components/CreditCardLedgerPanel").then((module) => ({ default: module.CreditCardLedgerPanel })),
+);
+const GmailSyncPanel = lazy(() =>
+  import("./components/GmailSyncPanel").then((module) => ({ default: module.GmailSyncPanel })),
+);
+const ImportPanel = lazy(() =>
+  import("./components/ImportPanel").then((module) => ({ default: module.ImportPanel })),
+);
+const InsurancePanel = lazy(() =>
+  import("./components/InsurancePanel").then((module) => ({ default: module.InsurancePanel })),
+);
+const LoanPanel = lazy(() =>
+  import("./components/LoanPanel").then((module) => ({ default: module.LoanPanel })),
+);
+const MonthlyReportPanel = lazy(() =>
+  import("./components/MonthlyReportPanel").then((module) => ({ default: module.MonthlyReportPanel })),
+);
+const PortfolioPanel = lazy(() =>
+  import("./components/PortfolioPanel").then((module) => ({ default: module.PortfolioPanel })),
+);
+const RecurringTemplatesPanel = lazy(() =>
+  import("./components/RecurringTemplatesPanel").then((module) => ({ default: module.RecurringTemplatesPanel })),
+);
+const OpsPanel = lazy(() =>
+  import("./components/OpsPanel").then((module) => ({ default: module.OpsPanel })),
+);
+const SettingsPanel = lazy(() =>
+  import("./components/SettingsPanel").then((module) => ({ default: module.SettingsPanel })),
+);
+const TransactionsPanel = lazy(() =>
+  import("./components/TransactionsPanel").then((module) => ({ default: module.TransactionsPanel })),
+);
 
 type AppView = "home" | "ledger" | "bank" | "loan" | "insurance" | "settings";
 
@@ -179,58 +206,70 @@ export function App() {
       </header>
 
       {currentView === "home" && (
-        <section className="two-column">
-          <MonthlyReportPanel refreshKey={reportRefreshKey} session={session} />
-          <PortfolioPanel refreshKey={reportRefreshKey} session={session} />
-          <GmailSyncPanel session={session} onImported={handleImported} />
-          <ImportPanel
-            onImported={handleImported}
-            onRecurringTemplatesCreated={handleRecurringTemplatesCreated}
-            session={session}
-          />
-          <RecurringTemplatesPanel
-            onTemplatesApplied={handleRecurringTemplatesApplied}
-            refreshKey={recurringRefreshKey}
-            session={session}
-          />
-          <TransactionsPanel
-            onTransactionCreated={handleTransactionCreated}
-            refreshKey={reportRefreshKey}
-            session={session}
-          />
-          <AccountsPanel session={session} />
-        </section>
+        <Suspense fallback={<section className="two-column"><p>載入中...</p></section>}>
+          <section className="two-column">
+            <MonthlyReportPanel refreshKey={reportRefreshKey} session={session} />
+            <PortfolioPanel refreshKey={reportRefreshKey} session={session} />
+            <GmailSyncPanel session={session} onImported={handleImported} />
+            <ImportPanel
+              onImported={handleImported}
+              onRecurringTemplatesCreated={handleRecurringTemplatesCreated}
+              session={session}
+            />
+            <RecurringTemplatesPanel
+              onTemplatesApplied={handleRecurringTemplatesApplied}
+              refreshKey={recurringRefreshKey}
+              session={session}
+            />
+            <TransactionsPanel
+              onTransactionCreated={handleTransactionCreated}
+              refreshKey={reportRefreshKey}
+              session={session}
+            />
+            <AccountsPanel session={session} />
+          </section>
+        </Suspense>
       )}
 
       {currentView === "ledger" && (
-        <section className="two-column">
-          <CreditCardLedgerPanel session={session} />
-        </section>
+        <Suspense fallback={<section className="two-column"><p>載入中...</p></section>}>
+          <section className="two-column">
+            <CreditCardLedgerPanel session={session} />
+          </section>
+        </Suspense>
       )}
 
       {currentView === "bank" && (
-        <section className="two-column">
-          <BankLedgerPanel session={session} />
-        </section>
+        <Suspense fallback={<section className="two-column"><p>載入中...</p></section>}>
+          <section className="two-column">
+            <BankLedgerPanel session={session} />
+          </section>
+        </Suspense>
       )}
 
       {currentView === "loan" && (
-        <section className="two-column">
-          <LoanPanel session={session} />
-        </section>
+        <Suspense fallback={<section className="two-column"><p>載入中...</p></section>}>
+          <section className="two-column">
+            <LoanPanel session={session} />
+          </section>
+        </Suspense>
       )}
 
       {currentView === "insurance" && (
-        <section className="two-column">
-          <InsurancePanel session={session} />
-        </section>
+        <Suspense fallback={<section className="two-column"><p>載入中...</p></section>}>
+          <section className="two-column">
+            <InsurancePanel session={session} />
+          </section>
+        </Suspense>
       )}
 
       {currentView === "settings" && (
-        <section className="two-column">
-          <SettingsPanel session={session} />
-          <OpsPanel session={session} />
-        </section>
+        <Suspense fallback={<section className="two-column"><p>載入中...</p></section>}>
+          <section className="two-column">
+            <SettingsPanel session={session} />
+            <OpsPanel session={session} />
+          </section>
+        </Suspense>
       )}
     </main>
   );

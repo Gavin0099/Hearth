@@ -141,3 +141,12 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
   - enforced required memory references in injection artifacts (`memory/01_active_task.md`, `memory/04_validation_log.md`, `MEMORY.md`)
   - repaired historical `artifacts/runtime/injection/2026-05-07/*.json` `LOADED` fields to satisfy current governance baseline
   - wired injection-memory validation into first-release readiness flow (`scripts/first-release-readiness.ps1`)
+- `npm run readiness:first:strict` -> pass (governance gate + env validation + api tests + api build + web check + web build)
+- `npm --workspace @hearth/api run test` -> pass (`173/173`)
+- `npm --workspace @hearth/web run check` -> pass
+- `npm --workspace @hearth/web run build` -> pass
+- Scope covered:
+  - readiness gate now fails fast on non-zero `npm` step exit codes
+  - API test expectations aligned with current import/ops behavior
+  - web bundle optimization: Vite vendor chunks split by package + route/panel lazy loading in `App.tsx`
+  - post-optimization build no longer emits `>500k` JS chunk warning (largest JS chunk: `vendor_pdfjs-dist` ~446k)
