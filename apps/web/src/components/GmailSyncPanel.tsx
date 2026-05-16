@@ -69,15 +69,17 @@ async function extractPdfTextWithOptionalBlankFallback(
   password: string,
   bank: BankKey,
 ) {
+  const cloneBytes = () => new Uint8Array(bytes);
+
   try {
-    return await pdfParser.extractPdfText(bytes, password, bank);
+    return await pdfParser.extractPdfText(cloneBytes(), password, bank);
   } catch (error) {
     if (!password.trim()) {
       throw error;
     }
 
     // Some statements are unencrypted. Retry with blank password if passworded open fails.
-    return pdfParser.extractPdfText(bytes, "", bank);
+    return pdfParser.extractPdfText(cloneBytes(), "", bank);
   }
 }
 
