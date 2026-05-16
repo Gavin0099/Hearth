@@ -17,6 +17,7 @@
   --color-border: rgba(91, 66, 44, 0.14);
   --color-focus: rgba(140, 77, 34, 0.36);
   --color-text-muted: #6b5c4e;
+  --font-heading: "Noto Serif TC", "PMingLiU", serif;
   --color-success: #2c8f5b;
   --color-warning: #b57618;
   --color-error: #b43d2c;
@@ -32,6 +33,10 @@
 body {
   margin: 0;
   min-width: 320px;
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(255, 220, 163, 0.35), transparent 30%),
+    radial-gradient(circle at 86% 18%, rgba(234, 199, 148, 0.26), transparent 32%),
+    linear-gradient(180deg, #fff9ef 0%, #f4efe6 100%);
 }
 
 .app-shell {
@@ -50,13 +55,16 @@ body {
 
 .app-header-title h1 {
   margin: 0 0 4px;
-  font-size: 2rem;
+  font-size: clamp(2rem, 3.8vw, 2.65rem);
   font-weight: 700;
+  letter-spacing: 0.01em;
+  font-family: var(--font-heading);
 }
 
 .app-header-title p {
   margin: 0;
   color: var(--color-text-muted);
+  letter-spacing: 0.02em;
 }
 
 .build-badge {
@@ -240,6 +248,13 @@ textarea:focus-visible {
 
 .panel {
   padding: 24px;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.panel:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 40px rgba(76, 58, 41, 0.12);
+  border-color: rgba(140, 77, 34, 0.22);
 }
 
 .home-overview {
@@ -285,12 +300,47 @@ textarea:focus-visible {
   box-shadow: 0 16px 38px rgba(76, 58, 41, 0.1);
 }
 
+.home-overview > *,
+.home-primary-workspace > *,
+.home-secondary-workspace > * {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: home-enter 0.45s ease forwards;
+}
+
+.home-overview > *:nth-child(2) { animation-delay: 0.06s; }
+.home-primary-workspace > *:nth-child(1) { animation-delay: 0.12s; }
+.home-primary-workspace > *:nth-child(2) { animation-delay: 0.16s; }
+.home-secondary-workspace > *:nth-child(1) { animation-delay: 0.2s; }
+.home-secondary-workspace > *:nth-child(2) { animation-delay: 0.24s; }
+
+@keyframes home-enter {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .home-hero-card {
   padding: 18px 20px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.home-hero-card::after {
+  content: "";
+  position: absolute;
+  right: -80px;
+  top: -80px;
+  width: 220px;
+  height: 220px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(140, 77, 34, 0.12), transparent 68%);
+  pointer-events: none;
 }
 
 .home-hero-card h2 {
@@ -332,6 +382,12 @@ textarea:focus-visible {
 
 .home-kpi-card {
   padding: 14px 16px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.home-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(76, 58, 41, 0.1);
 }
 
 .home-kpi-card p {
@@ -342,8 +398,9 @@ textarea:focus-visible {
 
 .home-kpi-card strong {
   display: block;
-  font-size: 1rem;
+  font-size: 1.06rem;
   margin-bottom: 4px;
+  letter-spacing: 0.01em;
 }
 
 .home-kpi-card span {
