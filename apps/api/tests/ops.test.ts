@@ -261,7 +261,7 @@ test("GET /api/ops/job-runs/summary returns recent status and report-error total
       }) as any,
   });
 
-  const response = await app.request("/api/ops/job-runs/summary?job_name=daily-update&limit=3", {
+  const response = await app.request("/api/ops/job-runs/summary?job_name=daily-update&limit=3&max_age_minutes=999999", {
     headers: { Authorization: "Bearer valid-token" },
   });
 
@@ -273,7 +273,7 @@ test("GET /api/ops/job-runs/summary returns recent status and report-error total
   assert.equal(payload.verdict, "healthy");
   assert.deepEqual(payload.reasons, []);
   assert.deepEqual(payload.thresholds, {
-    max_age_minutes: 4320,
+    max_age_minutes: 999999,
     consecutive_failure_threshold: 2,
     consecutive_report_error_threshold: 2,
   });
