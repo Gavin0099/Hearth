@@ -33,17 +33,11 @@ const MonthlyReportPanel = lazy(() =>
 const PortfolioPanel = lazy(() =>
   import("./components/PortfolioPanel").then((module) => ({ default: module.PortfolioPanel })),
 );
-const RecurringTemplatesPanel = lazy(() =>
-  import("./components/RecurringTemplatesPanel").then((module) => ({ default: module.RecurringTemplatesPanel })),
-);
 const OpsPanel = lazy(() =>
   import("./components/OpsPanel").then((module) => ({ default: module.OpsPanel })),
 );
 const SettingsPanel = lazy(() =>
   import("./components/SettingsPanel").then((module) => ({ default: module.SettingsPanel })),
-);
-const TransactionsPanel = lazy(() =>
-  import("./components/TransactionsPanel").then((module) => ({ default: module.TransactionsPanel })),
 );
 
 type AppView = "home" | "ledger" | "bank" | "loan" | "insurance" | "settings";
@@ -67,7 +61,6 @@ export function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [reportRefreshKey, setReportRefreshKey] = useState(0);
-  const [recurringRefreshKey, setRecurringRefreshKey] = useState(0);
   const [currentView, setCurrentView] = useState<AppView>("home");
   const isSupabaseConfigured = Boolean(env.supabaseUrl && env.supabaseAnonKey);
 
@@ -134,10 +127,7 @@ export function App() {
     }
   }
 
-  function handleTransactionCreated() { setReportRefreshKey((k) => k + 1); }
   function handleImported() { setReportRefreshKey((k) => k + 1); }
-  function handleRecurringTemplatesCreated() { setRecurringRefreshKey((k) => k + 1); }
-  function handleRecurringTemplatesApplied() { setReportRefreshKey((k) => k + 1); }
 
   return (
     <main className="app-shell">
@@ -213,17 +203,7 @@ export function App() {
             <GmailSyncPanel session={session} onImported={handleImported} />
             <ImportPanel
               onImported={handleImported}
-              onRecurringTemplatesCreated={handleRecurringTemplatesCreated}
-              session={session}
-            />
-            <RecurringTemplatesPanel
-              onTemplatesApplied={handleRecurringTemplatesApplied}
-              refreshKey={recurringRefreshKey}
-              session={session}
-            />
-            <TransactionsPanel
-              onTransactionCreated={handleTransactionCreated}
-              refreshKey={reportRefreshKey}
+              onRecurringTemplatesCreated={() => {}}
               session={session}
             />
             <AccountsPanel session={session} />
