@@ -517,7 +517,7 @@ export function TransactionsPanel({
                         ) : null}
                         {" | "}
                         <span
-                          className={`tx-amount ${Number(transaction.amount) >= 0 ? "cat-drill-amount--income" : "cat-drill-amount--expense"}`}
+                          className={`tx-amount ${Number(transaction.amount) >= 0 ? "amount--income" : "amount--expense"}`}
                         >
                           {fmtTwd.format(Number(transaction.amount))}
                         </span>{" "}
@@ -543,15 +543,14 @@ export function TransactionsPanel({
               </ul>
               {hasMore ? (
                 <button
-                  className="action-button secondary"
+                  className="action-button secondary action-button--compact"
                   type="button"
                   onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-                  style={{ marginTop: "0.5rem", fontSize: "0.85rem" }}
                 >
                   載入更多（剩餘 {allTransactions.length - visibleCount} 筆）
                 </button>
               ) : allTransactions.length > PAGE_SIZE ? (
-                <p style={{ fontSize: "0.8rem", color: "#888", marginTop: "0.25rem" }}>
+                <p className="tx-all-shown">
                   已顯示全部 {allTransactions.length} 筆
                 </p>
               ) : null}

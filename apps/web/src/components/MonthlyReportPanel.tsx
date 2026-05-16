@@ -215,7 +215,7 @@ export function MonthlyReportPanel({ session, refreshKey }: MonthlyReportPanelPr
                                     <span className="cat-drill-date">{tx.date}</span>
                                     <span className="cat-drill-desc">{tx.description ?? "—"}</span>
                                     <span
-                                      className={`cat-drill-amount ${Number(tx.amount) >= 0 ? "cat-drill-amount--income" : "cat-drill-amount--expense"}`}
+                                      className={`cat-drill-amount ${Number(tx.amount) >= 0 ? "amount--income" : "amount--expense"}`}
                                     >
                                       {fmtTwd.format(Number(tx.amount))}
                                     </span>

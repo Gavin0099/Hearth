@@ -60,53 +60,37 @@ export function OpsPanel({ session }: OpsPanelProps) {
         ? "Warning"
         : "Critical";
 
-  const healthColor =
+  const healthClass =
     !latest || verdict === null
-      ? "#888"
+      ? ""
       : verdict === "healthy"
-        ? "#4caf50"
+        ? "amount--income"
         : verdict === "warning"
-          ? "#d89b1d"
-          : "#f44336";
+          ? "ops-health--warning"
+          : "amount--expense";
 
   return (
     <article className="panel">
       <h2>
         Ops
-        <span
-          style={{
-            marginLeft: "0.5rem",
-            fontSize: "0.8rem",
-            color: healthColor,
-            fontWeight: "normal",
-          }}
-        >
+        <span className={`ops-health-badge ${healthClass}`}>
           {healthLabel}
         </span>
       </h2>
 
       {loading && !summary ? (
-        <p>Loading...</p>
+        <p className="panel-message--muted">Loading...</p>
       ) : summary?.status === "error" ? (
-        <p>Load failed: {summary.error}</p>
+        <p className="panel-message panel-message--error">Load failed: {summary.error}</p>
       ) : (
         <>
           {latest ? (
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                fontSize: "0.85rem",
-                marginBottom: "0.75rem",
-              }}
-            >
+            <table className="ops-table">
               <tbody>
                 <tr>
-                  <th style={{ textAlign: "left", padding: "2px 8px 2px 0", color: "#aaa", fontWeight: "normal" }}>
-                    Latest Run
-                  </th>
+                  <th>Latest Run</th>
                   <td>{formatRelative(latest.run_finished_at)}</td>
-                  <td style={{ color: "#888", paddingLeft: "0.5rem" }}>
+                  <td className="muted">
                     {new Date(latest.run_finished_at).toLocaleString("zh-TW", {
                       month: "2-digit",
                       day: "2-digit",
@@ -116,39 +100,33 @@ export function OpsPanel({ session }: OpsPanelProps) {
                   </td>
                 </tr>
                 <tr>
-                  <th style={{ textAlign: "left", padding: "2px 8px 2px 0", color: "#aaa", fontWeight: "normal" }}>
-                    Status
-                  </th>
-                  <td style={{ color: latest.status === "ok" ? "#4caf50" : "#f44336" }}>
+                  <th>Status</th>
+                  <td className={latest.status === "ok" ? "amount--income" : "amount--expense"}>
                     {latest.status === "ok" ? "ok" : latest.status}
                   </td>
                 </tr>
                 {latest.age_minutes !== null ? (
                   <tr>
-                    <th style={{ textAlign: "left", padding: "2px 8px 2px 0", color: "#aaa", fontWeight: "normal" }}>
-                      Age
-                    </th>
+                    <th>Age</th>
                     <td>{latest.age_minutes} min</td>
                   </tr>
                 ) : null}
                 {latest.report_error_sections.length > 0 ? (
                   <tr>
-                    <th style={{ textAlign: "left", padding: "2px 8px 2px 0", color: "#aaa", fontWeight: "normal" }}>
-                      Error Sections
-                    </th>
-                    <td style={{ color: "#f44336" }}>{latest.report_error_sections.join(", ")}</td>
+                    <th>Error Sections</th>
+                    <td className="amount--expense">{latest.report_error_sections.join(", ")}</td>
                   </tr>
                 ) : null}
               </tbody>
             </table>
           ) : (
-            <p style={{ color: "#888", fontSize: "0.85rem" }}>No persisted daily-update runs yet.</p>
+            <p className="ops-no-data">No persisted daily-update runs yet.</p>
           )}
 
           {reasons.length > 0 ? (
-            <div style={{ marginBottom: "0.75rem" }}>
+            <div className="ops-reasons">
               {reasons.map((reason) => (
-                <p key={reason} style={{ margin: "0.2rem 0", fontSize: "0.8rem", color: healthColor }}>
+                <p key={reason} className={`ops-reason ${healthClass}`}>
                   {reason}
                 </p>
               ))}
@@ -156,7 +134,7 @@ export function OpsPanel({ session }: OpsPanelProps) {
           ) : null}
 
           {thresholds ? (
-            <p style={{ fontSize: "0.8rem", color: "#888", margin: "0 0 0.75rem" }}>
+            <p className="ops-policy">
               Policy: max age{" "}
               {thresholds.max_age_minutes === null ? "disabled" : `${thresholds.max_age_minutes} min`}
               , consecutive status errors {thresholds.consecutive_failure_threshold}, consecutive report-error
@@ -166,12 +144,12 @@ export function OpsPanel({ session }: OpsPanelProps) {
 
           {totals && totals.runs > 0 ? (
             <>
-              <p style={{ fontSize: "0.8rem", color: "#aaa", margin: 0 }}>
+              <p className="ops-totals">
                 Last {totals.runs} run(s): ok {totals.ok}, error {totals.error}
                 {totals.with_report_errors > 0 ? `, report-error runs ${totals.with_report_errors}` : ""}
               </p>
               {(totals.consecutive_status_errors > 0 || totals.consecutive_report_error_runs > 0) ? (
-                <p style={{ fontSize: "0.8rem", color: healthColor, margin: "0.35rem 0 0" }}>
+                <p className={`ops-consecutive ${healthClass}`}>
                   Consecutive status errors {totals.consecutive_status_errors}; consecutive report-error runs {totals.consecutive_report_error_runs}
                 </p>
               ) : null}
@@ -189,7 +167,7 @@ export function OpsPanel({ session }: OpsPanelProps) {
           </button>
 
           {refreshedAt ? (
-            <p style={{ fontSize: "0.75rem", color: "#666", marginTop: "0.25rem" }}>
+            <p className="ops-refreshed">
               Refreshed at {refreshedAt.toLocaleTimeString("zh-TW")}
             </p>
           ) : null}

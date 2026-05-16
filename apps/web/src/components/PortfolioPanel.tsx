@@ -90,10 +90,10 @@ function NetWorthChart({ snapshots }: { snapshots: NetWorthSnapshotRecord[] }) {
 
   return (
     <section className="nw-chart-section">
-      <h3 style={{ margin: "0 0 6px", fontSize: "0.85rem", color: "#888" }}>淨值走勢（近 90 天）</h3>
+      <h3 className="nw-chart-title">淨值走勢（近 90 天）</h3>
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        style={{ width: "100%", height: "auto", display: "block" }}
+        className="nw-chart-svg"
         aria-hidden="true"
       >
         <defs>
@@ -457,7 +457,7 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
                         const marketValue = closePrice !== null ? shares * closePrice : null;
                         const pnl = marketValue !== null ? marketValue - costBasis : null;
                         const pnlPct = pnl !== null && costBasis > 0 ? (pnl / costBasis) * 100 : null;
-                        const pnlColor = pnl === null ? undefined : pnl >= 0 ? "#4caf50" : "#f44336";
+                        const pnlColor = pnl === null ? undefined : pnl >= 0 ? "var(--color-income)" : "var(--color-expense)";
 
                         return (
                           <tr key={item.id}>
@@ -514,19 +514,19 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
               {/* 自動更新狀態 */}
               <section className="auto-update-status">
                 <h3>股價 / 匯率自動更新</h3>
-                <p style={{ fontSize: "0.875rem", color: "var(--color-muted, #888)" }}>
+                <p className="portfolio-status-text">
                   每個工作日 14:00（台灣時間）自動抓取台股收盤價與外幣匯率。
                 </p>
                 {lastJobRun ? (
-                  <p style={{ fontSize: "0.875rem" }}>
+                  <p className="portfolio-status-text">
                     上次更新：{new Date(lastJobRun.finishedAt).toLocaleString("zh-TW")}
                     {" "}
-                    <span style={{ color: lastJobRun.status === "ok" ? "var(--color-success, #22c55e)" : "var(--color-error, #ef4444)" }}>
+                    <span className={lastJobRun.status === "ok" ? "amount--income" : "amount--expense"}>
                       {lastJobRun.status === "ok" ? "✓ 成功" : "✗ 有錯誤"}
                     </span>
                   </p>
                 ) : (
-                  <p style={{ fontSize: "0.875rem", color: "var(--color-muted, #888)" }}>尚無更新記錄。</p>
+                  <p className="portfolio-status-text">尚無更新記錄。</p>
                 )}
                 <button
                   className="action-button secondary"
@@ -536,7 +536,7 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
                 >
                   {autoUpdateRunning ? "更新中..." : "立即更新股價 / 匯率"}
                 </button>
-                {autoUpdateMessage ? <p style={{ fontSize: "0.875rem" }}>{autoUpdateMessage}</p> : null}
+                {autoUpdateMessage ? <p className="portfolio-status-text">{autoUpdateMessage}</p> : null}
               </section>
 
               {/* 更新報價 */}
@@ -699,9 +699,9 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
                   </tbody>
                 </table>
               </div>
-              <div style={{ marginTop: "0.75rem", fontSize: "0.85rem", color: "#666" }}>
+              <div className="portfolio-cost-summary">
                 {Object.entries(tradeCostTotalsByCurrency).map(([currency, totals]) => (
-                  <p key={currency} style={{ margin: "0.2rem 0" }}>
+                  <p key={currency}>
                     {currency} 合計: {totals.trades} 筆交易，手續費 {formatAmount(totals.fee, currency)}，
                     證交稅 {formatAmount(totals.tax, currency)}，總成本 {formatAmount(totals.fee + totals.tax, currency)}
                   </p>

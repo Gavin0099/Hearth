@@ -2327,6 +2327,10 @@ tr:hover .ledger-delete-btn {
   font-weight: normal;
 }
 
+.ops-health--warning {
+  color: var(--color-warning);
+}
+
 .ops-table {
   width: 100%;
   border-collapse: collapse;
@@ -2426,13 +2430,13 @@ tr:hover .ledger-delete-btn {
   margin-top: 0.25rem;
 }
 
-/* ── Monthly Report Panel ─────────────────────────────────────────── */
+/* ── Amount color modifiers (shared across panels) ───────────────── */
 
-.cat-drill-amount--income {
+.amount--income {
   color: var(--color-income);
 }
 
-.cat-drill-amount--expense {
+.amount--expense {
   color: var(--color-expense);
 }
 
