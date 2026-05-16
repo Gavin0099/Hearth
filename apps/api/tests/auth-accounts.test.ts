@@ -2573,7 +2573,7 @@ test("POST /api/import/credit-card-tw prefers posted date over transaction date"
       date: "2026-04-02",
       amount: -500,
       currency: "TWD",
-      category: "其他",
+      category: "生活",
       description: "超商",
       source: "credit_card_tw",
       source_hash: insertedRows[0]?.source_hash,

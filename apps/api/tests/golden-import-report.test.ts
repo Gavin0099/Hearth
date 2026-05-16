@@ -215,7 +215,7 @@ const excelMonthlyGoldenCases: Array<{
             ["category", "description", "2026/05/01"],
             ["固定支出", "", ""],
             ["", "房租", ""],
-            ["餐飲", "早餐", { f: "SUM(80,20)" }],
+            ["餐飲", "早餐", { f: "SUM(80,20)", v: 100 }],
           ],
         },
       ]),
