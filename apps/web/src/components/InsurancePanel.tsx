@@ -389,12 +389,11 @@ export function InsurancePanel({ session }: { session: Session | null }) {
                           {rec.insuranceType === "investment" ? "投資型" : "非投資型"}
                         </span>
                         <button
-                          className="ledger-delete-btn always-visible"
+                          className="ledger-delete-btn always-visible ml-auto"
                           disabled={deletingIds.has(`${snap.id}-${idx}`)}
                           onClick={() => void handleDeleteRecord(snap, idx)}
                           type="button"
                           aria-label="刪除此保單"
-                          style={{ marginLeft: "auto" }}
                         >×</button>
                       </div>
                       <div className="insurance-card-body detail-grid">

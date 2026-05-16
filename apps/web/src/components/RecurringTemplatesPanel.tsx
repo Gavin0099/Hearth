@@ -410,7 +410,7 @@ export function RecurringTemplatesPanel({
                         value={editForm.amount}
                         onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))}
                         placeholder="金額（可留空）"
-                        style={{ width: "7rem" }}
+                        className="input-w-md"
                       />
                       <input
                         type="number"
@@ -419,7 +419,7 @@ export function RecurringTemplatesPanel({
                         value={editForm.anchor_day}
                         onChange={(e) => setEditForm((f) => ({ ...f, anchor_day: e.target.value }))}
                         placeholder="扣款日"
-                        style={{ width: "5rem" }}
+                        className="input-w-sm"
                       />
                       {editError ? <span className="account-edit-error">{editError}</span> : null}
                     </div>
