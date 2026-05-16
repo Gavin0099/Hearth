@@ -248,6 +248,43 @@ textarea:focus-visible {
   margin-bottom: 18px;
 }
 
+.home-primary-workspace,
+.home-secondary-workspace {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.home-section-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.home-section-title-row h3 {
+  margin: 0;
+  font-size: 1.02rem;
+}
+
+.home-section-title-row p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.84rem;
+}
+
+.home-primary-grid,
+.home-secondary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.home-primary-grid .panel {
+  border-color: rgba(140, 77, 34, 0.22);
+  box-shadow: 0 16px 38px rgba(76, 58, 41, 0.1);
+}
+
 .home-hero-card {
   padding: 18px 20px;
   display: flex;
@@ -2012,6 +2049,16 @@ tr:hover .ledger-delete-btn {
 
   .home-hero-card {
     flex-direction: column;
+  }
+
+  .home-section-title-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .home-primary-grid,
+  .home-secondary-grid {
+    grid-template-columns: 1fr;
   }
 
   .app-shell {

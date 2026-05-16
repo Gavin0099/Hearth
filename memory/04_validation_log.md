@@ -165,3 +165,10 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
     - shadcn-style primitives added (`Button`, `Card`, `Badge`, `Tabs`, `Dialog`, `Skeleton`)
     - Radix base added for tabs/dialog interactions
     - unified `hover/focus-visible/disabled/loading` interaction states for button layer
+- `npm --workspace @hearth/web run check` -> pass
+- `npm --workspace @hearth/web run build` -> pass
+- Scope covered:
+  - homepage information architecture reorder:
+    - primary workspace focuses on Gmail sync + import
+    - secondary workspace defers monthly report / portfolio / accounts
+    - responsive section hierarchy styles added without changing import/report logic
