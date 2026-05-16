@@ -150,3 +150,10 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
   - API test expectations aligned with current import/ops behavior
   - web bundle optimization: Vite vendor chunks split by package + route/panel lazy loading in `App.tsx`
   - post-optimization build no longer emits `>500k` JS chunk warning (largest JS chunk: `vendor_pdfjs-dist` ~446k)
+- `npm --workspace @hearth/web run check` -> pass
+- `npm --workspace @hearth/web run build` -> pass
+- Scope covered:
+  - home UI simplified (hide recurring/manual panels)
+  - Gmail PDF import fallback now retries blank password on failure
+  - fixed Gmail fallback detached-buffer worker error by cloning bytes per parse attempt
+  - first home UI uplift slice landed (status hero + semantic color tokens + clearer button hierarchy)
