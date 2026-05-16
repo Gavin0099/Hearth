@@ -800,7 +800,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       <p>自動抓取永豐、玉山、國泰、台新、中信、兆豐帳單（信用卡＋綜合對帳單），匯入後以銀行標籤區分，不需要逐封指定帳戶。</p>
 
       {pendingQueue.length > 0 && (
-        <div style={{ marginBottom: "12px", padding: "8px", background: "var(--color-surface-alt, #f5f5f5)", borderRadius: "6px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+        <div className="queue-notice">
           <span>伺服器已偵測到 <strong>{pendingQueue.length}</strong> 封待匯入帳單</span>
           <button
             className="action-button secondary"
@@ -836,10 +836,10 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
               );
               return (
                 <li key={email.id} className="gmail-email-item">
-                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
+                  <div className="gmail-email-meta">
                     <span>{BANK_DISPLAY_NAMES[email.bank]} - {email.subject}</span>
                     {!hasPdf && (
-                      <span style={{ fontSize: "0.8em", color: "var(--color-muted, #888)" }}>
+                      <span className="gmail-email-no-pdf">
                         通知信，無 PDF 附件
                       </span>
                     )}

@@ -390,19 +390,19 @@ export function ImportPanel({
                   </div>
                 ) : null}
                 {filePreview.warnings.length > 0 ? (
-                  <p style={{ fontSize: "0.8rem", color: "#8a6a2f", margin: "8px 0 0" }}>
+                  <p className="import-preview-warning-text">
                     warnings: {filePreview.warnings.join(" | ")}
                   </p>
                 ) : null}
                 {filePreview.errors.length > 0 ? (
-                  <p style={{ fontSize: "0.8rem", color: "#b23b2a", margin: "8px 0 0" }}>
+                  <p className="import-preview-error-text">
                     errors: {filePreview.errors.slice(0, 3).join(" | ")}
                     {filePreview.errors.length > 3 ? ` | ...共 ${filePreview.errors.length} 筆` : ""}
                   </p>
                 ) : null}
               </div>
             ) : null}
-            {previewLoading ? <p style={{ fontSize: "0.85rem", color: "#666" }}>預覽解析中...</p> : null}
+            {previewLoading ? <p className="import-preview-loading">預覽解析中...</p> : null}
             <button className="action-button" disabled={isSubmitting} type="submit">
               {isSubmitting
                 ? "匯入中..."

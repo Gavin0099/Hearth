@@ -159,6 +159,31 @@ textarea:focus-visible {
   font-size: 0.9rem;
 }
 
+.gmail-email-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.gmail-email-no-pdf {
+  font-size: 0.8em;
+  color: var(--color-text-muted);
+}
+
+.queue-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+
 .hero {
   display: grid;
   gap: 24px;
@@ -1154,6 +1179,23 @@ textarea {
   max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.import-preview-warning-text {
+  font-size: 0.8rem;
+  color: var(--color-warning);
+  margin: 8px 0 0;
+}
+
+.import-preview-error-text {
+  font-size: 0.8rem;
+  color: var(--color-error);
+  margin: 8px 0 0;
+}
+
+.import-preview-loading {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
 }
 
 /* ── Credit Card Ledger Panel ─────────────────────────────────────── */
