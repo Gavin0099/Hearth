@@ -215,7 +215,7 @@ export function App() {
               <article className="home-kpi-card">
                 <p>主工作流</p>
                 <strong>匯入帳單</strong>
-                <span>先跑 Gmail 同步與匯入面板</span>
+                <span>先完成 Gmail 同步，再執行資料匯入</span>
               </article>
               <article className="home-kpi-card">
                 <p>檢查重點</p>
@@ -229,16 +229,32 @@ export function App() {
               </article>
             </div>
           </section>
-          <section className="two-column">
-            <MonthlyReportPanel refreshKey={reportRefreshKey} session={session} />
-            <PortfolioPanel refreshKey={reportRefreshKey} session={session} />
-            <GmailSyncPanel session={session} onImported={handleImported} />
-            <ImportPanel
-              onImported={handleImported}
-              onRecurringTemplatesCreated={() => {}}
-              session={session}
-            />
-            <AccountsPanel session={session} />
+
+          <section className="home-primary-workspace">
+            <div className="home-section-title-row">
+              <h3>核心工作區</h3>
+              <p>每日優先完成的兩個步驟</p>
+            </div>
+            <div className="home-primary-grid">
+              <GmailSyncPanel session={session} onImported={handleImported} />
+              <ImportPanel
+                onImported={handleImported}
+                onRecurringTemplatesCreated={() => {}}
+                session={session}
+              />
+            </div>
+          </section>
+
+          <section className="home-secondary-workspace">
+            <div className="home-section-title-row">
+              <h3>進階檢視</h3>
+              <p>匯入完成後再檢查月報、淨值與帳戶設定</p>
+            </div>
+            <div className="home-secondary-grid">
+              <MonthlyReportPanel refreshKey={reportRefreshKey} session={session} />
+              <PortfolioPanel refreshKey={reportRefreshKey} session={session} />
+              <AccountsPanel session={session} />
+            </div>
           </section>
         </Suspense>
       )}
