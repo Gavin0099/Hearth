@@ -133,3 +133,11 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - python ai-governance-framework/governance_tools/plan_freshness.py --file PLAN.md --format json -> `FRESH` (2026-05-04, 0 days)
 - python ai-governance-framework/governance_tools/adopt_governance.py --target . --refresh -> baseline inventory refreshed
 - python ai-governance-framework/governance_tools/governance_drift_checker.py --repo . --framework-root ai-governance-framework --format json -> pass (all checks ok)
+
+## 2026-05-16
+
+- `npm run governance:validate-injection-memory` -> pass
+- Scope covered:
+  - enforced required memory references in injection artifacts (`memory/01_active_task.md`, `memory/04_validation_log.md`, `MEMORY.md`)
+  - repaired historical `artifacts/runtime/injection/2026-05-07/*.json` `LOADED` fields to satisfy current governance baseline
+  - wired injection-memory validation into first-release readiness flow (`scripts/first-release-readiness.ps1`)

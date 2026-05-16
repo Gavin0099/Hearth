@@ -49,11 +49,13 @@
 - [x] Upgraded `ai-governance-framework` to v1.2.0 (`78984f4`); full adopt (framework.lock.json, governance docs, rule packs, hooks, AGENTS.md governance keys)
 - [x] Fixed Gmail OAuth re-login loop: added `access_type=offline` to get persistent refresh token
 - [x] Fixed Gmail bill sync missing recent emails: removed `has:attachment` filter, added 90-day date range, maxResults=12
+- [x] Backfilled historical injection artifacts so required memory files are explicitly present in `LOADED`
+- [x] Added automated injection-memory validation script and wired it into first-release readiness flow
 
 ## Context
 - **Recent achievements**: portfolio analytics now include verified `net-worth-history` and `trade-costs` behavior, import dry-run preview goes through the real parser/normalization path for cashflow, excel, stock, and dividend modes, and ops expose verdict-level health instead of raw counts only.
 - **Validation baseline**: `npm.cmd --workspace @hearth/api run build` and `npm.cmd --workspace @hearth/api run test` currently pass at `170/170`; `npm.cmd --workspace @hearth/web run check` and `npm.cmd --workspace @hearth/web run build` were also restored earlier in the current closure cycle.
-- **Next steps**: keep pushing new `P0 correctness / ops` slices instead of reopening the already-closed A1/B1/A2/C1/C2/D1/E1 batch, and keep structured memory aligned with the real validation state.
+- **Next steps**: keep pushing new `P0 correctness / ops` slices instead of reopening the already-closed A1/B1/A2/C1/C2/D1/E1 batch, keep structured memory aligned with the real validation state, and ensure new injection artifacts keep passing memory-load validation.
 
 
 
