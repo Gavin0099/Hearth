@@ -157,3 +157,11 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
   - Gmail PDF import fallback now retries blank password on failure
   - fixed Gmail fallback detached-buffer worker error by cloning bytes per parse attempt
   - first home UI uplift slice landed (status hero + semantic color tokens + clearer button hierarchy)
+- `npm --workspace @hearth/web run check` -> pass
+- `npm --workspace @hearth/web run build` -> pass
+- Scope covered:
+  - UI foundation step 1+2 landed without touching feature logic:
+    - Warm Finance Console design tokens formalized in global CSS
+    - shadcn-style primitives added (`Button`, `Card`, `Badge`, `Tabs`, `Dialog`, `Skeleton`)
+    - Radix base added for tabs/dialog interactions
+    - unified `hover/focus-visible/disabled/loading` interaction states for button layer
