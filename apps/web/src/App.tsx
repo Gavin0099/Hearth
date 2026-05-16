@@ -129,6 +129,9 @@ export function App() {
 
   function handleImported() { setReportRefreshKey((k) => k + 1); }
 
+  const authStatusLabel = authLoading ? "登入狀態檢查中" : session ? "已登入" : "未登入";
+  const authStatusTone = authLoading ? "warning" : session ? "success" : "info";
+
   return (
     <main className="app-shell">
       <header className="app-header">
@@ -197,6 +200,35 @@ export function App() {
 
       {currentView === "home" && (
         <Suspense fallback={<section className="two-column"><p>載入中...</p></section>}>
+          <section className="home-overview">
+            <article className="home-hero-card">
+              <div>
+                <h2>本週操作重點</h2>
+                <p>先完成匯入與分類，再回頭檢視月報與淨值變化。</p>
+              </div>
+              <div className="home-status-row">
+                <span className={`status-pill ${authStatusTone}`}>{authStatusLabel}</span>
+                <span className="status-pill info">目前頁籤：總覽</span>
+              </div>
+            </article>
+            <div className="home-kpi-grid">
+              <article className="home-kpi-card">
+                <p>主工作流</p>
+                <strong>匯入帳單</strong>
+                <span>先跑 Gmail 同步與匯入面板</span>
+              </article>
+              <article className="home-kpi-card">
+                <p>檢查重點</p>
+                <strong>月報分類</strong>
+                <span>確認未分類是否下降</span>
+              </article>
+              <article className="home-kpi-card">
+                <p>收斂指標</p>
+                <strong>淨值趨勢</strong>
+                <span>觀察 90 天曲線是否合理</span>
+              </article>
+            </div>
+          </section>
           <section className="two-column">
             <MonthlyReportPanel refreshKey={reportRefreshKey} session={session} />
             <PortfolioPanel refreshKey={reportRefreshKey} session={session} />
