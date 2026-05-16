@@ -172,3 +172,10 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
     - primary workspace focuses on Gmail sync + import
     - secondary workspace defers monthly report / portfolio / accounts
     - responsive section hierarchy styles added without changing import/report logic
+- `npm --workspace @hearth/web run check` -> pass
+- `npm --workspace @hearth/web run build` -> pass
+- Scope covered:
+  - UI Step 4 visual polish first slice:
+    - improved home typography rhythm and atmospheric background layering
+    - added panel/KPI depth-on-hover
+    - added staged section enter motion with `prefers-reduced-motion` fallback
