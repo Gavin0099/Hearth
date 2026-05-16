@@ -20,8 +20,7 @@
       "token_source_summary": "claude_code_internal",
       "token_observability_level": "none",
       "decision_usage_allowed": false
-    }
-  ],
+    },
     {
       "timestamp": "2026-05-07T03:15:12Z",
       "artifact_path": "artifacts/runtime/injection/2026-05-07/20260507T031512Z-claude.json",

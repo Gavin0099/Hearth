@@ -76,13 +76,15 @@ python -m ai-governance-framework.governance_tools.governed_prompt_bridge `
   --level <L0|L1|L2> `
   --scope <fix|feat|chore|review> `
   --plan "<task summary>" `
-  --loaded "AGENTS.md, PLAN.md, governance/AGENT.md" `
+  --loaded "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/02_tech_stack.md|memory/02_project_facts.md, memory/03_knowledge_base.md|memory/03_decisions.md, memory/04_validation_log.md, MEMORY.md, memory/YYYY-MM-DD.md(today), memory/YYYY-MM-DD.md(yesterday)" `
   --context "<what you're doing; NOT what you're NOT doing>" `
   --pressure "<SAFE|ELEVATED> (<scope note>)" `
   --prompt "<one-line task description>" `
   --artifact-root "artifacts/runtime/injection" `
   --format text
 ```
+
+最低要求：`LOADED` 必須至少包含 `memory/01_active_task.md`、`memory/04_validation_log.md`、`MEMORY.md`。
 
 ### Per Run — 最少記錄 5 項
 寫入當日 `artifacts/runtime/injection/YYYY-MM-DD/token-meta.json`：
