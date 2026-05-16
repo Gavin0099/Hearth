@@ -6,6 +6,19 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Invoke-Step {
+  param(
+    [string]$Name,
+    [scriptblock]$Action
+  )
+
+  Write-Host "[readiness] $Name"
+  & $Action
+  if ($LASTEXITCODE -ne 0) {
+    throw "[readiness] $Name failed with exit code $LASTEXITCODE"
+  }
+}
+
 function Get-EnvValue {
   param(
     [string]$Path,
@@ -49,14 +62,11 @@ Write-Host "[readiness] Hearth first-release readiness check"
 Write-Host "[readiness] repo: D:\Hearth"
 
 if (-not $SkipGovernanceGate) {
-  Write-Host "[readiness] governance phase gate"
-  npm run governance:gate
-  Write-Host "[readiness] injection memory validation"
-  npm run governance:validate-injection-memory
+  Invoke-Step -Name "governance phase gate" -Action { npm run governance:gate }
+  Invoke-Step -Name "injection memory validation" -Action { npm run governance:validate-injection-memory }
 } else {
   Write-Host "[readiness] governance phase gate skipped"
-  Write-Host "[readiness] injection memory validation"
-  npm run governance:validate-injection-memory
+  Invoke-Step -Name "injection memory validation" -Action { npm run governance:validate-injection-memory }
 }
 
 if (-not $SkipEnv) {
@@ -72,18 +82,14 @@ if (-not $SkipEnv) {
   Write-Host "[readiness] env validation skipped"
 }
 
-Write-Host "[readiness] api tests"
-npm --workspace @hearth/api run test
+Invoke-Step -Name "api tests" -Action { npm --workspace @hearth/api run test }
 
-Write-Host "[readiness] api build"
-npm --workspace @hearth/api run build
+Invoke-Step -Name "api build" -Action { npm --workspace @hearth/api run build }
 
-Write-Host "[readiness] web check"
-npm --workspace @hearth/web run check
+Invoke-Step -Name "web check" -Action { npm --workspace @hearth/web run check }
 
 if (-not $SkipWebBuild) {
-  Write-Host "[readiness] web build"
-  npm --workspace @hearth/web run build
+  Invoke-Step -Name "web build" -Action { npm --workspace @hearth/web run build }
 } else {
   Write-Host "[readiness] web build skipped"
 }
