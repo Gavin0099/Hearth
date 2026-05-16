@@ -218,7 +218,7 @@ export function AccountsPanel({ session }: AccountsPanelProps) {
           <button className="action-button" disabled={isSubmitting} type="submit">
             {isSubmitting ? "建立中..." : "新增帳戶"}
           </button>
-          {formError ? <p>建立失敗: {formError}</p> : null}
+          {formError ? <p className="panel-message panel-message--error">建立失敗: {formError}</p> : null}
           {formSuccess ? <p>{formSuccess}</p> : null}
         </form>
       ) : null}
@@ -248,7 +248,7 @@ export function AccountsPanel({ session }: AccountsPanelProps) {
                       value={editForm.currency}
                       onChange={(e) => setEditForm((f) => ({ ...f, currency: e.target.value.toUpperCase() }))}
                       placeholder="幣別"
-                      style={{ width: "5rem" }}
+                      className="input-w-sm"
                     />
                     <input
                       value={editForm.broker}

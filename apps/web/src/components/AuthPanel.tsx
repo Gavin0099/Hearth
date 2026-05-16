@@ -103,14 +103,14 @@ export function AuthPanel({
       {!isConfigured ? (
         <p>尚未設定 Supabase 前端環境變數，Auth UI 無法啟動。</p>
       ) : null}
-      {isLoading ? <p>正在檢查目前 session...</p> : null}
-      {error ? <p>Auth 錯誤: {error}</p> : null}
+      {isLoading ? <p className="panel-message--muted">正在檢查目前 session...</p> : null}
+      {error ? <p className="panel-message panel-message--error">Auth 錯誤: {error}</p> : null}
       {user ? (
         <>
           <p>目前登入者: {user.email ?? user.id}</p>
-          {workerUser.status === "loading" ? <p>正在確認 Worker 端使用者狀態...</p> : null}
+          {workerUser.status === "loading" ? <p className="panel-message--muted">正在確認 Worker 端使用者狀態...</p> : null}
           {workerUser.status === "error" ? (
-            <p>Worker 驗證失敗: {workerUser.message}</p>
+            <p className="panel-message panel-message--error">Worker 驗證失敗: {workerUser.message}</p>
           ) : null}
           {workerUser.status === "success" ? (
             <p>Worker 已辨識使用者: {workerUser.email ?? workerUser.id}</p>

@@ -347,8 +347,8 @@ export function InsurancePanel({ session }: { session: Session | null }) {
         </div>
       )}
 
-      {loading && <p>載入中...</p>}
-      {loadError && <p>載入失敗：{loadError}</p>}
+      {loading && <p className="panel-message--muted">載入中...</p>}
+      {loadError && <p className="panel-message panel-message--error">載入失敗：{loadError}</p>}
       {!loading && snapshots.length === 0 && !showForm && (
         <p>尚無保險資料。請在 Gmail 同步中匯入永豐綜合對帳單，或點上方「手動新增」。</p>
       )}

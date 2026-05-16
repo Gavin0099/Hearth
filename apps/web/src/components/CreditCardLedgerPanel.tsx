@@ -475,8 +475,8 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
         </section>
       </div>
 
-      {loadError && <p>載入失敗：{loadError}</p>}
-      {loading && <p>載入中...</p>}
+      {loadError && <p className="panel-message panel-message--error">載入失敗：{loadError}</p>}
+      {loading && <p className="panel-message--muted">載入中...</p>}
 
       {!loading && creditTransactions.length > 0 && (
         <div className="review-workspace">

@@ -298,8 +298,8 @@ export function RecurringTemplatesPanel({
     <article className="panel">
       <h2>週期模板</h2>
       {!session ? <p>登入後可以管理固定支出與週期模板。</p> : null}
-      {state.status === "loading" ? <p>正在載入週期模板...</p> : null}
-      {state.status === "error" ? <p>週期模板載入失敗: {state.message}</p> : null}
+      {state.status === "loading" ? <p className="panel-message--muted">正在載入週期模板...</p> : null}
+      {state.status === "error" ? <p className="panel-message panel-message--error">週期模板載入失敗: {state.message}</p> : null}
       {session ? (
         <form className="account-form" onSubmit={handleSubmit}>
           {state.status === "success" ? (

@@ -318,8 +318,8 @@ export function TransactionsPanel({
     <article className="panel">
       <h2>手動交易</h2>
       {!session ? <p>登入後可以建立第一筆手動交易，直接餵給月報。</p> : null}
-      {state.status === "loading" ? <p>正在載入帳戶與交易資料...</p> : null}
-      {state.status === "error" ? <p>交易面板載入失敗: {state.message}</p> : null}
+      {state.status === "loading" ? <p className="panel-message--muted">正在載入帳戶與交易資料...</p> : null}
+      {state.status === "error" ? <p className="panel-message panel-message--error">交易面板載入失敗: {state.message}</p> : null}
       {state.status === "success" ? (
         <>
           <form className="account-form" onSubmit={handleSubmit}>

@@ -2303,6 +2303,12 @@ tr:hover .ledger-delete-btn {
   }
 }
 
+/* ── Layout utilities ────────────────────────────────────────────── */
+
+.ml-auto { margin-left: auto; }
+.input-w-sm { width: 5rem; }
+.input-w-md { width: 7rem; }
+
 /* ── Panel status messages ────────────────────────────────────────── */
 
 .panel-message {

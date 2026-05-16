@@ -387,8 +387,8 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
       <h2>投資組合</h2>
 
       {!session ? <p>登入後會載入你目前的持倉清單。</p> : null}
-      {state.status === "loading" ? <p>正在載入...</p> : null}
-      {state.status === "error" ? <p>載入失敗: {state.message}</p> : null}
+      {state.status === "loading" ? <p className="panel-message--muted">正在載入...</p> : null}
+      {state.status === "error" ? <p className="panel-message panel-message--error">載入失敗: {state.message}</p> : null}
 
       {state.status === "success" ? (
         <>
