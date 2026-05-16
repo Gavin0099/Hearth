@@ -379,12 +379,19 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
           : bank === "taishin" ? (settings.taishin_pdf_password ?? defaultPw)
           : defaultPw;
 
+        const isBankStatement =
+          item.email_subject.includes("綜合對帳單") ||
+          item.email_subject.includes("存款對帳單") ||
+          item.attachment_filename.includes("綜合對帳單") ||
+          item.attachment_filename.toLowerCase().includes("statement");
+
         const bytes = await downloadAttachment(item.email_id, item.attachment_id, accessToken);
         const extraction = await extractPdfTextWithOptionalBlankFallback(
           pdfParser,
           bytes,
           password,
           bank,
+          { probeEsunAssets: isBankStatement },
         );
         const text = extraction.text;
 
@@ -392,12 +399,6 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
           await markQueue(item.id, "error");
           continue;
         }
-
-        const isBankStatement =
-          item.email_subject.includes("綜合對帳單") ||
-          item.email_subject.includes("存款對帳單") ||
-          item.attachment_filename.includes("綜合對帳單") ||
-          item.attachment_filename.toLowerCase().includes("statement");
 
         const parsed = isBankStatement
           ? parseBankStatementTransactions(pdfParser, bank, text)
@@ -587,6 +588,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         bytes,
         password,
         email.bank,
+        { probeEsunAssets: isBankStatement },
       );
       const text = extraction.text;
 
