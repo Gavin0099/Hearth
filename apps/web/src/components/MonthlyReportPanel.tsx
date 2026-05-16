@@ -215,8 +215,7 @@ export function MonthlyReportPanel({ session, refreshKey }: MonthlyReportPanelPr
                                     <span className="cat-drill-date">{tx.date}</span>
                                     <span className="cat-drill-desc">{tx.description ?? "—"}</span>
                                     <span
-                                      className="cat-drill-amount"
-                                      style={{ color: Number(tx.amount) >= 0 ? "#4caf50" : "#f44336" }}
+                                      className={`cat-drill-amount ${Number(tx.amount) >= 0 ? "cat-drill-amount--income" : "cat-drill-amount--expense"}`}
                                     >
                                       {fmtTwd.format(Number(tx.amount))}
                                     </span>
@@ -236,19 +235,17 @@ export function MonthlyReportPanel({ session, refreshKey }: MonthlyReportPanelPr
                 </ul>
                 {hiddenCount > 0 ? (
                   <button
-                    className="action-button"
+                    className="action-button action-button--compact"
                     type="button"
                     onClick={() => setShowAllCategories(true)}
-                    style={{ marginTop: "0.25rem", fontSize: "0.8rem" }}
                   >
                     顯示剩餘 {hiddenCount} 筆分類
                   </button>
                 ) : showAllCategories && categories.length > 6 ? (
                   <button
-                    className="action-button"
+                    className="action-button action-button--compact"
                     type="button"
                     onClick={() => setShowAllCategories(false)}
-                    style={{ marginTop: "0.25rem", fontSize: "0.8rem" }}
                   >
                     收起
                   </button>

@@ -22,6 +22,8 @@
   --color-warning: #b57618;
   --color-error: #b43d2c;
   --color-info: #3b6da8;
+  --color-income: var(--color-success);
+  --color-expense: var(--color-error);
   line-height: 1.5;
   font-weight: 400;
 }
@@ -140,6 +142,11 @@ textarea:focus-visible {
 .action-button.small {
   padding: 6px 14px;
   font-size: 0.875rem;
+}
+
+.action-button--compact {
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
 }
 
 .gmail-email-list {
@@ -2294,6 +2301,139 @@ tr:hover .ledger-delete-btn {
     align-items: stretch;
     flex-direction: column;
   }
+}
+
+/* ── Panel status messages ────────────────────────────────────────── */
+
+.panel-message {
+  margin: 4px 0;
+  font-size: 0.9rem;
+}
+
+.panel-message--error {
+  color: var(--color-error);
+}
+
+.panel-message--muted {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+/* ── Ops Panel ────────────────────────────────────────────────────── */
+
+.ops-health-badge {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: normal;
+}
+
+.ops-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.ops-table th {
+  text-align: left;
+  padding: 2px 8px 2px 0;
+  color: var(--color-text-muted);
+  font-weight: normal;
+}
+
+.ops-table td.muted {
+  color: var(--color-text-muted);
+  padding-left: 0.5rem;
+}
+
+.ops-no-data {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.ops-reasons {
+  margin-bottom: 0.75rem;
+}
+
+.ops-reason {
+  margin: 0.2rem 0;
+  font-size: 0.8rem;
+}
+
+.ops-policy {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin: 0 0 0.75rem;
+}
+
+.ops-totals {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.ops-consecutive {
+  font-size: 0.8rem;
+  margin: 0.35rem 0 0;
+}
+
+.ops-refreshed {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
+}
+
+/* ── Portfolio Panel ──────────────────────────────────────────────── */
+
+.nw-chart-title {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.nw-chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.portfolio-status-text {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.portfolio-cost-summary {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.portfolio-cost-summary p {
+  margin: 0.2rem 0;
+}
+
+/* ── Transactions Panel ───────────────────────────────────────────── */
+
+.tx-count-info {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin: 0 0 8px;
+}
+
+.tx-all-shown {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
+}
+
+/* ── Monthly Report Panel ─────────────────────────────────────────── */
+
+.cat-drill-amount--income {
+  color: var(--color-income);
+}
+
+.cat-drill-amount--expense {
+  color: var(--color-expense);
 }
 
 @media (prefers-reduced-motion: reduce) {

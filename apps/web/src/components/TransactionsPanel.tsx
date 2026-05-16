@@ -449,7 +449,7 @@ export function TransactionsPanel({
 
           {allTransactions.length > 0 ? (
             <>
-              <p style={{ fontSize: "0.8rem", color: "#888", margin: "0 0 8px" }}>
+              <p className="tx-count-info">
                 共 {allTransactions.length} 筆
                 {allTransactions.length > visibleCount ? `，顯示前 ${visibleCount} 筆` : ""}
               </p>
@@ -517,8 +517,7 @@ export function TransactionsPanel({
                         ) : null}
                         {" | "}
                         <span
-                          className="tx-amount"
-                          style={{ color: Number(transaction.amount) >= 0 ? "#4caf50" : "#f44336" }}
+                          className={`tx-amount ${Number(transaction.amount) >= 0 ? "cat-drill-amount--income" : "cat-drill-amount--expense"}`}
                         >
                           {fmtTwd.format(Number(transaction.amount))}
                         </span>{" "}
