@@ -15,6 +15,7 @@
     "deploy:first": "powershell -ExecutionPolicy Bypass -File scripts/cloudflare-first-deploy.ps1 -AutoCreatePagesProject",
     "smoke:postdeploy": "powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1",
     "governance:gate": "powershell -ExecutionPolicy Bypass -File scripts/governance-phase-gate.ps1",
+    "governance:validate-injection-memory": "powershell -ExecutionPolicy Bypass -File scripts/validate-injection-memory.ps1",
     "readiness:first:codeonly": "powershell -ExecutionPolicy Bypass -File scripts/first-release-readiness.ps1 -SkipEnv -SkipWebBuild -SkipGovernanceGate",
     "readiness:first": "powershell -ExecutionPolicy Bypass -File scripts/first-release-readiness.ps1 -SkipWebBuild",
     "readiness:first:strict": "powershell -ExecutionPolicy Bypass -File scripts/first-release-readiness.ps1",

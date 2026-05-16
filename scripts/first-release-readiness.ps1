@@ -51,8 +51,12 @@ Write-Host "[readiness] repo: D:\Hearth"
 if (-not $SkipGovernanceGate) {
   Write-Host "[readiness] governance phase gate"
   npm run governance:gate
+  Write-Host "[readiness] injection memory validation"
+  npm run governance:validate-injection-memory
 } else {
   Write-Host "[readiness] governance phase gate skipped"
+  Write-Host "[readiness] injection memory validation"
+  npm run governance:validate-injection-memory
 }
 
 if (-not $SkipEnv) {
