@@ -3,7 +3,7 @@
 > **專案名稱**: Hearth 家庭財務管理
 > **技術棧**: React / TypeScript / Hono / Supabase / Cloudflare
 > **風險等級**: L1-L2（以 correctness / security 為優先）
-> **最後更新**: 2026-05-07
+> **最後更新**: 2026-05-16
 > **Owner**: GavinWu
 > **Freshness**: Sprint (7d)
 
@@ -42,7 +42,7 @@
 
 ---
 
-## 🔥 本輪聚焦（Sprint 2026-05-07）
+## 🔥 本輪聚焦（Sprint 2026-05-16）
 
 ### 已完成（本輪帶入）
 - [x] 信用卡匯入日期統一改用「入帳起息日 / posted date」
@@ -135,3 +135,4 @@
 | 2026-05-07 | Gmail OAuth 修正 | access_type=offline 解決重登問題；移除 has:attachment，改用 90 天日期視窗 |
 | 2026-05-07 | 股價/匯率/Gmail 排程功能 | Items 1-4：PortfolioPanel cron status UI、trigger API、server-side Gmail cron、queue UI |
 | 2026-05-07 | 治理框架升級至 c5152c1 | v1.2.0+post，drift check 17/17 PASS（expansion_boundary 也通過） |
+| 2026-05-16 | readiness gate 強化 | first-release-readiness 改為 fail-fast；修正 3 個 API 測試期望並恢復 173/173；codeonly readiness PASS |
