@@ -63,6 +63,24 @@ async function loadPdfParser() {
   return import("../lib/pdf-parser");
 }
 
+async function extractPdfTextWithOptionalBlankFallback(
+  pdfParser: PdfParserModule,
+  bytes: Uint8Array,
+  password: string,
+  bank: BankKey,
+) {
+  try {
+    return await pdfParser.extractPdfText(bytes, password, bank);
+  } catch (error) {
+    if (!password.trim()) {
+      throw error;
+    }
+
+    // Some statements are unencrypted. Retry with blank password if passworded open fails.
+    return pdfParser.extractPdfText(bytes, "", bank);
+  }
+}
+
 function parseCreditCardTransactions(
   pdfParser: PdfParserModule,
   bank: BankKey,
@@ -359,7 +377,12 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
           : defaultPw;
 
         const bytes = await downloadAttachment(item.email_id, item.attachment_id, accessToken);
-        const extraction = await pdfParser.extractPdfText(bytes, password, bank);
+        const extraction = await extractPdfTextWithOptionalBlankFallback(
+          pdfParser,
+          bytes,
+          password,
+          bank,
+        );
         const text = extraction.text;
 
         if (!text.trim()) {
@@ -544,17 +567,6 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
               ? (settings.taishin_pdf_password ?? defaultPw)
               : defaultPw;
 
-      if (!password.trim()) {
-        setState({
-          status: "error",
-          message:
-            email.bank === "taishin"
-              ? "尚未讀到台新 PDF 密碼。請先在設定頁儲存台新密碼；如果剛新增欄位卻存不進去，代表資料庫 schema 還沒套用。"
-              : "尚未讀到 PDF 密碼。請先在設定頁儲存對應銀行密碼。",
-        });
-        return;
-      }
-
       const pdfAttachment = email.attachments.find(
         (attachment) =>
           attachment.mimeType === "application/pdf" || attachment.filename.endsWith(".pdf"),
@@ -567,7 +579,12 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
 
       setState({ status: "loading", message: "讀取 PDF 中..." });
       const bytes = await downloadAttachment(email.id, pdfAttachment.id, accessToken);
-      const extraction = await pdfParser.extractPdfText(bytes, password, email.bank);
+      const extraction = await extractPdfTextWithOptionalBlankFallback(
+        pdfParser,
+        bytes,
+        password,
+        email.bank,
+      );
       const text = extraction.text;
 
       if (extraction.source === "ocr_fallback") {
