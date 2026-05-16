@@ -514,6 +514,7 @@ export async function extractPdfText(
   data: Uint8Array,
   password?: string,
   bank?: PdfBankHint,
+  options?: { probeEsunAssets?: boolean },
 ): Promise<PdfTextExtractionResult> {
   const loadingTask = pdfjsLib.getDocument({
     data,
@@ -559,7 +560,7 @@ export async function extractPdfText(
 
       // Use text layer if it has content
       if (layerText) {
-        if (bank === "esun" && !ESUN_ASSET_SECTION_MARKERS.test(layerText.replace(/\s+/g, ""))) {
+        if (bank === "esun" && options?.probeEsunAssets && !ESUN_ASSET_SECTION_MARKERS.test(layerText.replace(/\s+/g, ""))) {
           const supplement = await extractEsunAssetSupplementFromPage(worker, page, layerText, debugCandidates, i);
           if (supplement) {
             usedOcr = true;
