@@ -30,6 +30,15 @@
 - `memory/04_validation_log.md` stores review/build/test validation history.
 - `memory/YYYY-MM-DD.md` stores detailed daily execution notes.
 
+## Temporal Governance Tooling (added 2026-05-18)
+
+- `scripts/mob_verifier.py` — MOB Verifier v0.1; syntax-inferable obligation observer
+- `docs/hearth-obligation-policy-v0.1.md` — 4 temporal admissibility decisions + Gap Consumption Boundary
+- `docs/mob-batch-scan-analysis-2026-05-18.md` — first batch scan findings (5 dates)
+- Convention effective date: 2026-04-01 (all obligation files created then)
+- Claim ceiling: bounded_reconstruction — NOT temporal_integrity_verified
+- Gap Consumption Boundary: gap_observed records PROHIBITED from contributor ranking, scoring, or trust downgrade
+
 ## Important Boundary
 
 - Framework adoption is only real if local governance docs and local memory are maintained in the Hearth repo itself.
