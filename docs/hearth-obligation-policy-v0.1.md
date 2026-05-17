@@ -158,3 +158,71 @@ Derived from the four decisions above. These constraints bind the verifier imple
 | Prohibited claim | `temporal_integrity_verified` |
 
 The verifier output is an **observation record**, not a governance verdict.
+
+---
+
+## Gap Consumption Boundary (forward constraint — binds all future versions)
+
+This boundary is written before any batch scan or longitudinal accumulation feature exists.
+It constrains how `gap_observed` records may be consumed by downstream systems.
+
+**Permitted uses of gap_observed records:**
+
+| Use | Allowed |
+|---|---|
+| Lineage reconstruction assistance (help reviewer find missing artifacts) | yes |
+| Historical audit (understand when obligation patterns break down) | yes |
+| Identifying systemic trigger conditions with low obligation follow-through | yes |
+| Input to manual gap_confirmed classification | yes |
+
+**Prohibited uses (regardless of technical feasibility):**
+
+| Use | Prohibited | Reason |
+|---|---|---|
+| Contributor quality signal | prohibited | gap_observed is a system observation, not a human performance signal |
+| Automatic trust downgrade | prohibited | gap_observed does not establish causal intent |
+| Productivity or velocity scoring | prohibited | temporal governance is reconstructability aid, not throughput metric |
+| Hidden ranking or comparative contributor scoring | prohibited | creates surveillance structure under a governance label |
+
+**Rationale:**
+
+`gap_observed` means: the expected artifact pattern was not detected within the
+reconstruction window. It does NOT mean: the human responsible failed to do their job.
+
+Causal continuity gaps emerge from:
+- work that spans the reconstruction boundary (legitimate continuity)
+- auto-commit stream fragmentation (system behavior, not human choice)
+- reconstruction ambiguity cases (calendar semantics ≠ causal continuity)
+
+Using gap counts as contributor signals would be a form of clock-semantics colonization —
+importing a 24h boundary rule's artifacts back as human behavioral evidence.
+
+**Drift signal**: if a future feature request includes phrases like "gap rate by author",
+"obligation compliance per contributor", or "governance score trend", that request is
+attempting to cross this boundary. Reject it at the design stage.
+
+---
+
+## Architectural framing note (2026-05-17)
+
+This policy document marks a transition point.
+
+The MOB Verifier is not doing **artifact governance** (did the artifact exist?).
+It is doing **causal continuity governance** (can a future reviewer reconstruct
+why this change happened?).
+
+These are different governance objects:
+
+| Artifact governance | Causal continuity governance |
+|---|---|
+| existence check | reconstructability check |
+| pass / fail | observed / gap / ambiguous |
+| point-in-time | spans time |
+| machine-authoritative | human-review-required for confirmation |
+
+The shift from `Did the artifact exist?` to `Can a future reviewer reconstruct why this
+happened?` means the system is now governing **reconstructability under incomplete memory**
+— not correctness of discrete artifacts.
+
+This is the correct framing for long-horizon agent governance where no single agent
+has complete context of the full causal chain.
