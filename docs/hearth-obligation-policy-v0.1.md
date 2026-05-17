@@ -141,6 +141,28 @@ A deferred obligation must be recorded with an explicit carry-forward entry in
 
 ---
 
+## Convention Effective Dates
+
+MOB rules have implicit effective dates — they cannot be retroactively applied
+to dates before the obligation convention existed in this repository.
+
+| Obligation file | First created | Convention start |
+|---|---|---|
+| `memory/04_validation_log.md` | 2026-04-01 (commit 698a508) | 2026-04-01 |
+| `memory/02_project_facts.md` | 2026-04-01 (commit 698a508) | 2026-04-01 |
+| `memory/01_active_task.md` | 2026-04-01 (commit 698a508) | 2026-04-01 |
+
+**Rule**: observations for dates before `convention_start` must be classified as
+`pre_convention`, not `gap_observed`. A `pre_convention` classification is informational
+only — no gap classification is permitted, no enforcement consequence applies.
+
+This field is policy (v0.1) but not yet enforced by the verifier (v0.1).
+Retroactive application produces structural false positives; scans of dates
+before 2026-04-01 should be interpreted with this constraint in mind.
+Convention enforcement is deferred to verifier v0.2.
+
+---
+
 ## Verifier v0.1 Scope Constraints
 
 Derived from the four decisions above. These constraints bind the verifier implementation.
