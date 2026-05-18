@@ -80,6 +80,40 @@ _MOB08_VALIDATION_LOG = "memory/04_validation_log.md"
 # Obligation artifact sentinel: any daily log file
 _DAILY_LOG_RE = re.compile(r"^memory/\d{4}-\d{2}-\d{2}\.md$")
 
+# ── observed_gap_id support ──────────────────────────────────────────────────
+#
+# Format (v0.3, locked): {repo_id}::{date}::{mob_id}::{normalized_trigger_path}
+# Example: hearth::2026-05-07::MOB-05::pkg/supabase
+#
+# The normalized form is used exclusively for YAML cross-reference stability.
+# trigger_file (the original git-reported path) is preserved separately.
+# Any change to the ID format requires a schema_version bump + YAML migration.
+
+REPO_ID = "hearth"
+
+
+def _normalize_trigger_path(path: str) -> str:
+    """Return a path-safe, stable form of trigger_file for use in observed_gap_id.
+
+    Rules (v0.3 — locked):
+      - Strip leading/trailing whitespace
+      - Backslash → forward slash (Windows path normalization)
+      - Strip leading/trailing slashes
+      - Lowercase
+
+    The original trigger_file is preserved in ObservationRecord.trigger_file.
+    This normalized form is only used inside observed_gap_id for YAML lookups.
+    """
+    return path.strip().replace("\\", "/").strip("/").lower()
+
+
+def _make_observed_gap_id(date: str, mob_id: str, trigger_file: str) -> str:
+    """Produce the stable observed_gap_id for a trigger event.
+
+    Deterministic: same inputs always produce the same ID.
+    """
+    return f"{REPO_ID}::{date}::{mob_id}::{_normalize_trigger_path(trigger_file)}"
+
 
 # ── Data types ───────────────────────────────────────────────────────────────
 
@@ -101,6 +135,7 @@ class ObservationRecord:
     obligation_required: list[str]
     status: str                # obligation_observed | gap_observed | reconstruction_ambiguous | pre_convention
     obligation_found: list[str]
+    observed_gap_id: str = ""  # stable cross-reference ID; format: {repo_id}::{date}::{mob_id}::{trigger_path}
     claim_ceiling: str = "bounded_reconstruction"
     semantic_inference: str = "prohibited"
     gap_claim_allowed: bool = True   # False when status == pre_convention
@@ -273,6 +308,7 @@ def _check_obligation(
         obligation_required=required_paths,
         status=status,
         obligation_found=found,
+        observed_gap_id=_make_observed_gap_id(target_date, mob_id, trigger_file),
         note=note,
     )
 
@@ -291,6 +327,7 @@ def _pre_convention_record(
         obligation_required=required_paths,
         status="pre_convention",
         obligation_found=[],
+        observed_gap_id=_make_observed_gap_id(target_date, mob_id, trigger_file),
         gap_claim_allowed=False,
         note=(
             f"scan_date={target_date} < convention_start={_GLOBAL_CONVENTION_START}. "
@@ -410,7 +447,7 @@ def main() -> None:
     header = {
         "type": "header",
         "verifier": "mob_verifier",
-        "version": "0.2",
+        "version": "0.3",
         "target_date": target_date,
         "claim_ceiling": "bounded_reconstruction",
         "temporal_applicability_gate": True,
@@ -419,6 +456,7 @@ def main() -> None:
         "deferred": ["MOB-03", "MOB-04", "MOB-07"],
         "semantic_inference": "prohibited",
         "causal_assertion": "prohibited",
+        "observed_gap_id_format": f"{REPO_ID}::{{date}}::{{mob_id}}::{{normalized_trigger_path}}",
     }
     print(json.dumps(header))
 
