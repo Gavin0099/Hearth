@@ -99,10 +99,11 @@ class ObservationRecord:
     trigger_commit: str        # short sha
     trigger_file: str
     obligation_required: list[str]
-    status: str                # obligation_observed | gap_observed | reconstruction_ambiguous
+    status: str                # obligation_observed | gap_observed | reconstruction_ambiguous | pre_convention
     obligation_found: list[str]
     claim_ceiling: str = "bounded_reconstruction"
     semantic_inference: str = "prohibited"
+    gap_claim_allowed: bool = True   # False when status == pre_convention
     note: str = ""
 
     def to_dict(self) -> dict:
@@ -276,6 +277,28 @@ def _check_obligation(
     )
 
 
+def _pre_convention_record(
+    mob_id: str,
+    trigger_commit: str,
+    trigger_file: str,
+    required_paths: list[str],
+    target_date: str,
+) -> ObservationRecord:
+    return ObservationRecord(
+        mob_id=mob_id,
+        trigger_commit=trigger_commit,
+        trigger_file=trigger_file,
+        obligation_required=required_paths,
+        status="pre_convention",
+        obligation_found=[],
+        gap_claim_allowed=False,
+        note=(
+            f"scan_date={target_date} < convention_start={_GLOBAL_CONVENTION_START}. "
+            "Obligation files did not exist. No gap classification permitted."
+        ),
+    )
+
+
 # ── Main verifier ────────────────────────────────────────────────────────────
 
 def verify(target_date: str) -> list[ObservationRecord]:
@@ -284,10 +307,15 @@ def verify(target_date: str) -> list[ObservationRecord]:
 
     Returns a list of ObservationRecord (one per trigger detected).
     Empty list means no triggers were observed — NOT a clean bill of health.
+
+    Dates before _GLOBAL_CONVENTION_START produce pre_convention records only —
+    no gap_observed is emitted.
     """
     commits = _get_commits_for_date(target_date)
     if not commits:
         return []
+
+    is_pre_convention = target_date < _GLOBAL_CONVENTION_START
 
     semantic_commits = [c for c in commits if not c.is_auto]
     all_files_changed: set[str] = {f for c in commits for f in c.files_changed}
@@ -297,58 +325,78 @@ def verify(target_date: str) -> list[ObservationRecord]:
     for commit in semantic_commits:
         # MOB-01: new migration file
         for f in _detect_mob01(commit):
-            observations.append(_check_obligation(
-                mob_id="MOB-01",
-                trigger_commit=commit.sha[:8],
-                trigger_file=f,
-                required_paths=["memory/04_validation_log.md", "DAILY_LOG"],
-                all_files_changed=all_files_changed,
-                target_date=target_date,
-            ))
+            req = ["memory/04_validation_log.md", "DAILY_LOG"]
+            if is_pre_convention:
+                observations.append(_pre_convention_record("MOB-01", commit.sha[:8], f, req, target_date))
+            else:
+                observations.append(_check_obligation(
+                    mob_id="MOB-01",
+                    trigger_commit=commit.sha[:8],
+                    trigger_file=f,
+                    required_paths=req,
+                    all_files_changed=all_files_changed,
+                    target_date=target_date,
+                ))
 
         # MOB-02: PLAN.md checkbox transition
         if _detect_mob02(commit):
-            observations.append(_check_obligation(
-                mob_id="MOB-02",
-                trigger_commit=commit.sha[:8],
-                trigger_file=_MOB02_PLAN_PATH,
-                required_paths=["memory/01_active_task.md", "DAILY_LOG"],
-                all_files_changed=all_files_changed,
-                target_date=target_date,
-            ))
+            req = ["memory/01_active_task.md", "DAILY_LOG"]
+            if is_pre_convention:
+                observations.append(_pre_convention_record("MOB-02", commit.sha[:8], _MOB02_PLAN_PATH, req, target_date))
+            else:
+                observations.append(_check_obligation(
+                    mob_id="MOB-02",
+                    trigger_commit=commit.sha[:8],
+                    trigger_file=_MOB02_PLAN_PATH,
+                    required_paths=req,
+                    all_files_changed=all_files_changed,
+                    target_date=target_date,
+                ))
 
         # MOB-05: submodule bump
         if _detect_mob05(commit):
-            observations.append(_check_obligation(
-                mob_id="MOB-05",
-                trigger_commit=commit.sha[:8],
-                trigger_file=_MOB05_SUBMODULE_PATH,
-                required_paths=["memory/02_project_facts.md"],
-                all_files_changed=all_files_changed,
-                target_date=target_date,
-            ))
+            req = ["memory/02_project_facts.md"]
+            if is_pre_convention:
+                observations.append(_pre_convention_record("MOB-05", commit.sha[:8], _MOB05_SUBMODULE_PATH, req, target_date))
+            else:
+                observations.append(_check_obligation(
+                    mob_id="MOB-05",
+                    trigger_commit=commit.sha[:8],
+                    trigger_file=_MOB05_SUBMODULE_PATH,
+                    required_paths=req,
+                    all_files_changed=all_files_changed,
+                    target_date=target_date,
+                ))
 
         # MOB-06: route handler changed
         for f in _detect_mob06(commit):
-            observations.append(_check_obligation(
-                mob_id="MOB-06",
-                trigger_commit=commit.sha[:8],
-                trigger_file=f,
-                required_paths=["memory/04_validation_log.md"],
-                all_files_changed=all_files_changed,
-                target_date=target_date,
-            ))
+            req = ["memory/04_validation_log.md"]
+            if is_pre_convention:
+                observations.append(_pre_convention_record("MOB-06", commit.sha[:8], f, req, target_date))
+            else:
+                observations.append(_check_obligation(
+                    mob_id="MOB-06",
+                    trigger_commit=commit.sha[:8],
+                    trigger_file=f,
+                    required_paths=req,
+                    all_files_changed=all_files_changed,
+                    target_date=target_date,
+                ))
 
         # MOB-08: validation count changed
         if _detect_mob08(commit):
-            observations.append(_check_obligation(
-                mob_id="MOB-08",
-                trigger_commit=commit.sha[:8],
-                trigger_file=_MOB08_VALIDATION_LOG,
-                required_paths=["DAILY_LOG"],
-                all_files_changed=all_files_changed,
-                target_date=target_date,
-            ))
+            req = ["DAILY_LOG"]
+            if is_pre_convention:
+                observations.append(_pre_convention_record("MOB-08", commit.sha[:8], _MOB08_VALIDATION_LOG, req, target_date))
+            else:
+                observations.append(_check_obligation(
+                    mob_id="MOB-08",
+                    trigger_commit=commit.sha[:8],
+                    trigger_file=_MOB08_VALIDATION_LOG,
+                    required_paths=req,
+                    all_files_changed=all_files_changed,
+                    target_date=target_date,
+                ))
 
     return observations
 
@@ -362,9 +410,11 @@ def main() -> None:
     header = {
         "type": "header",
         "verifier": "mob_verifier",
-        "version": "0.1",
+        "version": "0.2",
         "target_date": target_date,
         "claim_ceiling": "bounded_reconstruction",
+        "temporal_applicability_gate": True,
+        "convention_start": _GLOBAL_CONVENTION_START,
         "mob_coverage": ["MOB-01", "MOB-02", "MOB-05", "MOB-06", "MOB-08"],
         "deferred": ["MOB-03", "MOB-04", "MOB-07"],
         "semantic_inference": "prohibited",
@@ -392,6 +442,7 @@ def main() -> None:
     gap_count = sum(1 for o in observations if o.status == "gap_observed")
     observed_count = sum(1 for o in observations if o.status == "obligation_observed")
     ambiguous_count = sum(1 for o in observations if o.status == "reconstruction_ambiguous")
+    pre_convention_count = sum(1 for o in observations if o.status == "pre_convention")
 
     print(json.dumps({
         "type": "summary",
@@ -400,10 +451,12 @@ def main() -> None:
         "obligation_observed": observed_count,
         "gap_observed": gap_count,
         "reconstruction_ambiguous": ambiguous_count,
+        "pre_convention": pre_convention_count,
         "claim_ceiling": "bounded_reconstruction",
         "note": (
             "gap_observed requires human review before gap_confirmed. "
-            "reconstruction_ambiguous requires human review before any classification."
+            "reconstruction_ambiguous requires human review before any classification. "
+            "pre_convention records are informational only — no gap classification permitted."
         ),
     }))
 
