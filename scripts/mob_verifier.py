@@ -1,13 +1,22 @@
 #!/usr/bin/env python3
 """
-Hearth MOB Verifier v0.1
+Hearth MOB Verifier v0.2
 
 Syntax-inferable obligation observer for the Hearth repository.
 
 Coverage  : MOB-01, MOB-02, MOB-05, MOB-06, MOB-08
-Deferred  : MOB-03, MOB-04, MOB-07 (semantic inference required — not in v0.1)
-Claim ceiling : bounded_reconstruction  (NOT temporal_integrity_verified)
+Deferred  : MOB-03, MOB-04, MOB-07 (semantic inference required — not in v0.1/v0.2)
+Claim ceiling : bounded_reconstruction with temporal applicability filtering
+              (NOT temporal_integrity_verified)
 Policy ref    : docs/hearth-obligation-policy-v0.1.md
+
+v0.2 addition — temporal applicability gate
+-------------------------------------------
+    Dates before convention_start are classified as pre_convention.
+    pre_convention records are informational only:
+      - obligation_state = not_applicable
+      - gap_claim_allowed = false
+      - No gap_observed emitted for pre-convention dates.
 
 Usage
 -----
@@ -44,6 +53,16 @@ from typing import Optional
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 _TZ_CST = timezone(timedelta(hours=8))  # Asia/Taipei UTC+8
+
+# ── Temporal applicability gate ──────────────────────────────────────────────
+#
+# convention_start: earliest date for which a MOB rule can produce gap_observed.
+# Dates before this are pre_convention — obligation files did not exist yet.
+# Policy: docs/hearth-obligation-policy-v0.1.md § "Convention Effective Dates"
+#
+# v0.2 uses a single global gate (2026-04-01). Per-MOB gates are future work.
+
+_GLOBAL_CONVENTION_START = "2026-04-01"
 
 # ── Commit classification ────────────────────────────────────────────────────
 
