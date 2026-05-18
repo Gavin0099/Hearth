@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-05-18T11:32:32.279113+00:00",
+  "record_count": 1,
+  "records": [
+    {
+      "observed_gap_id": "hearth::2026-05-07::MOB-05::ai-governance-framework",
+      "mob_id": "MOB-05",
+      "observation_status": "gap_observed",
+      "disposition": "confirmed",
+      "consequence_eligible": false,
+      "reviewer": "human",
+      "reviewed_at": "2026-05-18T00:00:00Z",
+      "derived_at": "2026-05-18T11:32:32.279008+00:00"
+    }
+  ]
+}

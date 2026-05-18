@@ -12,6 +12,10 @@ New invariants for v0.3 (observed_gap_id):
   6. observed_gap_id is stable (deterministic) across two runs of same input
   7. trigger_path in observed_gap_id is normalized (lowercase, no leading slash)
   8. gap_observed count is unchanged from v0.2 (regression guard)
+
+New invariants for v0.3.1 (Layer 1 → Layer 3 contract):
+  9. ndjson output dict includes record_type field aliasing status
+  10. record_type == status for all observation records (Layer 3 consumer contract)
 """
 
 import sys
@@ -217,6 +221,84 @@ def test_gap_observed_count_regression(monkeypatch):
         f"gap_observed count regression: expected 1, got {gap_count}. "
         "v0.3 must not change the count of gap_observed records."
     )
+
+
+# ── v0.3.1: Layer 1 → Layer 3 contract (record_type alias) ───────────────────
+
+
+def test_ndjson_output_includes_record_type_alias(monkeypatch):
+    """Invariant 9: ndjson output dict must include record_type aliasing status.
+
+    gap_disposition_reader.load_observations() filters on record_type == 'gap_observed'.
+    mob_verifier must emit this field so Layer 1 → Layer 3 works without hand-editing.
+    """
+    target_date = "2026-05-04"
+    monkeypatch.setattr(
+        mob_verifier,
+        "_get_commits_for_date",
+        lambda d: [_submodule_bump_commit(d)],
+    )
+    records = mob_verifier.verify(target_date)
+    for obs in records:
+        ndjson_dict = {"type": "observation", "record_type": obs.status, **obs.to_dict()}
+        assert "record_type" in ndjson_dict, (
+            f"Invariant 9: record_type missing from ndjson output for {obs.mob_id}"
+        )
+
+
+def test_ndjson_record_type_equals_status(monkeypatch):
+    """Invariant 10: record_type must equal status for all observation records."""
+    target_date = "2026-05-04"
+    monkeypatch.setattr(
+        mob_verifier,
+        "_get_commits_for_date",
+        lambda d: [_submodule_bump_commit(d)],
+    )
+    records = mob_verifier.verify(target_date)
+    for obs in records:
+        ndjson_dict = {"type": "observation", "record_type": obs.status, **obs.to_dict()}
+        assert ndjson_dict["record_type"] == ndjson_dict["status"], (
+            f"Invariant 10: record_type={ndjson_dict['record_type']!r} != "
+            f"status={ndjson_dict['status']!r} for {obs.mob_id}"
+        )
+
+
+def test_gap_observed_record_type_is_loadable_by_reader(monkeypatch, tmp_path):
+    """Round-trip: mob_verifier gap_observed output can be consumed by load_observations().
+
+    Verifies Layer 1 → Layer 3 contract without hand-editing the ndjson.
+    """
+    import json
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "ai-governance-framework"))
+    try:
+        from governance_tools.gap_disposition_reader import load_observations
+    except ImportError:
+        pytest.skip("ai-governance-framework not available as sibling repo")
+
+    target_date = "2026-05-04"
+    monkeypatch.setattr(
+        mob_verifier,
+        "_get_commits_for_date",
+        lambda d: [_submodule_bump_commit(d)],
+    )
+    records = mob_verifier.verify(target_date)
+
+    # Simulate mob_verifier main() output
+    ndjson_path = tmp_path / "obs.ndjson"
+    lines = []
+    for obs in records:
+        lines.append(json.dumps({"type": "observation", "record_type": obs.status, **obs.to_dict()}))
+    ndjson_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    loaded = load_observations(ndjson_path)
+    gap_records = [r for r in records if r.status == "gap_observed"]
+    assert len(loaded) == len(gap_records), (
+        f"load_observations returned {len(loaded)} records; expected {len(gap_records)}"
+    )
+    for r in loaded:
+        assert r["record_type"] == "gap_observed"
+        assert r.get("observed_gap_id"), "loaded record must carry observed_gap_id"
 
 
 # ── normalize helper ──────────────────────────────────────────────────────────

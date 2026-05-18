@@ -475,7 +475,9 @@ def main() -> None:
         return
 
     for obs in observations:
-        print(json.dumps({"type": "observation", **obs.to_dict()}))
+        # v0.3.1: record_type aliases status for Layer 3 (gap_disposition_reader) compatibility.
+        # type/status are preserved unchanged for v0.2 backward compatibility.
+        print(json.dumps({"type": "observation", "record_type": obs.status, **obs.to_dict()}))
 
     gap_count = sum(1 for o in observations if o.status == "gap_observed")
     observed_count = sum(1 for o in observations if o.status == "obligation_observed")
