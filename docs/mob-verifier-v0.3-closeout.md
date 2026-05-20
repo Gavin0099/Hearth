@@ -132,7 +132,33 @@ Total locked invariants: v0.2 (3) + v0.3 (8) + v0.3.1 (2) + FM-01..05 (15) = 28
 
 ---
 
-## Architectural note
+## Capability vs. Authorization — mandatory distinction
+
+**Eligibility derivation capability exists in v0.3,
+but eligibility authorization policy is intentionally absent.**
+
+These are not the same thing. They must never be conflated.
+
+| Dimension | v0.3 state |
+|-----------|------------|
+| Layer 3 can technically derive `consequence_eligible=true` | **yes** |
+| System governance defines admissible conditions for `consequence_eligible=true` | **no** |
+| Any gap record in v0.3 is authorized to trigger a consequence | **no** |
+
+**The failure mode this prevents:**
+
+> "Since `gap_disposition_reader.py` already supports `consequence_eligible=true`,
+> the system must already allow consequences."
+
+This reasoning is incorrect. The reader's technical capability to emit `eligible=true`
+does not constitute authorization. Technical capability and governance authorization
+are different layers. The absence of authorization policy is not an implementation gap —
+it is a deliberate design position. v0.3 closes with zero consequence-eligible records
+by construction, not by accident.
+
+---
+
+## Architectural note — escalation model shift
 
 v0.3 establishes that:
 
@@ -143,6 +169,21 @@ authorize enforcement — making the review step purely ceremonial. The three-la
 architecture enforces the separation structurally: Layer 2 writes both fields
 independently; Layer 3 only derives, never escalates.
 
-The v0.4 decision to open consequence eligibility is therefore not a technical
+**The deeper architectural shift:**
+
+v0.3 moves governance escalation from **runtime inference** to
+**explicit authorization artifact**.
+
+Before this architecture, a system could infer consequence from signal strength:
+> high-severity gap → probably important → probably actionable → auto-consequence
+
+After this architecture, consequence requires an explicit artifact:
+> gap_observed (Layer 1) → human review (Layer 2) → consequence_eligible=true
+> → authorization policy satisfied (v0.4, not yet defined) → enforcement
+
+The word "probably" is removed from the escalation path. Every step requires
+a durable artifact, not a reasoning chain.
+
+This is why the v0.4 decision to open consequence eligibility is not a technical
 decision — it is a governance boundary decision that requires a separate human
-authorization event, not a code change.
+authorization event and a new policy document, not a code change.
