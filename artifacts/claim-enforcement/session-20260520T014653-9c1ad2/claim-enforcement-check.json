@@ -1,0 +1,18 @@
+{
+  "claim_source": "session_end_canonical_closeout",
+  "evidence_refs": [
+    "runtime_closeout:session-20260520T014653-9c1ad2"
+  ],
+  "result": "pass",
+  "checker_status": "pass",
+  "semantic_drift_risk": false,
+  "claim_level": "bounded",
+  "enforcement_action": "allow",
+  "reviewer_override_required": false,
+  "publication_scope": "local_only",
+  "reasons": [],
+  "reviewer_response": {
+    "decision": "accept",
+    "override_reason": null
+  }
+}

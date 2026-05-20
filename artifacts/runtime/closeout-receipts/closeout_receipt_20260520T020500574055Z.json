@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "timestamp": "2026-05-20T02:05:00.574595+00:00",
+  "agent_id": "unknown",
+  "trigger_mode": "unknown",
+  "entrypoint": "governance_tools.session_closeout_entry",
+  "exit_code": 0,
+  "closeout_artifact_path": "E:\\BackUp\\Git_EE\\Hearth\\artifacts\\session-closeout.txt",
+  "checksum_of_cleaned_path": "",
+  "memory_eligibility_evaluated": true,
+  "memory_write_required": true,
+  "memory_write_performed": false,
+  "memory_eligibility_reason": "governance_or_enforcement_behavior_changed"
+}

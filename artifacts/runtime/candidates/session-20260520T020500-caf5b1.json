@@ -1,0 +1,93 @@
+{
+  "session_id": "session-20260520T020500-caf5b1",
+  "closed_at": "2026-05-20T02:05:00.447280+00:00",
+  "runtime_contract": {
+    "task": "session",
+    "rules": [
+      "common"
+    ],
+    "risk": "low",
+    "oversight": "auto",
+    "memory_mode": "stateless"
+  },
+  "checks": {
+    "closeout_status": "closeout_missing",
+    "closeout_file": "E:\\BackUp\\Git_EE\\Hearth\\artifacts\\session-closeout.txt",
+    "closeout_presence": "missing",
+    "closeout_schema_validity": "invalid",
+    "closeout_content_sufficiency": "insufficient",
+    "closeout_evidence_consistency": "unchecked",
+    "closeout_memory_tier": "no_update",
+    "closeout_per_layer_results": {
+      "missing_fields": [
+        "TASK_INTENT",
+        "WORK_COMPLETED",
+        "FILES_TOUCHED",
+        "CHECKS_RUN",
+        "OPEN_RISKS",
+        "NOT_DONE",
+        "RECOMMENDED_MEMORY_UPDATE"
+      ],
+      "content_issues": [],
+      "inconsistencies": [],
+      "cross_reference_results": []
+    },
+    "closeout_failure_signals": [
+      {
+        "type": "closeout_file_missing",
+        "affects": [
+          "presence",
+          "schema_validity",
+          "content_sufficiency"
+        ],
+        "guidance": "Write artifacts/session-closeout.txt before session ends. See docs/session-closeout-schema.md."
+      }
+    ],
+    "repo_readiness_level": 3,
+    "repo_readiness_limiting_factor": null,
+    "repo_closeout_activation_state": "observed",
+    "repo_activation_recency": "recent",
+    "repo_activation_gap": null
+  },
+  "architecture_impact_preview": {},
+  "proposal_summary": {},
+  "contract_resolution": {
+    "risk_tier": "unknown"
+  },
+  "domain_contract": {},
+  "public_api_diff": null,
+  "event_log": [],
+  "snapshot": null,
+  "policy": {
+    "decision": "DO_NOT_PROMOTE",
+    "reasons": [
+      "Session is stateless; durable memory is not allowed."
+    ]
+  },
+  "promotion": null,
+  "warnings": [],
+  "errors": [],
+  "phase_classification": {
+    "schema_version": "0.1",
+    "hook": "session_end",
+    "actions": [
+      {
+        "action": "canonical_closeout",
+        "phase": "async_closeout",
+        "owner": "session_end",
+        "description": "Canonical closeout artifact emission."
+      }
+    ],
+    "phase_summary": {
+      "async_closeout": [
+        "canonical_closeout"
+      ]
+    },
+    "rules": {
+      "sync_gate_blocks_execution": true,
+      "sync_advisory_hidden_gate_allowed": false,
+      "async_audit_can_retroactively_change_verdict": false
+    },
+    "unknown_actions": []
+  }
+}
