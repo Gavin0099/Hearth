@@ -187,3 +187,70 @@ a durable artifact, not a reasoning chain.
 This is why the v0.4 decision to open consequence eligibility is not a technical
 decision — it is a governance boundary decision that requires a separate human
 authorization event and a new policy document, not a code change.
+
+---
+
+## Known governance boundary — system limit (not a future enhancement)
+
+This section records a known, permanent limit of the artifact-backed authorization
+model. It is not a gap to be filled in v0.4. It is a structural property of what
+any artifact layer can and cannot verify.
+
+**This system verifies:**
+- Authorization artifact exists
+- Artifact structure is valid (schema, required fields)
+- Escalation path is traceable (Layer 1 → Layer 2 → Layer 3)
+- Policy linkage is present (observed_gap_id cross-reference holds)
+- Authorization provenance is recorded (reviewer, reviewed_at)
+
+**This system does not and cannot verify:**
+- Whether the reviewer exercised genuine independent judgment
+- Whether the rationale reflects actual analysis of the gap
+- Whether the authorization event was substantive or ceremonial
+- Reviewer competence or epistemic rigor
+
+**Mandatory interpretation rule:**
+
+> Artifact validity must not be interpreted as proof of epistemic grounding.
+> Reviewer accountability and judgment quality are external human governance
+> processes outside this system boundary.
+
+This is a known governance boundary, not an implementation gap.
+
+---
+
+### Anti-rubber-stamp protection is friction design, not proof of genuine judgment
+
+The defenses in this system against ritualized authorization:
+
+| Mechanism | What it does |
+|-----------|--------------|
+| FM-02: empty rationale → downgrade | raises cost of the most obvious rubber stamp |
+| FM-03: eligible=true requires confirmed | prevents eligibility without disposition step |
+| rationale field required | forces a non-empty string |
+| reviewer field required | records identity provenance |
+
+All of these mechanisms **increase the cost of ritualized authorization**.
+None of them **prove that genuine judgment occurred**.
+
+A reviewer who writes "Verified in git log." satisfies all structural checks.
+The system cannot distinguish this from a reviewer who spent thirty minutes
+tracing the commit history and made a substantive determination.
+
+**This distinction has a consequence for v0.4:**
+
+The goal of v0.4 anti-rubber-stamp design is NOT:
+
+> Eliminate rubber stamp authorization.
+
+The honest and achievable goal is:
+
+> Reduce the ease of low-cost ritualized authorization.
+
+These are different governance philosophies. The first implies the system can
+achieve epistemic certainty about reviewer judgment. The second acknowledges
+that the system can only raise friction — and that genuine accountability
+requires human governance processes external to the artifact layer.
+
+Any v0.4 design that claims to solve the rubber stamp problem completely
+is making a claim this architecture cannot support.
