@@ -254,3 +254,55 @@ requires human governance processes external to the artifact layer.
 
 Any v0.4 design that claims to solve the rubber stamp problem completely
 is making a claim this architecture cannot support.
+
+---
+
+### Friction accumulation drift — named anti-pattern for v0.4
+
+**The failure mode:**
+
+```
+cannot verify genuine judgment
+→ add more friction (metadata, scoring, AI review, latency gates)
+→ reviewer burden increases
+→ reviewer adopts ritual coping strategies
+→ rubber stamp quality worsens, not improves
+```
+
+This is a documented pathology in real governance systems. The relationship between
+friction and epistemic quality is not monotonic. Past a threshold, friction increases
+ritualization rather than reducing it.
+
+**Why this matters for v0.4:**
+
+Every proposal that adds a new structural check (minimum rationale length, specific
+reference requirements, reviewer diversity rules, AI-assisted validation) must answer:
+
+> At what friction level does this mechanism begin producing ritual coping rather
+> than genuine judgment?
+
+If the proposal cannot answer this, it is assuming a monotonic friction-quality
+relationship that this architecture does not support.
+
+**The mature position:**
+
+> Governance cannot manufacture judgment.
+> It can only shape the environment around judgment.
+
+This means the correct v0.4 design question is not:
+
+> What additional checks prevent rubber stamping?
+
+It is:
+
+> What environment makes genuine review more likely than ritual compliance?
+
+These are different design targets. The first adds structure to the artifact layer.
+The second may require changes to reviewer selection, accountability structures,
+or review scope — none of which are artifact-layer problems.
+
+**Constraint carried forward:**
+
+Any v0.4 friction addition must include an explicit friction ceiling rationale:
+why this addition does not push the system into ritual coping territory.
+Absence of this rationale is not a documentation gap — it is a design gap.
