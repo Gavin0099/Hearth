@@ -69,7 +69,9 @@
       "Read(//c/Users/reiko/.claude/projects/c--Users-reiko-Hearth/**)",
       "Bash(git add apps/web/src/lib/user-settings.ts apps/web/src/components/CreditCardLedgerPanel.tsx apps/api/src/routes/import.ts)",
       "Bash(npx tsc --noEmit -p packages/shared/tsconfig.json)",
-      "Bash(git add packages/shared/src/pdf-credit-card.ts)"
+      "Bash(git add packages/shared/src/pdf-credit-card.ts)",
+      "Bash(git -C d:\\\\Hearth log --oneline -10)",
+      "Bash(git -C ai-governance-framework diff --stat HEAD)"
     ]
   }
 }
