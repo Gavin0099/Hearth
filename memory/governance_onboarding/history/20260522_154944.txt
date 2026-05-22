@@ -3,7 +3,7 @@ External Repo Onboarding Report
 ok                = False
 repo_root         = D:\Hearth
 contract_path     = D:\Hearth\contract.yaml
-generated_at      = 2026-05-22T15:51:59.299133+00:00
+generated_at      = 2026-05-22T15:49:44.825411+00:00
 readiness_ready   = True
 smoke_ok          = False
 project_facts      = status=available | artifact_exists=False | artifact_drift=False | source=02_tech_stack.md
@@ -19,7 +19,7 @@ framework_version_known  = True
 git_repo_present         = True
 governance_baseline_present = True
 governance_drift_clean   = False
-hooks_ready              = True
+hooks_ready              = False
 plan_fresh_enough        = True
 plan_present             = True
 project_facts_drift_free = True
@@ -61,7 +61,9 @@ post_task_ok      = None
 errors: 1
 - smoke: version_compatibility_unsupported
 
-warnings: 7
+warnings: 9
+- readiness: hooks (optional): missing AI Governance pre-commit hook: D:\Hearth\.git\hooks\pre-commit
+- readiness: hooks (optional): missing AI Governance pre-push hook: D:\Hearth\.git\hooks\pre-push
 - readiness: governance-drift: plan_inventory_current: plan_section_inventory is stale — PLAN.md has changed since last refresh (new: ## 🔥 本輪聚焦（Sprint 2026-05-16）; removed: ## 🔥 本輪聚焦（Sprint 2026-05-07）) — run: python governance_tools/adopt_governance.py --target D:\Hearth --refresh
 - readiness: governance-drift: expansion_boundary: new_return_key: unrecognized key(s) in return dict: ['by_consumer', 'by_field', 'by_type', 'contract_version', 'high_frequency_misuse_triggers_enforcement', 'notice', 'total_violations', 'visibility_only'] — if these are new decision inputs, they require Expansion Admission Gate passage
 - readiness: framework-version: adopted release could not be compared to current release

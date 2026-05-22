@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "checked_at": "2026-05-22T15:53:57.629870Z",
+  "repo_manifest_found": false,
+  "framework_version": "0.4.0",
+  "verdict": "unsupported",
+  "checks": [],
+  "enabled_runtime_features": [],
+  "disabled_runtime_features": [],
+  "missing_migrations": [],
+  "error": "version_manifest_load_error:not_found:D:\\Hearth\\.governance\\version_manifest.yaml"
+}

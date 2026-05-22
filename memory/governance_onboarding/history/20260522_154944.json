@@ -2,12 +2,12 @@
   "ok": false,
   "repo_root": "D:\\Hearth",
   "contract_path": "D:\\Hearth\\contract.yaml",
-  "generated_at": "2026-05-22T15:51:59.299133+00:00",
+  "generated_at": "2026-05-22T15:49:44.825411+00:00",
   "readiness": {
     "ready": true,
     "checks": {
       "git_repo_present": true,
-      "hooks_ready": true,
+      "hooks_ready": false,
       "plan_present": true,
       "plan_fresh_enough": true,
       "contract_resolved": true,
@@ -59,12 +59,12 @@
       "warnings": []
     },
     "hooks": {
-      "valid": true,
+      "valid": false,
       "framework_root": "D:\\Hearth\\ai-governance-framework",
       "checks": {
         "git_hooks_dir_present": true,
-        "pre_commit_installed": true,
-        "pre_push_installed": true,
+        "pre_commit_installed": false,
+        "pre_push_installed": false,
         "framework_root_config_present": true,
         "framework_root_exists": true,
         "framework_file:scripts/lib/python.sh": true,
@@ -72,7 +72,10 @@
         "framework_file:governance_tools/plan_freshness.py": true,
         "framework_file:governance_tools/contract_validator.py": true
       },
-      "errors": [],
+      "errors": [
+        "missing AI Governance pre-commit hook: D:\\Hearth\\.git\\hooks\\pre-commit",
+        "missing AI Governance pre-push hook: D:\\Hearth\\.git\\hooks\\pre-push"
+      ],
       "warnings": []
     },
     "project_facts": {
@@ -118,6 +121,8 @@
       "next_questions": []
     },
     "warnings": [
+      "hooks (optional): missing AI Governance pre-commit hook: D:\\Hearth\\.git\\hooks\\pre-commit",
+      "hooks (optional): missing AI Governance pre-push hook: D:\\Hearth\\.git\\hooks\\pre-push",
       "governance-drift: plan_inventory_current: plan_section_inventory is stale — PLAN.md has changed since last refresh (new: ## 🔥 本輪聚焦（Sprint 2026-05-16）; removed: ## 🔥 本輪聚焦（Sprint 2026-05-07）) — run: python governance_tools/adopt_governance.py --target D:\\Hearth --refresh",
       "governance-drift: expansion_boundary: new_return_key: unrecognized key(s) in return dict: ['by_consumer', 'by_field', 'by_type', 'contract_version', 'high_frequency_misuse_triggers_enforcement', 'notice', 'total_violations', 'visibility_only'] — if these are new decision inputs, they require Expansion Admission Gate passage",
       "framework-version: adopted release could not be compared to current release"

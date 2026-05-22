@@ -12,8 +12,8 @@
 
 ## Outcome Summary
 
-- Completed: 1, 3, 4, 5, 7
-- Blocked by environment: 2, 6
+- Completed: 1, 2, 3, 4, 5, 6, 7
+- Note: Steps 2 and 6 were executed but produced governance failures (not runtime-tool missing anymore).
 
 ## Evidence
 
@@ -34,26 +34,25 @@
 
 ## External-Onboarding Gap Identification
 
-Primary blocker is runtime tooling availability:
+Executed results:
 
-- `python` not found
-- `py` not found
-- `bash` not found
+- `external_repo_readiness.py`: `ready=True`, but with drift/version warnings.
+- `external_repo_smoke.py`: failed with `version_compatibility_unsupported`.
+- `quickstart_smoke.py`: failed with `session_start_ok=False` and same compatibility blocker.
 
-Because of this, skill commands could not be executed:
+Resolved setup blockers:
 
-- `scripts/onboard-external-repo.sh`
-- `governance_tools/external_repo_readiness.py`
-- `governance_tools/external_repo_smoke.py`
-- `governance_tools/quickstart_smoke.py`
-- `runtime_hooks/smoke_test.py`
+- Created local venv at `D:\Hearth\.venv`.
+- Installed framework requirements.
+- Replaced non-governance identity hooks with framework governance hooks.
+- `hook_install_validator.py` now passes (`valid=True`).
 
-## Recommended Next Command After Runtime Prereqs Are Installed
+## Recommended Next Command
 
-Run onboarding:
+Refresh governance baseline inventory first, then rerun smoke:
 
-`bash ai-governance-framework/scripts/onboard-external-repo.sh --target d:/Hearth --contract d:/Hearth/contract.yaml --format human`
+`D:\Hearth\.venv\Scripts\python.exe ai-governance-framework\governance_tools\adopt_governance.py --target d:/Hearth --refresh`
 
-Then run runtime smoke:
+Then:
 
-`python ai-governance-framework/governance_tools/quickstart_smoke.py --project-root d:/Hearth --plan d:/Hearth/PLAN.md --contract d:/Hearth/contract.yaml --format human`
+`D:\Hearth\.venv\Scripts\python.exe ai-governance-framework\governance_tools\quickstart_smoke.py --project-root d:/Hearth --plan d:/Hearth/PLAN.md --contract d:/Hearth/contract.yaml --format human`
