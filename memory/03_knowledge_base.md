@@ -49,3 +49,28 @@
 
 - When import correctness changes, prefer pure helper extraction plus golden tests before large route rewrites.
 - Keep `supabase/migrations/` as canonical schema history and `supabase/schema.sql` as the latest bootstrap snapshot.
+
+## Updates (2026-05-23 refresh)
+
+### UI / Design System (completed 2026-05-17)
+
+- Full visual unification: all panels use CSS design tokens; no hardcoded colors remain in the web app.
+- Shadcn-style primitive layer introduced (`Button/Card/Badge/Tabs/Dialog/Skeleton`) via Radix base.
+- Home information architecture separates primary workflow (Gmail sync/import) from secondary analytics.
+- Mobile/accessibility pass completed: touch targets, nav flow, small-screen spacing.
+
+### Gmail / PDF parsing
+
+- E.SUN PDF OCR was stuck at "讀取 PDF 中"; fixed via `probeEsunAssets` option in the PDF parser.
+- Gmail OAuth re-login loop fixed: `access_type=offline` now enforced to get a persistent refresh token.
+- Gmail bill sync now covers 90-day date range, no `has:attachment` filter, maxResults=12.
+
+### Governance (2026-05-22 re-onboarding)
+
+- `ai-governance-framework` submodule URL aligned to GitLab remote.
+- `.governance/version_manifest.yaml` added to satisfy `version_compatibility_unsupported` gate.
+- `governance/framework.lock.json` adopted release normalized to `1.2.0`.
+- `contract.yaml` risk tier set to `L2`; domain kept as `household-finance`.
+- Pre-push hook `xargs git diff-tree` bug: when multiple commits are piped, all SHAs go to a single
+  diff-tree call and per-commit file listing fails. Workaround: ensure today's memory file is touched
+  in the push tip commit. Fix: use `xargs -rI{} git diff-tree` in the framework hook.
