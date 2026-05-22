@@ -3,6 +3,7 @@ plugin_version: "1.0.0"
 framework_interface_version: "1"
 framework_compatible: ">=1.0.0,<2.0.0"
 domain: household-finance
+risk_tier: L2
 documents:
   - AGENTS.base.md
   - PLAN.md

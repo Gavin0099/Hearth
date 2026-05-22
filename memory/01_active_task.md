@@ -64,5 +64,12 @@
 - **Validation baseline**: `npm run readiness:first:strict` now passes end-to-end; `npm --workspace @hearth/api run test` passes at `173/173`; `npm --workspace @hearth/web run check` and `npm --workspace @hearth/web run build` pass with largest JS chunk reduced below warning threshold.
 - **Next steps**: start selective component restyling pass (Gmail/Import panel internals first) to align detailed form/table surfaces with the updated home visual system.
 
+## 2026-05-22 Governance Re-Onboarding Snapshot
+
+- `ai-governance-framework` submodule URL was aligned to GitLab remote.
+- `contract.yaml` manual decision captured: keep `domain=household-finance`, set `risk_tier=L2`.
+- `pre-commit` and `pre-push` hooks were installed and pre-push trigger was verified via `git hook run pre-push -- origin`.
+- Runtime blocker discovered: no `python/py/bash` in environment, so `external-onboarding` and `runtime-smoke` commands remain pending.
+
 
 

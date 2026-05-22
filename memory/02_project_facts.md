@@ -41,3 +41,9 @@ type: project
 - API tests: `npm --workspace @hearth/api run test`
 - Web check: `npm --workspace @hearth/web run check`
 - Release/readiness: `npm run readiness:first:codeonly`, `npm run readiness:first`, `npm run readiness:first:strict`
+
+## Human Verification Needed
+
+- [ ] Confirm Product domain wording matches business scope in current quarter.
+- [ ] Confirm runtime stack versions are still correct (React/Hono/Supabase/Cloudflare).
+- [ ] Confirm verification baseline commands remain canonical for release gating.

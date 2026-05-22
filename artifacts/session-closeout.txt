@@ -1,0 +1,7 @@
+TASK_INTENT: Re-onboard Hearth with ai-governance-framework workflow including submodule alignment, onboarding/smoke checks, hook setup, and handoff output.
+WORK_COMPLETED: Updated submodule URL and synced remote; installed git hooks; updated contract.yaml risk tier; initialized memory updates; generated reviewer handoff report.
+FILES_TOUCHED: .gitmodules, contract.yaml, memory/02_project_facts.md, memory/2026-05-22.md, artifacts/reviewer-handoff-2026-05-22.md, artifacts/session-closeout.txt
+CHECKS_RUN: git submodule status; git submodule sync ai-governance-framework; git -C ai-governance-framework remote -v; git push --dry-run; git hook run pre-push -- origin
+OPEN_RISKS: Python and Bash executables are unavailable in this environment, so external-onboarding and runtime-smoke scripts were not executed.
+NOT_DONE: Running onboarding/readiness/smoke Python entrypoints; generating governed_prompt_bridge injection artifact.
+RECOMMENDED_MEMORY_UPDATE: Persist environment prerequisite gap (missing python/bash) and track follow-up run once runtime tooling is installed.
