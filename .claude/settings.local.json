@@ -71,7 +71,9 @@
       "Bash(npx tsc --noEmit -p packages/shared/tsconfig.json)",
       "Bash(git add packages/shared/src/pdf-credit-card.ts)",
       "Bash(git -C d:\\\\Hearth log --oneline -10)",
-      "Bash(git -C ai-governance-framework diff --stat HEAD)"
+      "Bash(git -C ai-governance-framework diff --stat HEAD)",
+      "Bash(git rev-list *)",
+      "Bash(xargs git diff-tree --no-commit-id --name-only -r)"
     ]
   }
 }
