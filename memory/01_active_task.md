@@ -69,7 +69,9 @@
 - `ai-governance-framework` submodule URL was aligned to GitLab remote.
 - `contract.yaml` manual decision captured: keep `domain=household-finance`, set `risk_tier=L2`.
 - `pre-commit` and `pre-push` hooks were installed and pre-push trigger was verified via `git hook run pre-push -- origin`.
-- Runtime blocker discovered: no `python/py/bash` in environment, so `external-onboarding` and `runtime-smoke` commands remain pending.
+- Local runtime prerequisites were restored with `D:\Hearth\.venv\Scripts\python.exe`.
+- `external-onboarding` and `runtime-smoke` were executed successfully after adding `.governance/version_manifest.yaml`.
+- Governance drift is now `severity=ok` after admitting post-task visibility keys via Expansion Admission Gate update.
 
 
 

@@ -186,3 +186,17 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
     - mobile header/nav layout and horizontal tab scrolling improved
     - touch target sizing and panel spacing adjusted for handheld use
     - focus/interaction consistency retained while keeping existing logic unchanged
+
+## 2026-05-22
+
+- `D:\Hearth\.venv\Scripts\python.exe ai-governance-framework\governance_tools\external_repo_readiness.py --repo d:/Hearth --framework-root d:/Hearth/ai-governance-framework --contract d:/Hearth/contract.yaml --format human` -> pass (`ready=True`)
+- `D:\Hearth\.venv\Scripts\python.exe ai-governance-framework\governance_tools\hook_install_validator.py --repo d:/Hearth --framework-root d:/Hearth/ai-governance-framework --format human` -> pass (`valid=True`)
+- `D:\Hearth\.venv\Scripts\python.exe ai-governance-framework\governance_tools\quickstart_smoke.py --project-root d:/Hearth --plan d:/Hearth/PLAN.md --contract d:/Hearth/contract.yaml --format human` -> pass (`ok=True`)
+- `D:\Hearth\.venv\Scripts\python.exe ai-governance-framework\governance_tools\external_repo_smoke.py --repo d:/Hearth --contract d:/Hearth/contract.yaml --format human` -> pass (`ok=True`)
+- `D:\Hearth\.venv\Scripts\python.exe ai-governance-framework\governance_tools\external_repo_onboarding_report.py --repo d:/Hearth --framework-root d:/Hearth/ai-governance-framework --contract d:/Hearth/contract.yaml --format human` -> pass (`ok=True`)
+- `D:\Hearth\.venv\Scripts\python.exe ai-governance-framework\governance_tools\governance_drift_checker.py --repo d:/Hearth --framework-root d:/Hearth/ai-governance-framework --format human` -> pass (`severity=ok`)
+
+- Scope covered:
+  - resolved runtime compatibility refusal by adding `.governance/version_manifest.yaml`
+  - normalized `governance/framework.lock.json` adopted release to comparable value (`1.2.0`)
+  - admitted post-task visibility keys in expansion boundary checker, clearing governance drift warning

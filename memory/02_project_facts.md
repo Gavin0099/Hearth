@@ -42,8 +42,11 @@ type: project
 - Web check: `npm --workspace @hearth/web run check`
 - Release/readiness: `npm run readiness:first:codeonly`, `npm run readiness:first`, `npm run readiness:first:strict`
 
-## Human Verification Needed
+## Human Verification
 
-- [ ] Confirm Product domain wording matches business scope in current quarter.
-- [ ] Confirm runtime stack versions are still correct (React/Hono/Supabase/Cloudflare).
-- [ ] Confirm verification baseline commands remain canonical for release gating.
+- [x] Confirm Product domain wording matches business scope in current quarter. (2026-05-22)
+- [x] Confirm runtime stack versions are still correct (React/Hono/Supabase/Cloudflare). (2026-05-22)
+- [x] Confirm verification baseline commands remain canonical for release gating. (2026-05-22)
+
+Notes:
+- This confirmation is based on governance onboarding/readiness + smoke checks run on 2026-05-22.
