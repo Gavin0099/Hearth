@@ -37,8 +37,8 @@
 Executed results:
 
 - `external_repo_readiness.py`: `ready=True`, but with drift/version warnings.
-- `external_repo_smoke.py`: failed with `version_compatibility_unsupported`.
-- `quickstart_smoke.py`: failed with `session_start_ok=False` and same compatibility blocker.
+- `external_repo_smoke.py`: initially failed with `version_compatibility_unsupported`; after adding `.governance/version_manifest.yaml`, now `ok=True`.
+- `quickstart_smoke.py`: initially failed with `session_start_ok=False`; after version manifest fix, now `ok=True`.
 
 Resolved setup blockers:
 
@@ -49,10 +49,10 @@ Resolved setup blockers:
 
 ## Recommended Next Command
 
-Refresh governance baseline inventory first, then rerun smoke:
+Remaining cleanup (non-blocking warnings):
 
-`D:\Hearth\.venv\Scripts\python.exe ai-governance-framework\governance_tools\adopt_governance.py --target d:/Hearth --refresh`
+`D:\Hearth\.venv\Scripts\python.exe ai-governance-framework\governance_tools\external_repo_onboarding_report.py --repo d:/Hearth --framework-root d:/Hearth/ai-governance-framework --contract d:/Hearth/contract.yaml --format human`
 
-Then:
-
-`D:\Hearth\.venv\Scripts\python.exe ai-governance-framework\governance_tools\quickstart_smoke.py --project-root d:/Hearth --plan d:/Hearth/PLAN.md --contract d:/Hearth/contract.yaml --format human`
+Focus areas:
+- expansion boundary warning (`new_return_key` set)
+- framework version compare warning (`adopted_release` format `v1.2.0+post`)
