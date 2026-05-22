@@ -74,7 +74,9 @@
       "Bash(git -C ai-governance-framework diff --stat HEAD)",
       "Bash(git rev-list *)",
       "Bash(xargs git diff-tree --no-commit-id --name-only -r)",
-      "Bash(xargs -0 -I{} git diff-tree --no-commit-id --name-only -r {})"
+      "Bash(xargs -0 -I{} git diff-tree --no-commit-id --name-only -r {})",
+      "Bash(git ls-remote *)",
+      "Bash(xargs -rI{} git diff-tree --no-commit-id --name-only -r {})"
     ]
   }
 }
