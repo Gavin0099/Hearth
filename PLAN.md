@@ -42,36 +42,56 @@
 
 ---
 
-## 🔥 本輪聚焦（Sprint 2026-05-16）
+## 🔥 本輪聚焦（Sprint 2026-05-23）
 
-### 已完成（本輪帶入）
+### 已完成（前輪收尾）
 - [x] 信用卡匯入日期統一改用「入帳起息日 / posted date」
 - [x] 全信用卡 PDF/CSV parser 套用相同日期語意
 - [x] `excel-monthly` 強化（formula-heavy / recurring sidebar）
 - [x] recurring candidate -> template 攜帶 amount
 - [x] 匯入面板新增一鍵「建立模板並套用本月」
 - [x] 初步資料安全邊界文件化（`docs/security-boundary.md`）
-- [x] 治理基線與 memory 同步
-- [x] `ai-governance-framework` 升級至 v1.2.1（full adopt + token run checklist）
+- [x] `ai-governance-framework` 升級至 v1.2.1 → v1.2.0+post（c5152c1），drift check 17/17 PASS
 - [x] Gmail OAuth `access_type=offline`：解決每小時強制重登問題
 - [x] Gmail 帳單查詢改用 90 天日期視窗（移除 `has:attachment`，maxResults 提升至 12）
+- [x] Items 1-4：PortfolioPanel cron status UI、trigger API、server-side Gmail cron、queue UI
 
-### 已完成（本輪追加）
-- [x] Items 1&2：PortfolioPanel 顯示 job_run 狀態 + 手動觸發「立即更新股價/匯率」
-- [x] Item 3：未驗證銀行帳戶對帳單顯示明確提示（等 PDF 樣本）
-- [x] Item 4：服務端 Gmail cron（gmail-sync.ts + wrangler cron + gmail_sync_queue + 佇列 UI）
-- [x] `ai-governance-framework` 升級至 v1.2.0+post（c5152c1），drift check 17/17 PASS
+### 已完成（05-17 UI 基礎）
+- [x] CSS design token 全面落地：所有 panel 使用 token，無 hardcoded 色彩
+- [x] Shadcn-style primitive layer（Button/Card/Badge/Tabs/Dialog/Skeleton）
+- [x] Home 資訊架構重整：主流程（Gmail/Import）vs 次要分析 panel 分層
+- [x] 視覺打磨：字體階層、panel 深度、首頁進場動畫（含 reduced-motion）
+- [x] Mobile/無障礙 pass：觸控目標、nav flow、小螢幕間距
+
+### 已完成（05-22 治理 re-onboarding）
+- [x] `ai-governance-framework` submodule URL 對齊 GitLab remote
+- [x] `.governance/version_manifest.yaml` 新增，通過 version_compatibility gate
+- [x] `contract.yaml` 手動決策：`domain=household-finance`、`risk_tier=L2`
+- [x] `governance/framework.lock.json` 採用版本正規化至 `1.2.0`
+- [x] `pre-push` hook bug 修正（`xargs -rI{}`＋stdin-independent fallback）
+- [x] governance drift `severity=ok`，runtime smoke `session_start_ok=True`
+- [x] push 成功，所有 gate 通過
 
 ### 本輪重點（進行中）
-- [ ] **部署操作（手動）**：執行 Supabase migration `20260507000000_add_gmail_server_sync.sql`
-- [ ] **部署操作（手動）**：Cloudflare Dashboard 設定 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`
-- [ ] **驗證**：重新登入 app 一次，確認 provider_refresh_token 被捕獲並儲存
-- [ ] **Gmail 真實驗證**：確認永豐 5 月帳單可見、通知信顯示「無 PDF 附件」
-- [ ] **Item 3 續作（先縮範圍）**：只收斂 玉山/永豐 銀行帳戶 PDF 樣本回歸（見 `docs/bank-statement-sample-checklist-esun-sinopac.md`）
-- [ ] **安全邊界強化（Phase F-1）**：
-  - [ ] RLS hardening map：逐表列出 RLS 狀態與對應路由
-  - [ ] Route-by-route auth 矩陣：auth + ownership + validation + failure code
-  - [ ] Secret lifecycle policy：PDF 密碼 rotation cadence 與 plaintext 消滅目標
+
+#### 手動部署（需人工操作）
+- [ ] 執行 Supabase migration `20260507000000_add_gmail_server_sync.sql`
+- [ ] Cloudflare Dashboard 設定 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`
+- [ ] 重新登入 app，確認 provider_refresh_token 被捕獲並儲存
+- [ ] Gmail 真實驗證：確認永豐 5 月帳單可見、通知信顯示「無 PDF 附件」
+
+#### UI 元件重設計 pass（本輪開工）
+- [ ] GmailSyncPanel 內部元件對齊 design token（表單、狀態指示、佇列列表）
+- [ ] ImportPanel 內部元件對齊 design token（檔案上傳區、preview table、結果列表）
+- [ ] 統一 form / table / badge 視覺語言，與 home 層級保持一致
+
+#### 安全邊界強化 Phase F-1（本輪開工）
+- [ ] RLS hardening map：逐表列出 RLS 狀態與對應路由
+- [ ] Route-by-route auth 矩陣：auth + ownership + validation + failure code
+- [ ] Secret lifecycle policy：PDF 密碼 rotation cadence 與 plaintext 消滅目標
+
+#### 銀行 PDF 樣本回歸（等樣本）
+- [ ] 玉山/永豐銀行帳戶 PDF 樣本回歸（見 `docs/bank-statement-sample-checklist-esun-sinopac.md`）
 
 ---
 
@@ -137,3 +157,6 @@
 | 2026-05-07 | 治理框架升級至 c5152c1 | v1.2.0+post，drift check 17/17 PASS（expansion_boundary 也通過） |
 | 2026-05-16 | readiness gate 強化 | first-release-readiness 改為 fail-fast；修正 3 個 API 測試期望並恢復 173/173；codeonly readiness PASS |
 | 2026-05-16 | 銀行樣本範圍收斂 | Item 3 續作先聚焦玉山/永豐，新增專用樣本回歸 checklist |
+| 2026-05-17 | UI 設計系統落地 | CSS design token 全面落地；shadcn primitive layer；home 資訊架構重整；視覺打磨；mobile/a11y pass |
+| 2026-05-22 | 治理 re-onboarding | submodule URL 對齊；version_manifest.yaml；risk_tier=L2；pre-push hook bug 修正；push gate 全通過 |
+| 2026-05-23 | PLAN 刷新 | Sprint 視窗更新至 05-23；新增 UI restyling pass 與 Security Phase F-1 工作項 |

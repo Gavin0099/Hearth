@@ -76,7 +76,9 @@
       "Bash(xargs git diff-tree --no-commit-id --name-only -r)",
       "Bash(xargs -0 -I{} git diff-tree --no-commit-id --name-only -r {})",
       "Bash(git ls-remote *)",
-      "Bash(xargs -rI{} git diff-tree --no-commit-id --name-only -r {})"
+      "Bash(xargs -rI{} git diff-tree --no-commit-id --name-only -r {})",
+      "Bash(Get-ChildItem -Path \"d:\\\\Hearth\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)"
     ]
   }
 }
