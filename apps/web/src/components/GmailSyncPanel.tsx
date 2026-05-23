@@ -846,20 +846,19 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
                   <div className="gmail-email-meta">
                     <span>{BANK_DISPLAY_NAMES[email.bank]} - {email.subject}</span>
                     {!hasPdf && (
-                      <span className="gmail-email-no-pdf">
-                        通知信，無 PDF 附件
-                      </span>
+                      <Badge variant="secondary">通知信，無 PDF 附件</Badge>
                     )}
                   </div>
-                  <button
-                    className="action-button secondary"
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => void handleSync(email)}
                     disabled={state.status === "loading" || !hasPdf}
                     type="button"
                     title={!hasPdf ? "此信無 PDF 附件，無法匯入" : undefined}
                   >
                     匯入
-                  </button>
+                  </Button>
                 </li>
               );
             })}

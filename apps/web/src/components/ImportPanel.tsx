@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import type { AccountRecord, RecurringImportCandidate } from "@hearth/shared";
+import { Button } from "./ui/button";
 import { fetchAccounts } from "../lib/accounts";
 import {
   importCreditCardTransactionsCsv,
@@ -403,7 +404,7 @@ export function ImportPanel({
               </div>
             ) : null}
             {previewLoading ? <p className="import-preview-loading">預覽解析中...</p> : null}
-            <button className="action-button" disabled={isSubmitting} type="submit">
+            <Button disabled={isSubmitting} loading={isSubmitting} type="submit">
               {isSubmitting
                 ? "匯入中..."
                 : importMode === "excel-monthly"
@@ -415,27 +416,27 @@ export function ImportPanel({
                     : importMode === "dividends-csv"
                       ? "匯入配息"
                       : "匯入 CSV"}
-            </button>
+            </Button>
           </form>
           {latestRecurringCandidates.length > 0 ? (
             <>
               <p>可直接建立週期模板的候選: {latestRecurringCandidates.length} 筆。</p>
-              <button
-                className="action-button"
+              <Button
                 disabled={isCreatingRecurring || isCreatingAndApplyingRecurring}
+                loading={isCreatingRecurring}
                 onClick={() => void handleCreateRecurringTemplates()}
                 type="button"
               >
                 {isCreatingRecurring ? "建立模板中..." : "從候選建立週期模板"}
-              </button>
-              <button
-                className="action-button"
+              </Button>
+              <Button
                 disabled={isCreatingRecurring || isCreatingAndApplyingRecurring}
+                loading={isCreatingAndApplyingRecurring}
                 onClick={() => void handleCreateAndApplyRecurringTemplates()}
                 type="button"
               >
                 {isCreatingAndApplyingRecurring ? "建立並套用中..." : "建立模板並套用本月"}
-              </button>
+              </Button>
             </>
           ) : null}
           {message ? <p>{message}</p> : null}
