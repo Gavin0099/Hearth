@@ -3,7 +3,7 @@
 > **專案名稱**: Hearth 家庭財務管理
 > **技術棧**: React / TypeScript / Hono / Supabase / Cloudflare
 > **風險等級**: L1-L2（以 correctness / security 為優先）
-> **最後更新**: 2026-05-16
+> **最後更新**: 2026-05-23
 > **Owner**: GavinWu
 > **Freshness**: Sprint (7d)
 
