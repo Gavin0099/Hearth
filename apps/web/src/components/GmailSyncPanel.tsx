@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import type { AccountRecord, ParsedPdfTransaction } from "@hearth/shared";
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
 import {
   downloadAttachment,
   fetchBillEmails,
@@ -805,25 +807,27 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       {pendingQueue.length > 0 && (
         <div className="queue-notice">
           <span>伺服器已偵測到 <strong>{pendingQueue.length}</strong> 封待匯入帳單</span>
-          <button
-            className="action-button secondary"
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => void handleProcessQueue()}
             disabled={queueRunning || state.status === "loading"}
+            loading={queueRunning}
             type="button"
           >
             {queueRunning ? "匯入中..." : "一鍵匯入佇列"}
-          </button>
+          </Button>
         </div>
       )}
 
-      <button
-        className="action-button"
+      <Button
         onClick={() => void handleConnect()}
         disabled={state.status === "loading"}
+        loading={state.status === "loading"}
         type="button"
       >
         {state.status === "loading" ? "載入中..." : "搜尋 Gmail 帳單"}
-      </button>
+      </Button>
 
       {state.status === "loading" && <p className="panel-message--muted">{state.message}</p>}
       {state.status === "error" && <p className="panel-message panel-message--error">錯誤：{state.message}</p>}

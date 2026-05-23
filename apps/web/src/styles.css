@@ -899,18 +899,18 @@ textarea:focus-visible {
   display: grid;
   gap: 6px;
   font-weight: 600;
-  color: #5d4331;
+  color: var(--color-primary-strong);
 }
 
 .account-form input,
 .account-form select {
   width: 100%;
-  border: 1px solid rgba(91, 66, 44, 0.18);
-  border-radius: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   padding: 10px 12px;
   font: inherit;
-  background: #fffdf9;
-  color: #241b15;
+  background: var(--color-surface-strong);
+  color: inherit;
 }
 
 input,
