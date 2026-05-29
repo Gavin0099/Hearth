@@ -11,17 +11,17 @@
 # ── PROVENANCE ────────────────────────────────────────────────────────────────
 schema_version: "1"
 baseline_version: 1.0.0
-source_commit: c9e77fc6eb59916d2052350b4d4faacfde568e43
-framework_root: D:\Hearth\ai-governance-framework
-initialized_at: 2026-05-22T15:53:55Z
+source_commit: 7f8b330cdd96ee7fdf367210bf1f85fe07349f2a
+framework_root: D:\ai-governance-framework
+initialized_at: 2026-05-29T17:02:48Z
 initialized_by: governance_tools/adopt_governance.py
 
 # ── INTEGRITY ─────────────────────────────────────────────────────────────────
 # sha256.<file>: hash recorded at init/refresh time; "protected" files are hash-verified
 # overridable.<file>: protected = must not change | overridable = repo may extend freely
 sha256.AGENTS.base.md: f3daf5037a36606d546dc8d621dbb32963c6e3067f419187e4afd6f2d6dc14a7
-sha256.PLAN.md: 163150d52a16cf5d7b65bd1358f45da4276d3cf6075d651c619ce14d3434ea96
-sha256.contract.yaml: 061e02292bc75b838f520c36ec7ad88af24fa1c63699e6370b71919d4a9c2bf4
+sha256.PLAN.md: 98565ad0948325b0a2f9b9a29b0db8470f627718e76ad10a2d36ecca1c80d65e
+sha256.contract.yaml: e3462b3cd1c0c9c731e05458bc5e17b5040949492703839fba97eba20243c5fe
 sha256.AGENTS.md: 3c0d87aba1b0e608fbdc9066b7fdb2ff970b82018994ff38fe66e0bfeefb2f38
 overridable.AGENTS.base.md: protected
 overridable.PLAN.md: overridable
@@ -48,7 +48,7 @@ contract_required_fields:
 plan_section_inventory:
   - "## 📋 專案目標"
   - "## 🏗️ 當前階段"
-  - "## 🔥 本輪聚焦（Sprint 2026-05-16）"
+  - "## 🔥 本輪聚焦（Sprint 2026-05-23）"
   - "## 📦 Phase 詳細規劃"
   - "## 🎯 當前決策"
   - "## 🚫 現階段不要做"
