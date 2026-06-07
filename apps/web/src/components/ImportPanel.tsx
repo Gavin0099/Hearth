@@ -277,31 +277,31 @@ export function ImportPanel({
   }
 
   return (
-    <article className="panel">
+    <article className="panel import-panel">
       <h2>資料匯入</h2>
-      {!session ? <p>登入後可以匯入標準化交易 CSV。</p> : null}
+      {!session ? <p className="panel-copy">登入後可以匯入標準化交易 CSV。</p> : null}
       {state.status === "loading" ? <p className="panel-message--muted">正在載入可用帳戶...</p> : null}
       {state.status === "error" ? <p className="panel-message panel-message--error">匯入面板載入失敗: {state.message}</p> : null}
       {state.status === "success" ? (
         <>
-          <p>
+          <p className="panel-copy">
             {importMode === "normalized" ? (
-              <>CSV 欄位格式：<code>date,amount,currency,category,description</code></>
+              <>CSV 欄位格式：<code className="panel-inline-code">date,amount,currency,category,description</code></>
             ) : importMode === "sinopac-tw" ? (
-              <>永豐最小欄位格式：<code>日期,金額,摘要</code>，可選 <code>幣別</code> 與 <code>收支別</code>。</>
+              <>永豐最小欄位格式：<code className="panel-inline-code">日期,金額,摘要</code>，可選 <code className="panel-inline-code">幣別</code> 與 <code className="panel-inline-code">收支別</code>。</>
             ) : importMode === "credit-card-tw" ? (
-              <>信用卡最小欄位格式：<code>交易日期,金額,摘要</code>，可選 <code>幣別</code> 與 <code>交易類型</code>。</>
+              <>信用卡最小欄位格式：<code className="panel-inline-code">交易日期,金額,摘要</code>，可選 <code className="panel-inline-code">幣別</code> 與 <code className="panel-inline-code">交易類型</code>。</>
             ) : importMode === "sinopac-stock" ? (
-              <>永豐台股欄位：<code>成交日期,股票代號,股票名稱,買賣別,成交股數,成交單價,手續費,交易稅</code>。匯入後自動重算持倉。</>
+              <>永豐台股欄位：<code className="panel-inline-code">成交日期,股票代號,股票名稱,買賣別,成交股數,成交單價,手續費,交易稅</code>。匯入後自動重算持倉。</>
             ) : importMode === "foreign-stock-csv" ? (
-              <>複委託 CSV 欄位：<code>成交日期,股票代號,股票名稱,買賣別,成交股數,成交單價,手續費,交易稅,currency</code>。可匯入 USD 等外幣交易，匯入後同樣自動重算持倉。</>
+              <>複委託 CSV 欄位：<code className="panel-inline-code">成交日期,股票代號,股票名稱,買賣別,成交股數,成交單價,手續費,交易稅,currency</code>。可匯入 USD 等外幣交易，匯入後同樣自動重算持倉。</>
             ) : importMode === "dividends-csv" ? (
-              <>配息 CSV 欄位：<code>ticker,pay_date,net_amount[,gross_amount][,tax_withheld][,currency]</code>。日期格式 YYYY-MM-DD。</>
+              <>配息 CSV 欄位：<code className="panel-inline-code">ticker,pay_date,net_amount[,gross_amount][,tax_withheld][,currency]</code>。日期格式 YYYY-MM-DD。</>
             ) : (
-              <>Excel 第一版格式：第一列放日期欄，左側欄位使用 <code>分類</code> / <code>項目</code>，每日金額填在日期欄下方。</>
+              <>Excel 第一版格式：第一列放日期欄，左側欄位使用 <code className="panel-inline-code">分類</code> / <code className="panel-inline-code">項目</code>，每日金額填在日期欄下方。</>
             )}
           </p>
-          <form className="account-form" onSubmit={handleSubmit}>
+          <form className="account-form form-surface" onSubmit={handleSubmit}>
             <label>
               匯入模式
               <select
@@ -356,7 +356,7 @@ export function ImportPanel({
             {filePreview ? (
               <div className="import-preview">
                 <div className="import-preview-meta">
-                  <span>{filePreview.name}</span>
+                  <span className="panel-inline-code">{filePreview.name}</span>
                   <span>{filePreview.sizeKb} KB</span>
                   {filePreview.estimatedDataRows > 0 ? (
                     <span>約 {filePreview.estimatedDataRows} 筆資料列</span>
@@ -421,25 +421,27 @@ export function ImportPanel({
           {latestRecurringCandidates.length > 0 ? (
             <>
               <p>可直接建立週期模板的候選: {latestRecurringCandidates.length} 筆。</p>
-              <Button
-                disabled={isCreatingRecurring || isCreatingAndApplyingRecurring}
-                loading={isCreatingRecurring}
-                onClick={() => void handleCreateRecurringTemplates()}
-                type="button"
-              >
-                {isCreatingRecurring ? "建立模板中..." : "從候選建立週期模板"}
-              </Button>
-              <Button
-                disabled={isCreatingRecurring || isCreatingAndApplyingRecurring}
-                loading={isCreatingAndApplyingRecurring}
-                onClick={() => void handleCreateAndApplyRecurringTemplates()}
-                type="button"
-              >
-                {isCreatingAndApplyingRecurring ? "建立並套用中..." : "建立模板並套用本月"}
-              </Button>
+              <div className="recurring-actions">
+                <Button
+                  disabled={isCreatingRecurring || isCreatingAndApplyingRecurring}
+                  loading={isCreatingRecurring}
+                  onClick={() => void handleCreateRecurringTemplates()}
+                  type="button"
+                >
+                  {isCreatingRecurring ? "建立模板中..." : "從候選建立週期模板"}
+                </Button>
+                <Button
+                  disabled={isCreatingRecurring || isCreatingAndApplyingRecurring}
+                  loading={isCreatingAndApplyingRecurring}
+                  onClick={() => void handleCreateAndApplyRecurringTemplates()}
+                  type="button"
+                >
+                  {isCreatingAndApplyingRecurring ? "建立並套用中..." : "建立模板並套用本月"}
+                </Button>
+              </div>
             </>
           ) : null}
-          {message ? <p>{message}</p> : null}
+          {message ? <p className="panel-message">{message}</p> : null}
         </>
       ) : null}
     </article>

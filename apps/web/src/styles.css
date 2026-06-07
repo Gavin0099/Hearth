@@ -173,9 +173,29 @@ textarea:focus-visible {
   flex: 1;
 }
 
+.gmail-email-meta .gmail-email-bank {
+  color: var(--color-primary-strong);
+  font-weight: 700;
+}
+
+.gmail-email-actions {
+  display: flex;
+  align-items: center;
+}
+
 .gmail-email-no-pdf {
   font-size: 0.8em;
   color: var(--color-text-muted);
+}
+
+.gmail-queue {
+  border-left-width: 4px;
+  border-left-color: var(--color-primary);
+}
+
+.queue-notice-count {
+  font-size: 0.9rem;
+  color: #4b3a2d;
 }
 
 .queue-notice {
@@ -282,6 +302,41 @@ textarea:focus-visible {
 .panel {
   padding: 24px;
   transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.panel-inline-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  background: rgba(91, 66, 44, 0.08);
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  padding: 0.08rem 0.35rem;
+  font-size: 0.8em;
+  color: #3f2e1f;
+}
+
+.panel-copy {
+  margin: 0 0 10px;
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
+.panel-copy--tight {
+  margin-bottom: 6px;
+}
+
+.panel-action-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.panel-row-item {
+  padding: 10px 12px;
+  border: 1px solid rgba(91, 66, 44, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 252, 247, 0.78);
 }
 
 .panel:hover {
@@ -1150,6 +1205,19 @@ textarea {
   border-radius: 10px;
   padding: 10px 12px;
   font-size: 0.82rem;
+}
+
+.form-surface {
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(91, 66, 44, 0.12);
+  border-radius: 16px;
+  padding: 12px 12px 2px;
+}
+
+.recurring-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .import-preview-meta {

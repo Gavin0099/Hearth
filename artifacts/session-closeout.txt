@@ -1,7 +1,7 @@
-﻿TASK_INTENT: pull main and update ai-governance-framework submodule via F-7 in this session
-WORK_COMPLETED: Pulled Hearth main branch (already up to date) and performed F-7 dry-run + apply flow for ai-governance-framework submodule; submodule pointer was advanced from 7c57f3a4d75ac188a4dc21e01522cb4f71da32ea to 57db6c164182b560fe6acc017b2ed93899dd422c and staged in parent repo.
-FILES_TOUCHED: ai-governance-framework/.git; artifacts/runtime/injection/2026-06-07/20260607T041352Z-claude.json; artifacts/runtime/injection/2026-06-07/token-meta.json; ai-governance-framework (git submodule pointer in parent index)
-CHECKS_RUN: git pull --ff-only origin main; git status --short; python -m governance_tools.external_governance_submodule_updater --repo D:\Hearth --format json (dry-run); python -m governance_tools.external_governance_submodule_updater --repo D:\Hearth --apply --stage --commit --format json; git status --short; git diff --cached --name-only
-OPEN_RISKS: The final commit failed due repo commit hook rejecting stale PLAN.md (15+ day freshness check), so the submodule update is staged but not yet committed in this session. Parent repo must be committed separately after required hook preconditions are satisfied.
-NOT_DONE: Commit and push of the ai-governance-framework submodule pointer update.
-RECOMMENDED_MEMORY_UPDATE: Record that the submodule pointer was advanced to 57db6c1 via F-7 dry-run + apply, with commit deferred pending hook precondition fix.
+﻿TASK_INTENT: 依照 repo 下一步完成 GmailSyncPanel / ImportPanel 的 UI 內部元件視覺對齊，維持匯入行為不變。
+WORK_COMPLETED:  更新 `apps/web/src/components/GmailSyncPanel.tsx`、`apps/web/src/components/ImportPanel.tsx`；新增/更新 `apps/web/src/styles.css` 的 token 化樣式；更新 `artifacts/runtime/injection/2026-06-07/token-meta.json`；更新 `memory/01_active_task.md`、`memory/2026-06-07.md`。
+FILES_TOUCHED: apps/web/src/components/GmailSyncPanel.tsx, apps/web/src/components/ImportPanel.tsx, apps/web/src/styles.css, artifacts/runtime/injection/2026-06-07/token-meta.json, memory/01_active_task.md, memory/2026-06-07.md, artifacts/runtime/injection/2026-06-07/20260607T042726Z-claude.json
+CHECKS_RUN: git status --short
+OPEN_RISKS: 尚未執行 UI check/build；尚未推送 commit。
+NOT_DONE: 未補齊 BankLedgerPanel / CreditCardLedgerPanel 的 UI 對齊；未執行測試/建置驗證。
+RECOMMENDED_MEMORY_UPDATE: 將本次 UI 視覺一致化內容同步寫入 `memory/01_active_task.md` 與 `memory/2026-06-07.md`（已完成）；建議下一筆日誌補上驗證結果（如有執行 web check 或 visual 驗收）。

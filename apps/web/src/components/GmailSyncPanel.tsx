@@ -800,13 +800,17 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
   if (!session) return null;
 
   return (
-    <article className="panel">
+    <article className="panel gmail-sync-panel">
       <h2>Gmail 帳單同步</h2>
-      <p>自動抓取永豐、玉山、國泰、台新、中信、兆豐帳單（信用卡＋綜合對帳單），匯入後以銀行標籤區分，不需要逐封指定帳戶。</p>
+      <p className="panel-copy">
+        自動抓取永豐、玉山、國泰、台新、中信、兆豐帳單（信用卡＋綜合對帳單），匯入後以銀行標籤區分，不需要逐封指定帳戶。
+      </p>
 
       {pendingQueue.length > 0 && (
-        <div className="queue-notice">
-          <span>伺服器已偵測到 <strong>{pendingQueue.length}</strong> 封待匯入帳單</span>
+        <div className="queue-notice gmail-queue">
+          <span className="queue-notice-count">
+            伺服器已偵測到 <strong>{pendingQueue.length}</strong> 封待匯入帳單
+          </span>
           <Button
             variant="secondary"
             size="sm"
@@ -820,14 +824,16 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         </div>
       )}
 
-      <Button
-        onClick={() => void handleConnect()}
-        disabled={state.status === "loading"}
-        loading={state.status === "loading"}
-        type="button"
-      >
-        {state.status === "loading" ? "載入中..." : "搜尋 Gmail 帳單"}
-      </Button>
+      <div className="panel-action-row">
+        <Button
+          onClick={() => void handleConnect()}
+          disabled={state.status === "loading"}
+          loading={state.status === "loading"}
+          type="button"
+        >
+          {state.status === "loading" ? "載入中..." : "搜尋 Gmail 帳單"}
+        </Button>
+      </div>
 
       {state.status === "loading" && <p className="panel-message--muted">{state.message}</p>}
       {state.status === "error" && <p className="panel-message panel-message--error">錯誤：{state.message}</p>}
@@ -835,30 +841,33 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
 
       {emails.length > 0 && (
         <>
-          <p>找到 {emails.length} 封帳單。</p>
+          <p className="panel-copy panel-copy--tight">找到 {emails.length} 封帳單。</p>
           <ul className="gmail-email-list">
             {emails.map((email) => {
               const hasPdf = email.attachments.some(
                 (a) => a.mimeType === "application/pdf" || a.filename.endsWith(".pdf"),
               );
               return (
-                <li key={email.id} className="gmail-email-item">
+                <li key={email.id} className="gmail-email-item panel-row-item">
                   <div className="gmail-email-meta">
-                    <span>{BANK_DISPLAY_NAMES[email.bank]} - {email.subject}</span>
+                    <span className="gmail-email-bank">{BANK_DISPLAY_NAMES[email.bank]}</span>
+                    <span>{email.subject}</span>
                     {!hasPdf && (
                       <Badge variant="secondary">通知信，無 PDF 附件</Badge>
                     )}
                   </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => void handleSync(email)}
-                    disabled={state.status === "loading" || !hasPdf}
-                    type="button"
-                    title={!hasPdf ? "此信無 PDF 附件，無法匯入" : undefined}
-                  >
-                    匯入
-                  </Button>
+                  <div className="gmail-email-actions">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void handleSync(email)}
+                      disabled={state.status === "loading" || !hasPdf}
+                      type="button"
+                      title={!hasPdf ? "此信無 PDF 附件，無法匯入" : undefined}
+                    >
+                      匯入
+                    </Button>
+                  </div>
                 </li>
               );
             })}

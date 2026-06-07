@@ -75,3 +75,4 @@
 
 
 
+- 2026-06-07: 完成 GmailSyncPanel 與 ImportPanel 的 UI 表單/列表視覺一致化；預計下一步完成銀行/信用卡 ledger 的同層次 token 化。

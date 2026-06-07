@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-07T04:27:26.637443+00:00",
+  "contract_injected": true,
+  "contract_hash": "832209c5260881aaf87af06b6186fd845813977166982d760f010d391c32483a",
+  "scope": "feat",
+  "level": "L1",
+  "lang": "TypeScript",
+  "contract_fields": {
+    "LANG": "TypeScript",
+    "LEVEL": "L1",
+    "SCOPE": "feat",
+    "PLAN": "繼續 repo 下一步：優先對 GmailSyncPanel / ImportPanel 元件做 token 化 UI 對齊",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/02_tech_stack.md, memory/03_knowledge_base.md, memory/03_decisions.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-07.md",
+    "CONTEXT": "執行 GmailSyncPanel 與 ImportPanel 內部元件樣式對齊，提升設計一致性，不改變資料流程與行為語意",
+    "PRESSURE": "SAFE (UI polish pass, no behavior changes)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L1\nSCOPE = feat\nPLAN = 繼續 repo 下一步：優先對 GmailSyncPanel / ImportPanel 元件做 token 化 UI 對齊\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/02_tech_stack.md, memory/03_knowledge_base.md, memory/03_decisions.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-07.md\nCONTEXT = 執行 GmailSyncPanel 與 ImportPanel 內部元件樣式對齊，提升設計一致性，不改變資料流程與行為語意\nPRESSURE = SAFE (UI polish pass, no behavior changes)\n\n對 GmailSyncPanel 與 Impor"
+}

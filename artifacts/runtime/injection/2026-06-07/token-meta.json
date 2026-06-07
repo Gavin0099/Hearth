@@ -1,10 +1,10 @@
 ﻿{
   "repo": "Hearth",
-  "timestamp": "2026-06-07T04:13:52.221106+00:00",
-  "task_type": "chore/update-governance-submodule",
+  "timestamp": "'+$ts+'",
+  "task_type": "feat/ui-token-restyle",
   "total_tokens": null,
   "token_source_summary": "claude_code_internal",
   "token_observability_level": "none",
   "decision_usage_allowed": false,
-  "artifact_path": "artifacts/runtime/injection/2026-06-07/20260607T041352Z-claude.json"
+  "artifact_path": "artifacts/runtime/injection/2026-06-07/20260607T042726Z-claude.json"
 }
