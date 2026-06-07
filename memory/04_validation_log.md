@@ -201,3 +201,4 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
   - normalized `governance/framework.lock.json` adopted release to comparable value (`1.2.0`)
   - admitted post-task visibility keys in expansion boundary checker, clearing governance drift warning
 - 2026-06-07: 完成 governance 例行紀錄確認（`artifacts/runtime/injection/2026-06-07/token-meta.json` `timestamp` 已補齊為實際時間值，並確認 closeout/載入檔到位）；當日驗證命令：`git status -sb`、strict 全域 panel 文案掃描、`npm --workspace @hearth/web run check`。
+- 2026-06-07: 完成 Gmail server sync 第1~2項（migration 確認 + 手冊/PLAN 對齊）與 runbook 補強；尚未進行 migration 套用與 Cloudflare / provider_refresh_token 實驗證。

@@ -75,10 +75,12 @@
 ### 本輪重點（進行中）
 
 #### 手動部署（需人工操作）
-- [ ] 執行 Supabase migration `20260507000000_add_gmail_server_sync.sql`
-- [ ] Cloudflare Dashboard 設定 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`
-- [ ] 重新登入 app，確認 provider_refresh_token 被捕獲並儲存
+- [x] backend migration 已就緒：`supabase/migrations/20260507000000_add_gmail_server_sync.sql` 存在
+- [ ] 執行 Supabase migration `20260507000000_add_gmail_server_sync.sql`（尚未確認已套用）
+- [ ] Cloudflare Dashboard / Wrangler Secret 設定 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`
+- [ ] 重新登入 app，確認 `provider_refresh_token` 被捕獲並儲存於 `user_settings.gmail_refresh_token`
 - [ ] Gmail 真實驗證：確認永豐 5 月帳單可見、通知信顯示「無 PDF 附件」
+- [ ] 依 `docs/gmail-server-sync-deploy-runbook.md` 完成驗證並補上 validation log
 
 #### UI 元件重設計 pass（本輪開工）
 - [ ] GmailSyncPanel 內部元件對齊 design token（表單、狀態指示、佇列列表）
@@ -161,3 +163,4 @@
 | 2026-05-22 | 治理 re-onboarding | submodule URL 對齊；version_manifest.yaml；risk_tier=L2；pre-push hook bug 修正；push gate 全通過 |
 | 2026-05-23 | PLAN 刷新 | Sprint 視窗更新至 05-23；新增 UI restyling pass 與 Security Phase F-1 工作項 |
 | 2026-06-07 | 治理更新 | F-7 update-governance-submodule 已將 ai-governance-framework 指向 `57db6c164182b560fe6acc017b2ed93899dd422c` |
+| 2026-06-07 | Gmail server sync 落地規劃 | 新增 `docs/gmail-server-sync-deploy-runbook.md`，並將手動部署清單同步為 migration/Cloudflare secrets/provider token/真實驗證待完成項目。 |
