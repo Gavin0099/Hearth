@@ -1,7 +1,7 @@
-TASK_INTENT: 繼續完成 `Hearth` UI 元件重設計 pass，對齊 Bank 與 Credit Card Ledger 面板的視覺 token 使用。
-WORK_COMPLETED: 更新 `apps/web/src/components/BankLedgerPanel.tsx`、`apps/web/src/components/CreditCardLedgerPanel.tsx` 的文案與 empty 狀態 class，改為 `panel-copy` / `panel-message` token 風格並補充 `bank-ledger-panel`、`credit-ledger-panel` wrapper。同步更新 `memory/01_active_task.md`、`memory/2026-06-07.md`。
-FILES_TOUCHED: apps/web/src/components/BankLedgerPanel.tsx, apps/web/src/components/CreditCardLedgerPanel.tsx, memory/01_active_task.md, memory/2026-06-07.md, artifacts/session-closeout.txt
-CHECKS_RUN: 無（依目前任務未要求執行）
-OPEN_RISKS: 尚未補齊全域 stylesheet 的對應 variant token（目前僅保留 wrapper class 作為未來擴展）；未執行 UI build/test。
-NOT_DONE: 尚未針對 Bank/Credit 面板做最後一次 responsive 快照或 `npm --workspace @hearth/web run check/build` 驗證。
-RECOMMENDED_MEMORY_UPDATE: 將本次視覺 token 對齊成果持續補充到 `memory/01_active_task.md` 與 `memory/YYYY-MM-DD.md`，並在後續執行 web check 後補上驗證結果。
+TASK_INTENT: 進行 UI 元件重設計 pass，完成手動交易面板的視覺 token 對齊。
+WORK_COMPLETED: 更新 `apps/web/src/components/TransactionsPanel.tsx` 的文案/訊息類別，新增 `transactions-panel` wrapper；同步更新 `apps/web/src/styles.css`、`memory/01_active_task.md`、`memory/2026-06-07.md`、`artifacts/session-closeout.txt`。
+FILES_TOUCHED: apps/web/src/components/TransactionsPanel.tsx, apps/web/src/styles.css, memory/01_active_task.md, memory/2026-06-07.md, artifacts/session-closeout.txt
+CHECKS_RUN: `npm --workspace @hearth/web run check`
+OPEN_RISKS: 尚未進行 visual snapshot 回歸，未對所有面板完成同層級 token 對齊。
+NOT_DONE: 未執行 `npm --workspace @hearth/web run build`、未完成 portfolio/ops 等面板一致化。
+RECOMMENDED_MEMORY_UPDATE: 後續於 `PLAN` 中追蹤 `TransactionsPanel` 後續其他面板的對齊完成度。

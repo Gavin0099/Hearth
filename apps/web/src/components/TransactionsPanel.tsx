@@ -315,10 +315,10 @@ export function TransactionsPanel({
   const hasMore = allTransactions.length > visibleCount;
 
   return (
-    <article className="panel">
+    <article className="panel transactions-panel">
       <h2>手動交易</h2>
-      {!session ? <p>登入後可以建立第一筆手動交易，直接餵給月報。</p> : null}
-      {state.status === "loading" ? <p className="panel-message--muted">正在載入帳戶與交易資料...</p> : null}
+      {!session ? <p className="panel-copy">登入後可以建立第一筆手動交易，直接餵給月報。</p> : null}
+      {state.status === "loading" ? <p className="panel-message panel-message--muted">正在載入帳戶與交易資料...</p> : null}
       {state.status === "error" ? <p className="panel-message panel-message--error">交易面板載入失敗: {state.message}</p> : null}
       {state.status === "success" ? (
         <>
@@ -371,8 +371,8 @@ export function TransactionsPanel({
             <button className="action-button" disabled={isSubmitting} type="submit">
               {isSubmitting ? "建立中..." : "新增交易"}
             </button>
-            {formError ? <p>建立失敗: {formError}</p> : null}
-            {formSuccess ? <p>{formSuccess}</p> : null}
+            {formError ? <p className="panel-message panel-message--error">建立失敗: {formError}</p> : null}
+            {formSuccess ? <p className="panel-message">{formSuccess}</p> : null}
           </form>
 
           {/* Month navigation */}
@@ -449,7 +449,7 @@ export function TransactionsPanel({
 
           {allTransactions.length > 0 ? (
             <>
-              <p className="tx-count-info">
+            <p className="tx-count-info panel-message panel-message--muted">
                 共 {allTransactions.length} 筆
                 {allTransactions.length > visibleCount ? `，顯示前 ${visibleCount} 筆` : ""}
               </p>
@@ -556,7 +556,7 @@ export function TransactionsPanel({
               ) : null}
             </>
           ) : (
-            <p>目前找不到符合篩選條件的交易。</p>
+            <p className="panel-message panel-message--muted">目前找不到符合篩選條件的交易。</p>
           )}
         </>
       ) : null}

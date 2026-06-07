@@ -383,11 +383,11 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
   }
 
   return (
-    <article className="panel">
+    <article className="panel portfolio-panel">
       <h2>投資組合</h2>
 
-      {!session ? <p>登入後會載入你目前的持倉清單。</p> : null}
-      {state.status === "loading" ? <p className="panel-message--muted">正在載入...</p> : null}
+      {!session ? <p className="panel-copy panel-copy--tight">登入後會載入你目前的持倉清單。</p> : null}
+      {state.status === "loading" ? <p className="panel-message panel-message--muted">正在載入...</p> : null}
       {state.status === "error" ? <p className="panel-message panel-message--error">載入失敗: {state.message}</p> : null}
 
       {state.status === "success" ? (
@@ -526,7 +526,7 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
                     </span>
                   </p>
                 ) : (
-                  <p className="portfolio-status-text">尚無更新記錄。</p>
+                <p className="portfolio-status-text panel-message--muted">尚無更新記錄。</p>
                 )}
                 <button
                   className="action-button secondary"
@@ -536,7 +536,7 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
                 >
                   {autoUpdateRunning ? "更新中..." : "立即更新股價 / 匯率"}
                 </button>
-                {autoUpdateMessage ? <p className="portfolio-status-text">{autoUpdateMessage}</p> : null}
+                {autoUpdateMessage ? <p className="portfolio-status-text panel-message--muted">{autoUpdateMessage}</p> : null}
               </section>
 
               {/* 更新報價 */}
@@ -588,11 +588,13 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
                     }}
                   />
                 </label>
-                {priceMessage ? <p>{priceMessage}</p> : null}
+                {priceMessage ? (
+                  <p className="panel-message panel-message--muted">{priceMessage}</p>
+                ) : null}
               </section>
             </>
           ) : (
-            <p>目前沒有持倉資料，匯入台股或複委託交易後這裡會顯示。</p>
+            <p className="panel-message panel-message--muted">目前沒有持倉資料，匯入台股或複委託交易後這裡會顯示。</p>
           )}
 
           {/* 更新匯率 */}
@@ -644,7 +646,7 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
               >
                 {fxSaving ? "儲存中..." : "儲存匯率"}
               </button>
-              {fxMessage ? <p>{fxMessage}</p> : null}
+              {fxMessage ? <p className="panel-message panel-message--muted">{fxMessage}</p> : null}
             </section>
           ) : null}
 
