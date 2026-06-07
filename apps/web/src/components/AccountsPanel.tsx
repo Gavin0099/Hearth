@@ -173,9 +173,9 @@ export function AccountsPanel({ session }: AccountsPanelProps) {
   }
 
   return (
-    <article className="panel">
+    <article className="panel accounts-panel">
       <h2>帳戶狀態</h2>
-      {!session ? <p>登入後會自動讀取目前使用者的帳戶資料。</p> : null}
+      {!session ? <p className="panel-message panel-message--muted">登入後會自動讀取目前使用者的帳戶資料。</p> : null}
       {session ? (
         <form className="account-form" onSubmit={handleSubmit}>
           <label>
@@ -219,14 +219,14 @@ export function AccountsPanel({ session }: AccountsPanelProps) {
             {isSubmitting ? "建立中..." : "新增帳戶"}
           </button>
           {formError ? <p className="panel-message panel-message--error">建立失敗: {formError}</p> : null}
-          {formSuccess ? <p>{formSuccess}</p> : null}
+          {formSuccess ? <p className="panel-message panel-message--muted">{formSuccess}</p> : null}
         </form>
       ) : null}
       {state.status === "loading" || state.status === "idle" ? (
-        session ? <p>正在向 Cloudflare Worker 讀取 Supabase 帳戶資料...</p> : null
+        session ? <p className="panel-message panel-message--muted">正在向 Cloudflare Worker 讀取 Supabase 帳戶資料...</p> : null
       ) : null}
       {state.status === "error" ? (
-        <p>
+        <p className="panel-message panel-message--error">
           尚未載入帳戶資料: {state.message}
           <br />
           先用 Supabase 登入取得 session，Worker 才能辨識目前使用者。
@@ -302,7 +302,7 @@ export function AccountsPanel({ session }: AccountsPanelProps) {
             )}
           </ul>
         ) : (
-          <p>目前沒有帳戶資料。下一步可以先建立第一個現金或投資帳戶。</p>
+          <p className="panel-message panel-message--muted">目前沒有帳戶資料。下一步可以先建立第一個現金或投資帳戶。</p>
         )
       ) : null}
     </article>

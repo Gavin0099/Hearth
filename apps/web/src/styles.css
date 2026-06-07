@@ -1294,6 +1294,15 @@ textarea {
   --ledger-accent: #7a6758;
 }
 
+.accounts-panel,
+.settings-panel {
+  grid-column: 1 / -1;
+}
+
+.auth-panel {
+  grid-column: 1 / -1;
+}
+
 .recurring-templates-panel {
   grid-column: 1 / -1;
 }

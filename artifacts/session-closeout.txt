@@ -1,7 +1,7 @@
-TASK_INTENT: 完成 UI 元件重設計 pass，接續完成 InsurancePanel 與 RecurringTemplatesPanel 視覺 token 一致化。
-WORK_COMPLETED: 已完成 `apps/web/src/components/RecurringTemplatesPanel.tsx` 的文案與訊息 token 化（`panel-message`）、並新增 `recurring-templates-panel` wrapper；同步補齊 `apps/web/src/styles.css` 的對應樣式。
-FILES_TOUCHED: apps/web/src/components/RecurringTemplatesPanel.tsx, apps/web/src/styles.css, memory/01_active_task.md, memory/2026-06-07.md, artifacts/session-closeout.txt
+TASK_INTENT: 完成 UI 元件重設計 pass，將剩餘 panel 全部同步為一致化 token。
+WORK_COMPLETED: 已完成 `AccountsPanel`、`SettingsPanel`、`AuthPanel` 的文案類別統一（`panel-copy` / `panel-message`）、新增對應 wrapper class，並補齊 `apps/web/src/styles.css` 樣式錨點；同時維持原有行為不變。
+FILES_TOUCHED: apps/web/src/components/AccountsPanel.tsx, apps/web/src/components/SettingsPanel.tsx, apps/web/src/components/AuthPanel.tsx, apps/web/src/styles.css, memory/01_active_task.md, memory/2026-06-07.md, artifacts/session-closeout.txt
 CHECKS_RUN: npm --workspace @hearth/web run check
-OPEN_RISKS: 尚未展開 `Recurring` 以外其他 panel（如 `AccountListPanel` 等）之後續一致化；未做後續測試擴充。
-NOT_DONE: 如需再做完整視覺一致化，後續建議繼續追補 `RecurringTemplatesPanel` 以外元件。
-RECOMMENDED_MEMORY_UPDATE: 將「已完成面板」與待辦面板清單持續寫入 `MEMORY.md` 與 `memory/YYYY-MM-DD.md`。
+OPEN_RISKS: 尚未系統化掃描 `apps/web/src/components` 中所有 `p`/`span` 的文案類別一致性；下一步可做全域 lint/設計規格抽檢。
+NOT_DONE: 本輪未更新 `MEMORY.md` 的長期歸檔條目。
+RECOMMENDED_MEMORY_UPDATE: 將本輪「完成全部 panel token 一致化」結果提要同步至 `MEMORY.md`。

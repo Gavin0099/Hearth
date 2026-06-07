@@ -99,9 +99,11 @@ export function SettingsPanel({ session }: SettingsPanelProps) {
   if (!session) return null;
 
   return (
-    <article className="panel">
+    <article className="panel settings-panel">
       <h2>密碼設定</h2>
-      <p>設定頁不再回顯 PDF 密碼明文。這些欄位目前採 write-only；同步時才會顯式讀取秘密資料。</p>
+      <p className="panel-copy panel-copy--tight">
+        設定頁不再回顯 PDF 密碼明文。這些欄位目前採 write-only；同步時才會顯式讀取秘密資料。
+      </p>
       <form className="account-form" onSubmit={handleSave}>
         <label>
           預設 PDF 密碼（適用所有銀行）
@@ -202,10 +204,12 @@ export function SettingsPanel({ session }: SettingsPanelProps) {
         <button className="action-button" type="submit" disabled={saving}>
           {saving ? "儲存中..." : "儲存設定"}
         </button>
-        {message ? <p>{message}</p> : null}
+        {message ? <p className="panel-message">{message}</p> : null}
       </form>
       {settings?.gmail_last_sync_at ? (
-        <p>上次 Gmail 同步：{new Date(settings.gmail_last_sync_at).toLocaleString("zh-TW")}</p>
+        <p className="panel-message panel-message--muted">
+          上次 Gmail 同步：{new Date(settings.gmail_last_sync_at).toLocaleString("zh-TW")}
+        </p>
       ) : null}
     </article>
   );

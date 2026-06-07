@@ -98,22 +98,22 @@ export function AuthPanel({
   }
 
   return (
-    <article className="panel">
+    <article className="panel auth-panel">
       <h2>登入狀態</h2>
       {!isConfigured ? (
-        <p>尚未設定 Supabase 前端環境變數，Auth UI 無法啟動。</p>
+        <p className="panel-message panel-message--error">尚未設定 Supabase 前端環境變數，Auth UI 無法啟動。</p>
       ) : null}
       {isLoading ? <p className="panel-message--muted">正在檢查目前 session...</p> : null}
       {error ? <p className="panel-message panel-message--error">Auth 錯誤: {error}</p> : null}
       {user ? (
         <>
-          <p>目前登入者: {user.email ?? user.id}</p>
+          <p className="panel-message">目前登入者: {user.email ?? user.id}</p>
           {workerUser.status === "loading" ? <p className="panel-message--muted">正在確認 Worker 端使用者狀態...</p> : null}
           {workerUser.status === "error" ? (
             <p className="panel-message panel-message--error">Worker 驗證失敗: {workerUser.message}</p>
           ) : null}
           {workerUser.status === "success" ? (
-            <p>Worker 已辨識使用者: {workerUser.email ?? workerUser.id}</p>
+            <p className="panel-message">Worker 已辨識使用者: {workerUser.email ?? workerUser.id}</p>
           ) : null}
           <button className="action-button secondary" onClick={() => void onSignOut()}>
             登出
@@ -121,7 +121,7 @@ export function AuthPanel({
         </>
       ) : (
         <>
-          <p>目前尚未登入。請先用 Supabase Google Auth 建立 session。</p>
+          <p className="panel-message panel-message--muted">目前尚未登入。請先用 Supabase Google Auth 建立 session。</p>
           <button
             className="action-button"
             disabled={!isConfigured}
