@@ -373,11 +373,11 @@ export function BankLedgerPanel({ session }: { session: Session | null }) {
   }
 
   return (
-    <article className="panel ledger-panel review-panel">
+    <article className="panel ledger-panel review-panel bank-ledger-panel">
       <div className="review-header">
         <div>
           <h2>銀行帳戶明細</h2>
-          <p className="review-panel-copy">把本月未整理的收支、轉帳與扣款先清乾淨，再看完整銀行資金流。手動分過的相同敘述，之後會自動套用。</p>
+          <p className="panel-copy panel-copy--tight review-panel-copy">把本月未整理的收支、轉帳與扣款先清乾淨，再看完整銀行資金流。手動分過的相同敘述，之後會自動套用。</p>
         </div>
         <div className="review-month-tabs" role="tablist" aria-label="銀行月份">
           {availableMonths.map((month) => (
@@ -423,7 +423,7 @@ export function BankLedgerPanel({ session }: { session: Session | null }) {
       </div>
 
       {loadError && <p className="panel-message panel-message--error">載入失敗：{loadError}</p>}
-      {loading && <p className="panel-message--muted">載入中...</p>}
+      {loading && <p className="panel-message panel-message--muted">載入中...</p>}
       {autoApplyMessage && (
         <p className="auto-apply-notice">
           {autoApplyMessage}
@@ -534,9 +534,9 @@ export function BankLedgerPanel({ session }: { session: Session | null }) {
                 );
               })}
 
-              {!loading && filteredTransactions.length === 0 && (
-                <p className="review-empty-state">目前這個月份/篩選下沒有交易。</p>
-              )}
+                {!loading && filteredTransactions.length === 0 && (
+                <p className="review-empty-state panel-message--muted">目前這個月份/篩選下沒有交易。</p>
+                )}
             </div>
 
             {filteredTransactions.length > visibleCount && (
@@ -652,9 +652,9 @@ export function BankLedgerPanel({ session }: { session: Session | null }) {
         </div>
       )}
 
-      {!loading && bankTransactions.length === 0 && (
-        <p>目前沒有銀行帳戶交易。先從 Gmail 帳單同步或匯入對帳單開始。</p>
-      )}
+        {!loading && bankTransactions.length === 0 && (
+        <p className="review-empty-state panel-message--muted">目前沒有銀行帳戶交易。先從 Gmail 帳單同步或匯入對帳單開始。</p>
+        )}
     </article>
   );
 }

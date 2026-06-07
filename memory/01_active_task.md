@@ -1,6 +1,7 @@
 ﻿# Current Task: Portfolio Surface Closure And Memory Discipline
 
 ## Progress
+- [x] 將 `BankLedgerPanel` 與 `CreditCardLedgerPanel` 套上新版視覺 token 對齊（copy / loading / empty state 文案類別、並加入每頁面專屬容器 class，行為仍保持不變）。
 - [x] Local governance baseline exists under `governance/`
 - [x] Structured `memory/01~04` schema has been introduced in addition to daily logs
 - [x] Framework-compatible facts / decisions / validation files exist in `memory/`
@@ -62,7 +63,7 @@
 ## Context
 - **Recent achievements**: portfolio analytics now include verified `net-worth-history` and `trade-costs` behavior, import dry-run preview goes through the real parser/normalization path for cashflow, excel, stock, and dividend modes, and ops expose verdict-level health instead of raw counts only.
 - **Validation baseline**: `npm run readiness:first:strict` now passes end-to-end; `npm --workspace @hearth/api run test` passes at `173/173`; `npm --workspace @hearth/web run check` and `npm --workspace @hearth/web run build` pass with largest JS chunk reduced below warning threshold.
-- **Next steps**: start selective component restyling pass (Gmail/Import panel internals first) to align detailed form/table surfaces with the updated home visual system.
+- **Next steps**: 持續完成所有主要面板的視覺一致性盤點（建議先處理「銀行/信用卡 ledger」為基準，完成後再針對其他分析 panel 的微調與行動項目）。
 
 ## 2026-05-22 Governance Re-Onboarding Snapshot
 

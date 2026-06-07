@@ -1279,6 +1279,11 @@ textarea {
   grid-column: 1 / -1;
 }
 
+.bank-ledger-panel,
+.credit-ledger-panel {
+  grid-column: 1 / -1;
+}
+
 .ledger-toolbar {
   display: flex;
   flex-wrap: wrap;
