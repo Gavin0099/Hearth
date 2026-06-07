@@ -1307,6 +1307,11 @@ textarea {
   grid-column: 1 / -1;
 }
 
+.gmail-sync-panel,
+.import-panel {
+  grid-column: 1 / -1;
+}
+
 .bank-ledger-panel .review-panel-copy,
 .credit-ledger-panel .review-panel-copy {
   margin-top: 0;

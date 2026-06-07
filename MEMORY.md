@@ -43,3 +43,4 @@
 
 - Framework adoption is only real if local governance docs and local memory are maintained in the Hearth repo itself.
 - Repo-local governance wins over framework examples when product-specific scope or delivery order differs.
+- 已完成 2026-06-07 UI 元件一致化 pass 全域掃描：`apps/web/src/components/*Panel.tsx` 皆檢視，補齊 `styles.css` 缺漏的 `gmail-sync-panel`、`import-panel` wrapper 錨點，並持續維持既有行為不變。
