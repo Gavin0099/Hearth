@@ -1,7 +1,7 @@
-TASK_INTENT: 完成 UI 元件重設計 pass，整理全域 panel 文案 token 一致性。
-WORK_COMPLETED: 已補齊 `BankLedgerPanel`/`CreditCardLedgerPanel`/`ImportPanel` 剩餘狀態文案的 `panel-message` token 套用；維持既有行為不變。
-FILES_TOUCHED: apps/web/src/components/BankLedgerPanel.tsx, apps/web/src/components/CreditCardLedgerPanel.tsx, apps/web/src/components/ImportPanel.tsx, memory/01_active_task.md, memory/2026-06-07.md, artifacts/session-closeout.txt
+TASK_INTENT: 完成 UI 元件重設計 pass，執行 strict 全域 panel 文案掃描。
+WORK_COMPLETED: 第1步完成 strict 掃描，確認剩餘未加 class 的 `<p>` 主要為卡片/欄位標題，無新增狀態訊息 token 缺口；第2步完成 `npm --workspace @hearth/web run check` 驗證。
+FILES_TOUCHED: memory/01_active_task.md, memory/2026-06-07.md, artifacts/session-closeout.txt
 CHECKS_RUN: npm --workspace @hearth/web run check
-OPEN_RISKS: 部分卡片標題仍為原有 class 或無 class（非狀態文案），本輪未全域改造。
-NOT_DONE: 無。
-RECOMMENDED_MEMORY_UPDATE: 持續將本輪補齊內容同步到 `MEMORY.md` 總結。
+OPEN_RISKS: 若未來要求「所有 `<p>` 一律 token 化」，建議另起一輪設計規範化作業；目前以狀態訊息一致性為準。
+NOT_DONE: 待明確是否要把所有 section title 也統一為 token class。
+RECOMMENDED_MEMORY_UPDATE: 長期維持標題與狀態訊息分流規範：僅狀態訊息需 panel-message/panel-copy。
