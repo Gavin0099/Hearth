@@ -1,7 +1,7 @@
-TASK_INTENT: 進行 UI 元件重設計 pass，完成手動交易面板的視覺 token 對齊。
-WORK_COMPLETED: 更新 `apps/web/src/components/TransactionsPanel.tsx` 的文案/訊息類別，新增 `transactions-panel` wrapper；同步更新 `apps/web/src/styles.css`、`memory/01_active_task.md`、`memory/2026-06-07.md`、`artifacts/session-closeout.txt`。
-FILES_TOUCHED: apps/web/src/components/TransactionsPanel.tsx, apps/web/src/styles.css, memory/01_active_task.md, memory/2026-06-07.md, artifacts/session-closeout.txt
+TASK_INTENT: 完成 UI 元件重設計 pass（Portfolio/Transactions 下一批）。
+WORK_COMPLETED: 完成 `apps/web/src/components/TransactionsPanel.tsx` 與 `apps/web/src/components/PortfolioPanel.tsx` 的文案/訊息 token 對齊，並補齊 `styles.css` 相關 wrapper token（`transactions-panel`、`portfolio-panel`）。同步更新 `memory/01_active_task.md`、`memory/2026-06-07.md`。
+FILES_TOUCHED: apps/web/src/components/TransactionsPanel.tsx, apps/web/src/components/PortfolioPanel.tsx, apps/web/src/styles.css, memory/01_active_task.md, memory/2026-06-07.md, artifacts/session-closeout.txt
 CHECKS_RUN: `npm --workspace @hearth/web run check`
-OPEN_RISKS: 尚未進行 visual snapshot 回歸，未對所有面板完成同層級 token 對齊。
-NOT_DONE: 未執行 `npm --workspace @hearth/web run build`、未完成 portfolio/ops 等面板一致化。
-RECOMMENDED_MEMORY_UPDATE: 後續於 `PLAN` 中追蹤 `TransactionsPanel` 後續其他面板的對齊完成度。
+OPEN_RISKS: 尚未補齊其他大面板（MonthlyReport/Ops/Insurance/Loan）與視覺 snapshot 回歸。
+NOT_DONE: 未執行 `npm --workspace @hearth/web run build`。
+RECOMMENDED_MEMORY_UPDATE: 下一步可持續將 `MonthlyReportPanel` / `OpsPanel` / `LoanPanel` 進行一致化，並補上驗證紀錄。

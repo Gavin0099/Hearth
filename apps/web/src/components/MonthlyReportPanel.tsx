@@ -133,10 +133,10 @@ export function MonthlyReportPanel({ session, refreshKey }: MonthlyReportPanelPr
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
 
   return (
-    <article className="panel">
+    <article className="panel monthly-report-panel">
       <h2>月報表</h2>
 
-      {!session ? <p>登入後會載入月收支摘要與分類。</p> : null}
+      {!session ? <p className="panel-copy panel-copy--tight">登入後會載入月收支摘要與分類。</p> : null}
 
       {session ? (
         <div className="month-nav">
@@ -153,7 +153,7 @@ export function MonthlyReportPanel({ session, refreshKey }: MonthlyReportPanelPr
         </div>
       ) : null}
 
-      {state.status === "loading" ? <p className="panel-message--muted">正在彙整...</p> : null}
+      {state.status === "loading" ? <p className="panel-message panel-message--muted">正在彙整...</p> : null}
       {state.status === "error" ? <p className="panel-message panel-message--error">月報載入失敗: {state.message}</p> : null}
 
       {state.status === "success" ? (() => {
@@ -207,7 +207,7 @@ export function MonthlyReportPanel({ session, refreshKey }: MonthlyReportPanelPr
                         {isExpanded ? (
                           <div className="cat-drill-down">
                             {isLoading ? (
-                              <p className="cat-drill-loading">載入中...</p>
+                              <p className="panel-message panel-message--muted cat-drill-loading">載入中...</p>
                             ) : txs && txs.length > 0 ? (
                               <ul className="cat-drill-list">
                                 {txs.map((tx) => (
@@ -223,9 +223,9 @@ export function MonthlyReportPanel({ session, refreshKey }: MonthlyReportPanelPr
                                 ))}
                               </ul>
                             ) : catTxError ? (
-                              <p className="cat-drill-loading">{catTxError}</p>
+                              <p className="panel-message panel-message--error cat-drill-loading">{catTxError}</p>
                             ) : txs ? (
-                              <p className="cat-drill-loading">無交易紀錄</p>
+                              <p className="panel-message panel-message--muted cat-drill-loading">無交易紀錄</p>
                             ) : null}
                           </div>
                         ) : null}
@@ -252,7 +252,7 @@ export function MonthlyReportPanel({ session, refreshKey }: MonthlyReportPanelPr
                 ) : null}
               </>
             ) : (
-              <p>本月尚無交易資料。</p>
+              <p className="panel-message panel-message--muted">本月尚無交易資料。</p>
             )}
           </>
         );

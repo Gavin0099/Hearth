@@ -983,6 +983,10 @@ textarea {
   margin-bottom: 0.75rem;
 }
 
+.monthly-report-panel {
+  --monthly-report-shell: 1;
+}
+
 .month-nav .action-button {
   padding: 2px 10px;
   font-size: 1.1rem;
