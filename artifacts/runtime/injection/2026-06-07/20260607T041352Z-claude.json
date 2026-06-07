@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-07T04:13:52.221106+00:00",
+  "contract_injected": true,
+  "contract_hash": "0764c27a56e636f665f8220a9c683d20264d34f119e451416e7a4a1fe296f72e",
+  "scope": "chore",
+  "level": "L1",
+  "lang": "TypeScript",
+  "contract_fields": {
+    "LANG": "TypeScript",
+    "LEVEL": "L1",
+    "SCOPE": "chore",
+    "PLAN": "Update ai-governance-framework via F7",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/02_tech_stack.md, memory/03_decisions.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-07.md(today), memory/2026-06-06.md(yesterday)",
+    "CONTEXT": "Pulled Hearth main branch and updated ai-governance-framework submodule pointer via F7 workflow to latest target commit.",
+    "PRESSURE": "SAFE (governance tooling maintenance)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L1\nSCOPE = chore\nPLAN = Update ai-governance-framework via F7\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/02_tech_stack.md, memory/03_decisions.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-07.md(today), memory/2026-06-06.md(yesterday)\nCONTEXT = Pulled Hearth main branch and updated ai-governance-framework submodule pointer via F7 workflow to latest target commit.\nPRESSURE = SAFE (governance tooli"
+}

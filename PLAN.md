@@ -3,7 +3,7 @@
 > **專案名稱**: Hearth 家庭財務管理
 > **技術棧**: React / TypeScript / Hono / Supabase / Cloudflare
 > **風險等級**: L1-L2（以 correctness / security 為優先）
-> **最後更新**: 2026-05-23
+> **最後更新**: 2026-06-07
 > **Owner**: GavinWu
 > **Freshness**: Sprint (7d)
 
@@ -160,3 +160,4 @@
 | 2026-05-17 | UI 設計系統落地 | CSS design token 全面落地；shadcn primitive layer；home 資訊架構重整；視覺打磨；mobile/a11y pass |
 | 2026-05-22 | 治理 re-onboarding | submodule URL 對齊；version_manifest.yaml；risk_tier=L2；pre-push hook bug 修正；push gate 全通過 |
 | 2026-05-23 | PLAN 刷新 | Sprint 視窗更新至 05-23；新增 UI restyling pass 與 Security Phase F-1 工作項 |
+| 2026-06-07 | 治理更新 | F-7 update-governance-submodule 已將 ai-governance-framework 指向 `57db6c164182b560fe6acc017b2ed93899dd422c` |
