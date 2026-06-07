@@ -175,11 +175,11 @@ export function LoanPanel({ session }: { session: Session | null }) {
   }, null);
 
   return (
-    <article className="panel detail-panel ledger-panel review-panel">
+    <article className="panel detail-panel ledger-panel review-panel loan-panel">
       <div className="review-header">
         <div>
           <h2>貸款明細</h2>
-          <p className="detail-panel-intro">按月份整理貸款餘額快照與還款明細，先確認每家銀行本月貸款狀態是否合理。</p>
+          <p className="detail-panel-intro panel-copy panel-copy--tight">按月份整理貸款餘額快照與還款明細，先確認每家銀行本月貸款狀態是否合理。</p>
         </div>
         <div className="review-month-tabs" role="tablist" aria-label="貸款月份">
           {availableMonths.map((month) => (
@@ -289,10 +289,10 @@ export function LoanPanel({ session }: { session: Session | null }) {
         </div>
       )}
 
-      {loading && <p className="panel-message--muted">載入中...</p>}
+      {loading && <p className="panel-message panel-message--muted">載入中...</p>}
       {loadError && <p className="panel-message panel-message--error">載入失敗：{loadError}</p>}
       {!loading && snapshots.length === 0 && !showForm && (
-        <p>尚無貸款資料。請在 Gmail 同步中匯入永豐綜合對帳單，或點上方「手動新增」。</p>
+        <p className="panel-message panel-message--muted">尚無貸款資料。請在 Gmail 同步中匯入永豐綜合對帳單，或點上方「手動新增」。</p>
       )}
 
       {[...byBank.entries()].map(([bank, bankSnaps]) => (
@@ -392,7 +392,7 @@ export function LoanPanel({ session }: { session: Session | null }) {
       ))}
 
       {!loading && snapshots.length > 0 && monthSnapshots.length === 0 && (
-        <p>這個月份目前沒有貸款資料。</p>
+        <p className="panel-message panel-message--muted">這個月份目前沒有貸款資料。</p>
       )}
     </article>
   );

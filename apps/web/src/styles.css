@@ -1283,10 +1283,19 @@ textarea {
   grid-column: 1 / -1;
 }
 
+.loan-panel {
+  --loan-shell: 1;
+}
+
 .bank-ledger-panel,
-.credit-ledger-panel {
+.credit-ledger-panel,
+.insurance-panel {
   grid-column: 1 / -1;
   --ledger-accent: #7a6758;
+}
+
+.recurring-templates-panel {
+  grid-column: 1 / -1;
 }
 
 .bank-ledger-panel .review-panel-copy,
@@ -2424,6 +2433,10 @@ tr:hover .ledger-delete-btn {
   margin-left: 0.5rem;
   font-size: 0.8rem;
   font-weight: normal;
+}
+
+.ops-panel {
+  --ops-shell: 1;
 }
 
 .ops-health--warning {

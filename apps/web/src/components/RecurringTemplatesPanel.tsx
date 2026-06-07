@@ -295,10 +295,10 @@ export function RecurringTemplatesPanel({
   }
 
   return (
-    <article className="panel">
+    <article className="panel recurring-templates-panel">
       <h2>週期模板</h2>
-      {!session ? <p>登入後可以管理固定支出與週期模板。</p> : null}
-      {state.status === "loading" ? <p className="panel-message--muted">正在載入週期模板...</p> : null}
+      {!session ? <p className="panel-message panel-message--muted">登入後可以管理固定支出與週期模板。</p> : null}
+      {state.status === "loading" ? <p className="panel-message panel-message--muted">正在載入週期模板...</p> : null}
       {state.status === "error" ? <p className="panel-message panel-message--error">週期模板載入失敗: {state.message}</p> : null}
       {session ? (
         <form className="account-form" onSubmit={handleSubmit}>
@@ -382,9 +382,9 @@ export function RecurringTemplatesPanel({
           >
             {isApplying ? "套用中..." : "套用本月模板"}
           </button>
-          {formError ? <p>建立失敗: {formError}</p> : null}
-          {formSuccess ? <p>{formSuccess}</p> : null}
-          {applyMessage ? <p>{applyMessage}</p> : null}
+          {formError ? <p className="panel-message panel-message--error">建立失敗: {formError}</p> : null}
+          {formSuccess ? <p className="panel-message panel-message--muted">{formSuccess}</p> : null}
+          {applyMessage ? <p className="panel-message panel-message--muted">{applyMessage}</p> : null}
         </form>
       ) : null}
       {state.status === "success" ? (
@@ -484,7 +484,7 @@ export function RecurringTemplatesPanel({
             ) : null}
           </>
         ) : (
-          <p>目前還沒有週期模板，可以先建立房租、月費、學費這類固定項目。</p>
+          <p className="panel-message panel-message--muted">目前還沒有週期模板，可以先建立房租、月費、學費這類固定項目。</p>
         )
       ) : null}
     </article>

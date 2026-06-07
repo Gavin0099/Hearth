@@ -70,7 +70,7 @@ export function OpsPanel({ session }: OpsPanelProps) {
           : "amount--expense";
 
   return (
-    <article className="panel">
+    <article className="panel ops-panel">
       <h2>
         Ops
         <span className={`ops-health-badge ${healthClass}`}>
@@ -79,7 +79,7 @@ export function OpsPanel({ session }: OpsPanelProps) {
       </h2>
 
       {loading && !summary ? (
-        <p className="panel-message--muted">Loading...</p>
+        <p className="panel-message panel-message--muted">Loading...</p>
       ) : summary?.status === "error" ? (
         <p className="panel-message panel-message--error">Load failed: {summary.error}</p>
       ) : (
@@ -120,7 +120,7 @@ export function OpsPanel({ session }: OpsPanelProps) {
               </tbody>
             </table>
           ) : (
-            <p className="ops-no-data">No persisted daily-update runs yet.</p>
+            <p className="panel-message panel-message--muted">No persisted daily-update runs yet.</p>
           )}
 
           {reasons.length > 0 ? (
@@ -167,7 +167,7 @@ export function OpsPanel({ session }: OpsPanelProps) {
           </button>
 
           {refreshedAt ? (
-            <p className="ops-refreshed">
+            <p className="panel-message panel-message--muted">
               Refreshed at {refreshedAt.toLocaleTimeString("zh-TW")}
             </p>
           ) : null}

@@ -197,11 +197,11 @@ export function InsurancePanel({ session }: { session: Session | null }) {
   const accumulatedPremiumTotal = monthRecords.reduce((sum, record) => sum + record.accumulatedPremium, 0);
 
   return (
-    <article className="panel detail-panel ledger-panel review-panel">
+    <article className="panel detail-panel ledger-panel review-panel insurance-panel">
       <div className="review-header">
         <div>
           <h2>保險明細</h2>
-          <p className="detail-panel-intro">把每月匯入的保單快照集中整理，方便確認保障型 / 投資型比例與後續保費負擔。</p>
+          <p className="panel-copy panel-copy--tight detail-panel-intro">把每月匯入的保單快照集中整理，方便確認保障型 / 投資型比例與後續保費負擔。</p>
         </div>
         <div className="review-month-tabs" role="tablist" aria-label="保險月份">
           {availableMonths.map((month) => (
@@ -347,10 +347,10 @@ export function InsurancePanel({ session }: { session: Session | null }) {
         </div>
       )}
 
-      {loading && <p className="panel-message--muted">載入中...</p>}
+      {loading && <p className="panel-message panel-message--muted">載入中...</p>}
       {loadError && <p className="panel-message panel-message--error">載入失敗：{loadError}</p>}
       {!loading && snapshots.length === 0 && !showForm && (
-        <p>尚無保險資料。請在 Gmail 同步中匯入永豐綜合對帳單，或點上方「手動新增」。</p>
+        <p className="panel-message panel-message--muted">尚無保險資料。請在 Gmail 同步中匯入永豐綜合對帳單，或點上方「手動新增」。</p>
       )}
 
       {[...byBank.entries()].map(([bank, bankSnaps]) => (
@@ -443,7 +443,7 @@ export function InsurancePanel({ session }: { session: Session | null }) {
       ))}
 
       {!loading && snapshots.length > 0 && monthSnapshots.length === 0 && (
-        <p>這個月份目前沒有保險資料。</p>
+        <p className="panel-message panel-message--muted">這個月份目前沒有保險資料。</p>
       )}
     </article>
   );
