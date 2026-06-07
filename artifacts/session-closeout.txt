@@ -1,7 +1,7 @@
-TASK_INTENT: 完成 UI 元件重設計 pass，確認所有 panel 的 token 化一致性。
-WORK_COMPLETED: 已完成全域掃描 `apps/web/src/components/*Panel.tsx` 後補齊 `styles.css` 缺漏的 `gmail-sync-panel` 與 `import-panel` wrapper 錨點，並同步更新 `MEMORY.md`。
-FILES_TOUCHED: apps/web/src/styles.css, apps/web/src/components/*Panel.tsx（既有一致性掃描與 wrapper 對應確認）, memory/01_active_task.md, memory/2026-06-07.md, MEMORY.md, artifacts/session-closeout.txt
+TASK_INTENT: 完成 UI 元件重設計 pass，整理全域 panel 文案 token 一致性。
+WORK_COMPLETED: 已補齊 `BankLedgerPanel`/`CreditCardLedgerPanel`/`ImportPanel` 剩餘狀態文案的 `panel-message` token 套用；維持既有行為不變。
+FILES_TOUCHED: apps/web/src/components/BankLedgerPanel.tsx, apps/web/src/components/CreditCardLedgerPanel.tsx, apps/web/src/components/ImportPanel.tsx, memory/01_active_task.md, memory/2026-06-07.md, artifacts/session-closeout.txt
 CHECKS_RUN: npm --workspace @hearth/web run check
-OPEN_RISKS: 部分 `panel-message`/`panel-copy` 仍用於卡片標題/註記，非狀態訊息的用途保留原有語意。
+OPEN_RISKS: 部分卡片標題仍為原有 class 或無 class（非狀態文案），本輪未全域改造。
 NOT_DONE: 無。
-RECOMMENDED_MEMORY_UPDATE: 持續將 panel 一致化與治理流程納入後續 `MEMORY.md` 章節。
+RECOMMENDED_MEMORY_UPDATE: 持續將本輪補齊內容同步到 `MEMORY.md` 總結。

@@ -420,7 +420,7 @@ export function ImportPanel({
           </form>
           {latestRecurringCandidates.length > 0 ? (
             <>
-              <p>可直接建立週期模板的候選: {latestRecurringCandidates.length} 筆。</p>
+              <p className="panel-message panel-message--muted">可直接建立週期模板的候選: {latestRecurringCandidates.length} 筆。</p>
               <div className="recurring-actions">
                 <Button
                   disabled={isCreatingRecurring || isCreatingAndApplyingRecurring}

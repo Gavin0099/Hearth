@@ -484,7 +484,9 @@ export function CreditCardLedgerPanel({ session }: { session: Session | null }) 
             <div className="review-section-header">
               <div>
                 <h3>交易列表</h3>
-                <p>{activeScope === "uncategorized" ? `${uncategorizedCount} 筆待分類，建議先清完再看整體分布。` : `目前顯示 ${filteredTransactions.length} 筆交易。`}</p>
+                <p className="panel-message panel-message--muted">
+                  {activeScope === "uncategorized" ? `${uncategorizedCount} 筆待分類，建議先清完再看整體分布。` : `目前顯示 ${filteredTransactions.length} 筆交易。`}
+                </p>
               </div>
               <div className="review-inline-meta">
                 {uncategorizedCount > 0 && <span className="review-count-pill">{uncategorizedCount} 未分類</span>}
