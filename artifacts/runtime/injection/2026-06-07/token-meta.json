@@ -1,4 +1,4 @@
-﻿{
+{
   "repo": "Hearth",
   "timestamp": "'+$ts+'",
   "task_type": "feat/ui-token-restyle",
@@ -8,3 +8,4 @@
   "decision_usage_allowed": false,
   "artifact_path": "artifacts/runtime/injection/2026-06-07/20260607T042726Z-claude.json"
 }
+

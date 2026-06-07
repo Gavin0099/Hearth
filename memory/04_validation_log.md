@@ -200,3 +200,4 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
   - resolved runtime compatibility refusal by adding `.governance/version_manifest.yaml`
   - normalized `governance/framework.lock.json` adopted release to comparable value (`1.2.0`)
   - admitted post-task visibility keys in expansion boundary checker, clearing governance drift warning
+- 2026-06-07: 完成 governance 例行紀錄確認（`artifacts/runtime/injection/2026-06-07/token-meta.json` `timestamp` 已補齊為實際時間值，並確認 closeout/載入檔到位）；當日驗證命令：`git status -sb`、strict 全域 panel 文案掃描、`npm --workspace @hearth/web run check`。
