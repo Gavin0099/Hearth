@@ -1,7 +1,7 @@
-TASK_INTENT: 完成 UI 元件重設計 pass，執行 strict 全域 panel 文案掃描。
-WORK_COMPLETED: 第1步完成 strict 掃描，確認剩餘未加 class 的 `<p>` 主要為卡片/欄位標題，無新增狀態訊息 token 缺口；第2步完成 `npm --workspace @hearth/web run check` 驗證。
-FILES_TOUCHED: memory/01_active_task.md, memory/2026-06-07.md, artifacts/session-closeout.txt
-CHECKS_RUN: npm --workspace @hearth/web run check
-OPEN_RISKS: 若未來要求「所有 `<p>` 一律 token 化」，建議另起一輪設計規範化作業；目前以狀態訊息一致性為準。
-NOT_DONE: 待明確是否要把所有 section title 也統一為 token class。
-RECOMMENDED_MEMORY_UPDATE: 長期維持標題與狀態訊息分流規範：僅狀態訊息需 panel-message/panel-copy。
+TASK_INTENT: Pull Hearth parent repo to latest origin/main and update AI Governance framework to latest upstream.
+WORK_COMPLETED: Ran git fetch origin, git pull --rebase origin main, external_governance_submodule_updater.py dry-run/apply, f7_full_update.py apply/dry-run, governance_drift_checker.py, and updated ai-governance-framework to 9b0e6b7ebff2d085861fade1054e773eaa630df1.
+FILES_TOUCHED: AGENTS.md, governance/framework.lock.json, memory/2026-06-11.md, artifacts/session-closeout.txt, artifacts/runtime/injection/2026-06-11/token-meta.json, ai-governance-framework
+CHECKS_RUN: python -X utf8 ai-governance-framework/governance_tools/external_governance_submodule_updater.py --repo . --submodule-path ai-governance-framework --target-ref origin/main --format human; python -X utf8 ai-governance-framework/governance_tools/f7_full_update.py --repo . --framework-root ai-governance-framework --submodule-path ai-governance-framework --format human; python -X utf8 ai-governance-framework/governance_tools/governance_drift_checker.py --repo . --framework-root ai-governance-framework --format human
+OPEN_RISKS: Pre-pull tracked dirty changes are preserved in stash@{0} and non-governance tracked dirty files were restored selectively; F-7 final status is not_verified because existing memory normalization remains unverified by the tool.
+NOT_DONE: No broad stash pop/drop was performed; no product test suite was run because scope was repository/governance synchronization.
+RECOMMENDED_MEMORY_UPDATE: Persist that Hearth was rebased onto origin/main and AI Governance was updated to 9b0e6b7 with governance drift severity ok, while F-7 remains claim-limited on existing memory normalization.

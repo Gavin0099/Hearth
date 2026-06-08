@@ -1,0 +1,12 @@
+[
+  {
+    "repo": "Hearth",
+    "timestamp": "20260611T033359Z",
+    "task_type": "chore/governance-update",
+    "total_tokens": null,
+    "token_source_summary": "claude_code_internal",
+    "token_observability_level": "none",
+    "decision_usage_allowed": false,
+    "artifact_path": "artifacts/runtime/injection/2026-06-11/20260611T033359Z-claude.json"
+  }
+]

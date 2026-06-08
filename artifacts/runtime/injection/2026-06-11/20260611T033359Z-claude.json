@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-11T03:33:59.313287+00:00",
+  "contract_injected": true,
+  "contract_hash": "5a1de962441ba1331305f927fd5caf8c98f71f713cd070fb153680c2b23e5aaf",
+  "scope": "chore",
+  "level": "L1",
+  "lang": "Git",
+  "contract_fields": {
+    "LANG": "Git",
+    "LEVEL": "L1",
+    "SCOPE": "chore",
+    "PLAN": "Pull Hearth to latest and update AI Governance framework submodule to latest",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/02_project_facts.md, memory/03_knowledge_base.md, memory/04_validation_log.md, MEMORY.md",
+    "CONTEXT": "Synchronizing Hearth parent repo and AI Governance framework submodule, preserving existing dirty worktree state",
+    "PRESSURE": "ELEVATED (dirty worktree and divergent parent branch)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = Git\nLEVEL = L1\nSCOPE = chore\nPLAN = Pull Hearth to latest and update AI Governance framework submodule to latest\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/02_project_facts.md, memory/03_knowledge_base.md, memory/04_validation_log.md, MEMORY.md\nCONTEXT = Synchronizing Hearth parent repo and AI Governance framework submodule, preserving existing dirty worktree state\nPRESSURE = ELEVATED (dirty worktree and divergent parent branch"
+}
