@@ -202,3 +202,13 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
   - admitted post-task visibility keys in expansion boundary checker, clearing governance drift warning
 - 2026-06-07: 完成 governance 例行紀錄確認（`artifacts/runtime/injection/2026-06-07/token-meta.json` `timestamp` 已補齊為實際時間值，並確認 closeout/載入檔到位）；當日驗證命令：`git status -sb`、strict 全域 panel 文案掃描、`npm --workspace @hearth/web run check`。
 - 2026-06-07: 完成 Gmail server sync 第1~2項（migration 確認 + 手冊/PLAN 對齊）與 runbook 補強；尚未進行 migration 套用與 Cloudflare / provider_refresh_token 實驗證。
+
+## 2026-06-11 Governance Sync Cleanup
+
+- `git pull --rebase origin main` -> pass after resolving `ai-governance-framework` submodule to latest upstream.
+- `external_governance_submodule_updater.py --repo . --submodule-path ai-governance-framework --target-ref origin/main --format human` -> pass; nested HEAD matched target HEAD.
+- `governance_version_check.py --required-versions ai-governance-framework/governance/runtime/required_versions.yaml --version-manifest .governance/version_manifest.yaml --json` -> `verdict=compatible`.
+- `governance_drift_checker.py --repo . --framework-root ai-governance-framework --format human` -> pass (`severity=ok`).
+- `memory_workflow --check --repo . --run-guard` -> `completion_claim_allowed=True`.
+- `manage_agent_closeout.py verify/smoke --agent claude`, `--agent copilot`, and `--agent gemini` -> installed/compliant after hook paths were normalized to Hearth's repo-local framework submodule.
+- Pushed governance commits through `origin/main` up to `4306d12`.

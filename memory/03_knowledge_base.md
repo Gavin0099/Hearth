@@ -74,3 +74,9 @@
 - Pre-push hook `xargs git diff-tree` bug: when multiple commits are piped, all SHAs go to a single
   diff-tree call and per-commit file listing fails. Workaround: ensure today's memory file is touched
   in the push tip commit. Fix: use `xargs -rI{} git diff-tree` in the framework hook.
+### Governance sync and hook cleanup gotchas
+
+- For Hearth AI Governance updates, use the repo-local `ai-governance-framework/` submodule as the framework root for adopted commit, hook paths, and drift checks.
+- `governance_version_check.py --write-artifact PATH` in the 2026-06-11 framework version computed the correct compatibility result but did not write the artifact in the explicit-path branch; verify the file contents after running it.
+- Claude, GitHub Copilot, and Gemini closeout hooks should point to `E:/BackUp/Git_EE/Hearth/ai-governance-framework/...`, not the external framework checkout.
+- OpenAI Codex CLI hook config should remain unpromoted until the framework manager reports it as a verified native hook surface rather than Tier B/stub.
