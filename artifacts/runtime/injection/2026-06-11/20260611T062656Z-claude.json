@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-11T06:26:56.510236+00:00",
+  "contract_injected": true,
+  "contract_hash": "54f3c48d5eff38347d8ed50a08ad39be9c40712edd70f2f94ee242d375b1c802",
+  "scope": "feat",
+  "level": "L1",
+  "lang": "PowerShell",
+  "contract_fields": {
+    "LANG": "PowerShell",
+    "LEVEL": "L1",
+    "SCOPE": "feat",
+    "PLAN": "Add local Gmail server-sync readiness diagnostics without touching production services",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-11.md, docs/gmail-server-sync-deploy-runbook.md",
+    "CONTEXT": "Create a local readiness script that verifies Gmail server-sync migration/runbook/config prerequisites and optional deployed API health before manual Supabase/Cloudflare/Gmail validation",
+    "PRESSURE": "SAFE (local diagnostic script and docs only; no production DB writes)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = PowerShell\nLEVEL = L1\nSCOPE = feat\nPLAN = Add local Gmail server-sync readiness diagnostics without touching production services\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-11.md, docs/gmail-server-sync-deploy-runbook.md\nCONTEXT = Create a local readiness script that verifies Gmail server-sync migration/runbook/config prerequisites and optional deployed API health before manual Sup"
+}

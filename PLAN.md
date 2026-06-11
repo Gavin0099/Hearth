@@ -83,6 +83,7 @@
 
 #### 手動部署（需人工操作）
 - [x] backend migration 已就緒：`supabase/migrations/20260507000000_add_gmail_server_sync.sql` 存在
+- [x] 本機 Gmail server-sync readiness 檢查已就緒：`scripts/gmail-server-sync-readiness.ps1 -PrintSqlChecks` PASS
 - [ ] 執行 Supabase migration `20260507000000_add_gmail_server_sync.sql`（尚未確認已套用）
 - [ ] Cloudflare Dashboard / Wrangler Secret 設定 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`
 - [ ] 重新登入 app，確認 `provider_refresh_token` 被捕獲並儲存於 `user_settings.gmail_refresh_token`
@@ -173,3 +174,4 @@
 | 2026-06-07 | 治理更新 | F-7 update-governance-submodule 已將 ai-governance-framework 指向 `57db6c164182b560fe6acc017b2ed93899dd422c` |
 | 2026-06-07 | Gmail server sync 落地規劃 | 新增 `docs/gmail-server-sync-deploy-runbook.md`，並將手動部署清單同步為 migration/Cloudflare secrets/provider token/真實驗證待完成項目。 |
 | 2026-06-11 | 治理更新 | parent repo 與 AI Governance submodule 已更新到最新；version/drift/hook smoke 通過，runtime ledger dirty state 已清理。 |
+| 2026-06-11 | Gmail server-sync readiness | 新增 `scripts/gmail-server-sync-readiness.ps1`，本機確認 migration/runbook/config/code prerequisites；外部 Supabase/Cloudflare/Gmail 驗證仍未完成。 |

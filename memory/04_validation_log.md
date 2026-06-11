@@ -222,3 +222,13 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - `npm.cmd run check` -> pass for api/web/shared.
 - `npm.cmd --workspace @hearth/web run build` -> pass; Vite emitted existing empty vendor chunk warnings only.
 - Version bump guard follow-up: bumped root/api/web/shared package versions to `0.1.1` after pre-push advisory recommended `patch`.
+
+## 2026-06-11 Gmail Server Sync Readiness
+
+- `powershell -ExecutionPolicy Bypass -File scripts/gmail-server-sync-readiness.ps1 -PrintSqlChecks` -> pass.
+- Scope covered:
+  - migration shape for `gmail_refresh_token`, `gmail_sync_queue`, RLS enablement, owner policy, and uniqueness.
+  - Worker config prerequisites for Gmail cron and `USER_SETTINGS_SECRET_KEY`.
+  - secrets and cron implementation references for encrypted `gmail_refresh_token` use.
+  - runbook coverage for migration, Cloudflare secrets, provider refresh token capture, and validation log update.
+- External deployed Worker health, Supabase migration application, Cloudflare secrets, OAuth re-login token capture, and real Gmail bill validation were not performed in this local readiness pass.

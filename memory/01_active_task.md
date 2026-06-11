@@ -13,6 +13,7 @@
 - Align PLAN and memory with the completed governance refresh.
 - Verify Security F-1 documents against the current route and migration implementation.
 - Complete the GmailSyncPanel and ImportPanel UI token pass without changing import or parser semantics.
+- Use `scripts/gmail-server-sync-readiness.ps1 -PrintSqlChecks` before the manual Gmail server-sync deployment; the local readiness check passes but does not replace external Supabase/Cloudflare/Gmail validation.
 - `stash@{0}` (`codex-pre-pull-tracked-20260611`) remains as a backup of pre-pull tracked dirty changes and can be dropped after explicit review.
 
 ## Next

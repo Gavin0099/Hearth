@@ -6,6 +6,7 @@
 
 1. 確認 migration 已存在：
    - `supabase/migrations/20260507000000_add_gmail_server_sync.sql`
+   - 可先在本機執行 `powershell -ExecutionPolicy Bypass -File scripts/gmail-server-sync-readiness.ps1 -PrintSqlChecks`
 2. 套用到 Supabase
    - 若使用 Supabase CLI：`supabase db push`（或對應專案/環境設定）
    - 若用 Dashboard：在 SQL Editor 輸入 migration 內容並執行
@@ -28,6 +29,13 @@
 npx wrangler secret put GOOGLE_CLIENT_ID --config apps/api/wrangler.jsonc
 npx wrangler secret put GOOGLE_CLIENT_SECRET --config apps/api/wrangler.jsonc
 npx wrangler secret put USER_SETTINGS_SECRET_KEY --config apps/api/wrangler.jsonc
+```
+
+部署 Worker 後，可用 health endpoint 做環境旗標檢查：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/gmail-server-sync-readiness.ps1 `
+  -ApiBaseUrl https://hearth-api.meiraybooks.workers.dev
 ```
 
 ## Step 3 — 重新登入驗證 provider_refresh_token 流程
