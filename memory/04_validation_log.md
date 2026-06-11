@@ -221,3 +221,4 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - `npm.cmd --workspace @hearth/api run test -- tests/secrets.test.ts` -> pass (`173/173` API tests).
 - `npm.cmd run check` -> pass for api/web/shared.
 - `npm.cmd --workspace @hearth/web run build` -> pass; Vite emitted existing empty vendor chunk warnings only.
+- Version bump guard follow-up: bumped root/api/web/shared package versions to `0.1.1` after pre-push advisory recommended `patch`.
