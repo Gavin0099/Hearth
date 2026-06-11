@@ -23,11 +23,34 @@
           "phase": "async_closeout",
           "owner": "session_end",
           "description": "Canonical closeout artifact emission."
+        },
+        {
+          "action": "daily_memory_append",
+          "phase": "async_closeout",
+          "owner": "session_end",
+          "description": "Daily memory append after session closeout."
+        },
+        {
+          "action": "memory_candidate_snapshot",
+          "phase": "async_audit",
+          "owner": "session_end",
+          "description": "Candidate memory snapshot for later curation or audit."
+        },
+        {
+          "action": "memory_promotion_candidate",
+          "phase": "async_audit",
+          "owner": "session_end",
+          "description": "Memory promotion candidate surfacing."
         }
       ],
       "phase_summary": {
         "async_closeout": [
-          "canonical_closeout"
+          "canonical_closeout",
+          "daily_memory_append"
+        ],
+        "async_audit": [
+          "memory_candidate_snapshot",
+          "memory_promotion_candidate"
         ]
       },
       "rules": {
@@ -40,7 +63,12 @@
   },
   "phase_summary": {
     "async_closeout": [
-      "canonical_closeout"
+      "canonical_closeout",
+      "daily_memory_append"
+    ],
+    "async_audit": [
+      "memory_candidate_snapshot",
+      "memory_promotion_candidate"
     ]
   },
   "rules": {

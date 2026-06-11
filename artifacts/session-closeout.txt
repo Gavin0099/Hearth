@@ -1,7 +1,7 @@
-TASK_INTENT: Continue dirty-tree cleanup by normalizing structured memory after the AI Governance update and hook smoke runs.
-WORK_COMPLETED: Replaced auto-promotion dumps in memory/01_active_task.md, memory/03_knowledge_base.md, and memory/04_validation_log.md with concise current-state, gotcha, and validation summaries; collapsed the noisy daily auto-closeout dump into a readable 2026-06-11 note.
-FILES_TOUCHED: memory/01_active_task.md, memory/03_knowledge_base.md, memory/04_validation_log.md, memory/2026-06-11.md, artifacts/session-closeout.txt
-CHECKS_RUN: python -X utf8 ai-governance-framework/governance_tools/governance_drift_checker.py --repo . --framework-root ai-governance-framework --format human -> PASS severity=ok; PYTHONPATH=ai-governance-framework python -X utf8 -m governance_tools.memory_workflow --check --repo . --run-guard -> completion_claim_allowed=True with missing_canonical_memory warning
-OPEN_RISKS: Runtime/session-end artifacts remain dirty and uncommitted; memory_workflow still warns about existing non-canonical/missing canonical generated memory artifacts; .codex/hooks.json remains uncommitted because Codex CLI is Tier B/stub; stash@{0} remains.
-NOT_DONE: Did not commit runtime ledgers or per-session artifacts; did not drop the pre-pull stash; did not remove pycache or runtime DB files.
-RECOMMENDED_MEMORY_UPDATE: Persist that structured memory was normalized after repeated synthetic smoke promotions and governance sync cleanup.
+TASK_INTENT: Continue dirty-tree cleanup by promoting the stable runtime phase summary while keeping manual-promotion runtime ledgers isolated.
+WORK_COMPLETED: Reviewed tracked runtime artifact diffs; promoted artifacts/governance/runtime_phase_summary.json as a reviewer-facing governance summary; recorded that append-only runtime ledgers remain manual-promotion-only and out of scope.
+FILES_TOUCHED: artifacts/governance/runtime_phase_summary.json, memory/2026-06-11.md, artifacts/session-closeout.txt
+CHECKS_RUN: python -X utf8 ai-governance-framework/governance_tools/governance_drift_checker.py --repo . --framework-root ai-governance-framework --format human -> PASS severity=ok; python -X utf8 ai-governance-framework/governance_tools/dirty_runtime_ledger_detector.py --project-root . -> warning_only dirty_count=2 manual-promotion-only
+OPEN_RISKS: Runtime/session-end ledgers remain dirty and uncommitted; dirty_runtime_ledger_detector.py reports manual-promotion-only ledger state; .codex/hooks.json remains uncommitted because Codex CLI is Tier B/stub; stash@{0} remains.
+NOT_DONE: Did not commit runtime append-only ledgers or generated per-session artifacts; did not restore manual-promotion ledgers; did not drop the pre-pull stash.
+RECOMMENDED_MEMORY_UPDATE: Persist that runtime_phase_summary.json was promoted separately from append-only runtime ledger evidence.
