@@ -21,12 +21,18 @@ test("buildUserSettingsSecretUpgradePayload only encrypts legacy plaintext secre
       sinopac_pdf_password: null,
       esun_pdf_password: "v1.already.encrypted.value",
       taishin_pdf_password: "legacy-taishin",
+      gmail_refresh_token: "legacy-gmail-refresh-token",
     },
     env,
   );
 
-  assert.deepEqual(Object.keys(upgrades).sort(), ["default_pdf_password", "taishin_pdf_password"]);
+  assert.deepEqual(Object.keys(upgrades).sort(), [
+    "default_pdf_password",
+    "gmail_refresh_token",
+    "taishin_pdf_password",
+  ]);
   assert.equal(isEncryptedSecretValue(upgrades.default_pdf_password), true);
+  assert.equal(isEncryptedSecretValue(upgrades.gmail_refresh_token), true);
   assert.equal(isEncryptedSecretValue(upgrades.taishin_pdf_password), true);
   assert.equal("esun_pdf_password" in upgrades, false);
 });

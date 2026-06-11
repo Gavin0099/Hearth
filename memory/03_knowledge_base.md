@@ -80,3 +80,9 @@
 - `governance_version_check.py --write-artifact PATH` in the 2026-06-11 framework version computed the correct compatibility result but did not write the artifact in the explicit-path branch; verify the file contents after running it.
 - Claude, GitHub Copilot, and Gemini closeout hooks should point to `E:/BackUp/Git_EE/Hearth/ai-governance-framework/...`, not the external framework checkout.
 - OpenAI Codex CLI hook config should remain unpromoted until the framework manager reports it as a verified native hook surface rather than Tier B/stub.
+
+### Security F-1 verification gotchas
+
+- `gmail_refresh_token` is a user-settings secret field and must stay in the same encryption/upgrade path as PDF passwords.
+- `20260507000000_add_gmail_server_sync.sql` is the migration reference for `gmail_sync_queue` RLS and `user_settings.gmail_refresh_token`.
+- Gmail server sync is not deploy-complete until Supabase migration, Cloudflare secrets, OAuth refresh-token capture, and a real Gmail bill validation are all verified.

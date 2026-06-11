@@ -1,6 +1,6 @@
 # Security: Route-by-Route Auth Matrix
 
-> **Last updated**: 2026-05-23
+> **Last updated**: 2026-06-11
 > **Related**: [security-boundary.md](security-boundary.md), [security-rls-map.md](security-rls-map.md)
 
 ## Legend
@@ -107,6 +107,8 @@ All import routes share the same preflight via `readOwnedImportFile()` + `resolv
 | GET | `/api/user-settings` | ✅ | ✅ `user_id` | 1. Resolve user 2. Query settings for uid 3. Return boolean flags only (no secret values) | 401, 500 |
 | GET | `/api/user-settings/pdf-passwords` | ✅ | ✅ `user_id` + secret guard | 1. Resolve user 2. Assert `USER_SETTINGS_SECRET_KEY` present 3. Fetch + decrypt secrets 4. Auto-upgrade any plaintext to encrypted | 401, 500 (missing key) |
 | PUT | `/api/user-settings` | ✅ | ✅ `user_id` + encrypt | 1. Resolve user 2. If writing secrets: assert key present 3. Encrypt values 4. Upsert `WHERE user_id = uid` | 401, 500 (missing key), 500 |
+
+Secret-bearing fields include PDF passwords and `gmail_refresh_token`; both use the shared user-settings encryption helper before persistence.
 
 ---
 

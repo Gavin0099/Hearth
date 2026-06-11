@@ -835,7 +835,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         </Button>
       </div>
 
-      {state.status === "loading" && <p className="panel-message--muted">{state.message}</p>}
+      {state.status === "loading" && <p className="panel-message panel-message--muted">{state.message}</p>}
       {state.status === "error" && <p className="panel-message panel-message--error">錯誤：{state.message}</p>}
       {state.status === "done" && <p className="panel-message">{state.message}</p>}
 
@@ -851,7 +851,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
                 <li key={email.id} className="gmail-email-item panel-row-item">
                   <div className="gmail-email-meta">
                     <span className="gmail-email-bank">{BANK_DISPLAY_NAMES[email.bank]}</span>
-                    <span>{email.subject}</span>
+                    <span className="gmail-email-subject">{email.subject}</span>
                     {!hasPdf && (
                       <Badge variant="secondary">通知信，無 PDF 附件</Badge>
                     )}

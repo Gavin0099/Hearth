@@ -3,7 +3,7 @@
 > **專案名稱**: Hearth 家庭財務管理
 > **技術棧**: React / TypeScript / Hono / Supabase / Cloudflare
 > **風險等級**: L1-L2（以 correctness / security 為優先）
-> **最後更新**: 2026-06-07
+> **最後更新**: 2026-06-11
 > **Owner**: GavinWu
 > **Freshness**: Sprint (7d)
 
@@ -72,6 +72,13 @@
 - [x] governance drift `severity=ok`，runtime smoke `session_start_ok=True`
 - [x] push 成功，所有 gate 通過
 
+### 已完成（06-11 治理維運）
+- [x] parent `main` 已同步至 `origin/main`
+- [x] `ai-governance-framework` submodule 已更新至 `9b0e6b7ebff2d085861fade1054e773eaa630df1`
+- [x] `governance/framework.lock.json`、`version_compatibility.json`、AGENTS / local hook paths 已對齊
+- [x] Claude / GitHub Copilot / Gemini closeout hooks 已 verify + smoke test compliant
+- [x] runtime append-only ledgers 已依 manual-promotion-only policy 清理，工作樹回到乾淨狀態
+
 ### 本輪重點（進行中）
 
 #### 手動部署（需人工操作）
@@ -88,9 +95,10 @@
 - [ ] 統一 form / table / badge 視覺語言，與 home 層級保持一致
 
 #### 安全邊界強化 Phase F-1（本輪開工）
-- [ ] RLS hardening map：逐表列出 RLS 狀態與對應路由
-- [ ] Route-by-route auth 矩陣：auth + ownership + validation + failure code
-- [ ] Secret lifecycle policy：PDF 密碼 rotation cadence 與 plaintext 消滅目標
+- [x] RLS hardening map：逐表列出 RLS 狀態與對應路由（`docs/security-rls-map.md`）
+- [x] Route-by-route auth 矩陣：auth + ownership + validation + failure code（`docs/security-route-auth-matrix.md`）
+- [x] Secret lifecycle policy：PDF 密碼 rotation cadence 與 plaintext 消滅目標（`docs/security-secret-lifecycle.md`）
+- [ ] Security F-1 verification pass：對照目前 routes/migrations，修正 stale doc 與缺漏測試項
 
 #### 銀行 PDF 樣本回歸（等樣本）
 - [ ] 玉山/永豐銀行帳戶 PDF 樣本回歸（見 `docs/bank-statement-sample-checklist-esun-sinopac.md`）
@@ -164,3 +172,4 @@
 | 2026-05-23 | PLAN 刷新 | Sprint 視窗更新至 05-23；新增 UI restyling pass 與 Security Phase F-1 工作項 |
 | 2026-06-07 | 治理更新 | F-7 update-governance-submodule 已將 ai-governance-framework 指向 `57db6c164182b560fe6acc017b2ed93899dd422c` |
 | 2026-06-07 | Gmail server sync 落地規劃 | 新增 `docs/gmail-server-sync-deploy-runbook.md`，並將手動部署清單同步為 migration/Cloudflare secrets/provider token/真實驗證待完成項目。 |
+| 2026-06-11 | 治理更新 | parent repo 與 AI Governance submodule 已更新到最新；version/drift/hook smoke 通過，runtime ledger dirty state 已清理。 |

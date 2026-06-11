@@ -1,6 +1,6 @@
 # Security: Secret Lifecycle Policy
 
-> **Last updated**: 2026-05-23
+> **Last updated**: 2026-06-11
 > **Related**: [security-boundary.md](security-boundary.md), [security-route-auth-matrix.md](security-route-auth-matrix.md)
 
 ## Secrets in Scope
@@ -8,6 +8,7 @@
 | Secret | Storage Location | Used For | Encryption |
 |--------|-----------------|----------|------------|
 | PDF bank passwords (per bank) | `user_settings.pdf_passwords` (DB column) | Decrypt password-protected bank PDF statements | AES-256 via `USER_SETTINGS_SECRET_KEY` |
+| Gmail refresh token | `user_settings.gmail_refresh_token` | Server-side Gmail cron and queue detection | AES-256 via `USER_SETTINGS_SECRET_KEY` |
 | `USER_SETTINGS_SECRET_KEY` | Cloudflare Worker environment variable | Encrypts/decrypts PDF passwords at rest | N/A (key itself) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Cloudflare Worker environment variable | Gmail OAuth flow | N/A |
 | Supabase service-role key | Cloudflare Worker environment variable | DB admin operations from API | N/A |
@@ -52,6 +53,7 @@ Any row read that contains a plaintext password (pre-encryption migration) is au
 | PDF passwords (user data) | User request only | User updates via settings UI; old value overwritten |
 | `USER_SETTINGS_SECRET_KEY` | Suspected compromise | Re-encrypt all rows: fetch all user_settings, decrypt with old key, encrypt with new key, write back. Update Cloudflare env var. |
 | `GOOGLE_CLIENT_ID/SECRET` | Suspected compromise or Google revocation | Revoke in Google Cloud Console, provision new credentials, update Cloudflare env var, re-run Gmail OAuth flow for all users |
+| Gmail refresh token | User disconnect, suspected account compromise, or Google revocation | Clear `user_settings.gmail_refresh_token`, ask the user to sign in with offline consent again, and verify a new encrypted token is captured |
 | Supabase service-role key | Suspected compromise | Rotate in Supabase dashboard, update Cloudflare env var |
 
 ---
@@ -63,6 +65,7 @@ Any row read that contains a plaintext password (pre-encryption migration) is au
 | PDF passwords in DB | Encrypted at rest (post-migration); legacy rows auto-upgraded on read | 100% encrypted | Auto-upgrade in place; no further code needed |
 | PDF passwords in transit | Only returned via `/api/user-settings/pdf-passwords`, HTTPS only | Maintain | — |
 | PDF passwords in logs | Not logged (key assertion, encrypt/decrypt only, no `console.log` of values) | Maintain | Audit log callsites if route is modified |
+| Gmail refresh token in DB | Encrypted at rest when written via `PUT /api/user-settings` | Maintain | Verify deployed `20260507000000_add_gmail_server_sync.sql` before enabling server cron |
 | Supabase service-role key | Cloudflare Worker env var only; never in code | Maintain | — |
 | `USER_SETTINGS_SECRET_KEY` | Cloudflare Worker env var only; never in code or logs | Maintain | Add assertion test to readiness gate |
 

@@ -164,6 +164,7 @@ textarea:focus-visible {
   justify-content: space-between;
   gap: 12px;
   font-size: 0.9rem;
+  min-height: 52px;
 }
 
 .gmail-email-meta {
@@ -171,6 +172,7 @@ textarea:focus-visible {
   flex-direction: column;
   gap: 4px;
   flex: 1;
+  min-width: 0;
 }
 
 .gmail-email-meta .gmail-email-bank {
@@ -178,9 +180,15 @@ textarea:focus-visible {
   font-weight: 700;
 }
 
+.gmail-email-subject {
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
 .gmail-email-actions {
   display: flex;
   align-items: center;
+  flex: 0 0 auto;
 }
 
 .gmail-email-no-pdf {
@@ -191,11 +199,12 @@ textarea:focus-visible {
 .gmail-queue {
   border-left-width: 4px;
   border-left-color: var(--color-primary);
+  justify-content: space-between;
 }
 
 .queue-notice-count {
   font-size: 0.9rem;
-  color: #4b3a2d;
+  color: var(--color-text);
 }
 
 .queue-notice {
@@ -1218,6 +1227,36 @@ textarea {
   padding: 12px 12px 2px;
 }
 
+.import-form {
+  gap: 12px;
+}
+
+.import-field {
+  min-width: min(100%, 220px);
+}
+
+.import-file-field {
+  grid-column: 1 / -1;
+}
+
+.import-file-input {
+  min-height: 42px;
+  padding: 9px 10px;
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.import-file-input::file-selector-button {
+  margin-right: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+  font-weight: 700;
+  padding: 6px 10px;
+}
+
 .recurring-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1226,10 +1265,17 @@ textarea {
 
 .import-preview-meta {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
-  color: #6b5c4e;
-  margin-bottom: 6px;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.import-preview-meta span {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 3px 8px;
 }
 
 .import-preview-table-wrap {
@@ -1238,22 +1284,25 @@ textarea {
 
 .import-preview-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.78rem;
 }
 
 .import-preview-table th {
   text-align: left;
-  color: #888;
+  color: var(--color-text-muted);
   font-weight: 600;
-  padding: 2px 8px 2px 0;
-  border-bottom: 1px solid rgba(91, 66, 44, 0.12);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(91, 66, 44, 0.05);
   white-space: nowrap;
 }
 
 .import-preview-table td {
-  padding: 2px 8px 2px 0;
-  color: #5d4331;
+  padding: 6px 10px;
+  color: var(--color-text);
+  border-bottom: 1px solid rgba(91, 66, 44, 0.08);
   white-space: nowrap;
   max-width: 120px;
   overflow: hidden;
@@ -1261,20 +1310,16 @@ textarea {
 }
 
 .import-preview-warning-text {
-  font-size: 0.8rem;
   color: var(--color-warning);
   margin: 8px 0 0;
 }
 
 .import-preview-error-text {
-  font-size: 0.8rem;
-  color: var(--color-error);
   margin: 8px 0 0;
 }
 
 .import-preview-loading {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
+  margin-top: 0;
 }
 
 /* ── Credit Card Ledger Panel ─────────────────────────────────────── */

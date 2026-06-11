@@ -212,3 +212,12 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - `memory_workflow --check --repo . --run-guard` -> `completion_claim_allowed=True`.
 - `manage_agent_closeout.py verify/smoke --agent claude`, `--agent copilot`, and `--agent gemini` -> installed/compliant after hook paths were normalized to Hearth's repo-local framework submodule.
 - Pushed governance commits through `origin/main` up to `4306d12`.
+
+## 2026-06-11 Product Stabilization
+
+- Security F-1 verification pass: compared `docs/security-rls-map.md`, `docs/security-route-auth-matrix.md`, and `docs/security-secret-lifecycle.md` against `supabase/migrations/20260402000000_add_rls_user_tables.sql`, `supabase/migrations/20260507000000_add_gmail_server_sync.sql`, `apps/api/src/routes/user-settings.ts`, `apps/api/src/cron/gmail-sync.ts`, and `apps/api/src/lib/secrets.ts`.
+- Security fix: documented `gmail_refresh_token` as a user-settings secret and added it to the secrets upgrade test coverage.
+- UI pass: tightened `GmailSyncPanel` queue/list message classes and `ImportPanel` form/file/preview/table token styling without changing import semantics.
+- `npm.cmd --workspace @hearth/api run test -- tests/secrets.test.ts` -> pass (`173/173` API tests).
+- `npm.cmd run check` -> pass for api/web/shared.
+- `npm.cmd --workspace @hearth/web run build` -> pass; Vite emitted existing empty vendor chunk warnings only.

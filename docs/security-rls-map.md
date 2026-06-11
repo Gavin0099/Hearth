@@ -1,6 +1,6 @@
 # Security: RLS Hardening Map
 
-> **Last updated**: 2026-05-23
+> **Last updated**: 2026-06-11
 > **Related**: [security-boundary.md](security-boundary.md), [security-route-auth-matrix.md](security-route-auth-matrix.md)
 
 ## Overview
@@ -78,7 +78,8 @@ API enforcement mirrors this: routes fetch all `account_id` values for the authe
 
 | Migration | Change |
 |-----------|--------|
-| `20260402000000_add_rls_user_tables.sql` | Initial RLS enablement across all user-scoped tables |
+| `20260402000000_add_rls_user_tables.sql` | Initial RLS enablement across core user-scoped tables |
+| `20260507000000_add_gmail_server_sync.sql` | Adds `user_settings.gmail_refresh_token`, creates `gmail_sync_queue`, enables RLS, and adds `gmail_sync_queue_owner` |
 
 ---
 

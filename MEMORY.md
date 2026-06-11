@@ -44,3 +44,4 @@
 - Framework adoption is only real if local governance docs and local memory are maintained in the Hearth repo itself.
 - Repo-local governance wins over framework examples when product-specific scope or delivery order differs.
 - 已完成 2026-06-07 UI 元件一致化 pass 全域掃描：`apps/web/src/components/*Panel.tsx` 皆檢視，補齊 `styles.css` 缺漏的 `gmail-sync-panel`、`import-panel` wrapper 錨點，並持續維持既有行為不變。
+- 2026-06-11 Security F-1 verification: `gmail_refresh_token` is treated as a user-settings secret and follows the shared encryption/upgrade path; Gmail server sync must not be called deployed until migration, Cloudflare secrets, OAuth refresh-token capture, and real Gmail validation are all verified.

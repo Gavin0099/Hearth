@@ -280,7 +280,7 @@ export function ImportPanel({
     <article className="panel import-panel">
       <h2>資料匯入</h2>
       {!session ? <p className="panel-copy">登入後可以匯入標準化交易 CSV。</p> : null}
-      {state.status === "loading" ? <p className="panel-message--muted">正在載入可用帳戶...</p> : null}
+      {state.status === "loading" ? <p className="panel-message panel-message--muted">正在載入可用帳戶...</p> : null}
       {state.status === "error" ? <p className="panel-message panel-message--error">匯入面板載入失敗: {state.message}</p> : null}
       {state.status === "success" ? (
         <>
@@ -301,8 +301,8 @@ export function ImportPanel({
               <>Excel 第一版格式：第一列放日期欄，左側欄位使用 <code className="panel-inline-code">分類</code> / <code className="panel-inline-code">項目</code>，每日金額填在日期欄下方。</>
             )}
           </p>
-          <form className="account-form form-surface" onSubmit={handleSubmit}>
-            <label>
+          <form className="account-form form-surface import-form" onSubmit={handleSubmit}>
+            <label className="import-field">
               匯入模式
               <select
                 value={importMode}
@@ -328,7 +328,7 @@ export function ImportPanel({
                 <option value="foreign-stock-csv">複委託交易 CSV</option>
               </select>
             </label>
-            <label>
+            <label className="import-field">
               匯入目標帳戶
               <select
                 value={selectedAccountId}
@@ -341,9 +341,10 @@ export function ImportPanel({
                 ))}
               </select>
             </label>
-            <label>
+            <label className="import-field import-file-field">
               {importMode === "excel-monthly" ? "Excel 檔案" : "CSV 檔案"}
               <input
+                className="import-file-input"
                 accept={
                   importMode === "excel-monthly"
                     ? ".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
@@ -391,19 +392,19 @@ export function ImportPanel({
                   </div>
                 ) : null}
                 {filePreview.warnings.length > 0 ? (
-                  <p className="import-preview-warning-text">
+                  <p className="panel-message import-preview-warning-text">
                     warnings: {filePreview.warnings.join(" | ")}
                   </p>
                 ) : null}
                 {filePreview.errors.length > 0 ? (
-                  <p className="import-preview-error-text">
+                  <p className="panel-message panel-message--error import-preview-error-text">
                     errors: {filePreview.errors.slice(0, 3).join(" | ")}
                     {filePreview.errors.length > 3 ? ` | ...共 ${filePreview.errors.length} 筆` : ""}
                   </p>
                 ) : null}
               </div>
             ) : null}
-            {previewLoading ? <p className="import-preview-loading">預覽解析中...</p> : null}
+            {previewLoading ? <p className="panel-message panel-message--muted import-preview-loading">預覽解析中...</p> : null}
             <Button disabled={isSubmitting} loading={isSubmitting} type="submit">
               {isSubmitting
                 ? "匯入中..."
