@@ -13,7 +13,7 @@
 
 - Align PLAN and memory with the completed governance refresh.
 - Verify Security F-1 documents against the current route and migration implementation.
-- Complete the GmailSyncPanel and ImportPanel UI token pass without changing import or parser semantics.
+- GmailSyncPanel and ImportPanel UI token pass is complete for status messages, queue/email rows, preview chips/table, and mobile row behavior without changing import or parser semantics.
 - Use `scripts/gmail-server-sync-readiness.ps1 -PrintSqlChecks` before the manual Gmail server-sync deployment; the local readiness check passes but does not replace external Supabase/Cloudflare/Gmail validation.
 - Deployed Worker health flags now pass via `scripts/gmail-server-sync-readiness.ps1 -ApiBaseUrl https://hearth-api.meiraybooks.workers.dev`; this still does not prove Supabase migration application, OAuth refresh-token capture, or real Gmail bill ingestion.
 - Use `scripts/gmail-server-sync-supabase-readiness.ps1` with caller-provided `SUPABASE_DB_URL` / `DATABASE_URL` to verify the Gmail migration against Supabase read-only. `-PrintSqlOnly` passes locally; live DB verification has not been run.
@@ -21,5 +21,5 @@
 
 ## Next
 
-- Keep product work focused on: Gmail server-sync manual deployment validation, UI component restyling, and Security Phase F-1 verification.
+- Keep product work focused on: Gmail server-sync manual deployment validation and Security Phase F-1 verification.
 - Do not claim Gmail server-sync deployed until Supabase migration, Cloudflare secrets, OAuth refresh token capture, and real Gmail bill validation have all been performed.

@@ -260,3 +260,15 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - `memory_workflow --check --repo . --run-guard` -> `completion_claim_allowed=True`.
 - `dirty_runtime_ledger_detector.py --project-root .` -> pass (`dirty_count=0`).
 - Claim boundary: F-7 was not claimed as `full_update_completed` because existing memory normalization remains unverified.
+
+## 2026-06-12 UI Token Pass
+
+- `npm.cmd --workspace @hearth/web run check` -> pass.
+- `npm.cmd --workspace @hearth/web run build` -> pass; Vite emitted existing empty vendor chunk warnings only.
+- `npm.cmd run check --workspaces` -> pass after `0.3.1` version bump.
+- Browser smoke at `http://127.0.0.1:5173` desktop + mobile viewport -> Hearth loaded; no app console errors. Observed unrelated `favicon.ico` 404 and existing mobile meta warning.
+- Scope covered:
+  - `GmailSyncPanel` status messages, queue/email rows, and no-PDF notice badge styling.
+  - `ImportPanel` preview chips, preview table surface, recurring candidate/result messages, and mobile responsive constraints.
+  - root/api/web/shared package versions and internal `@hearth/shared` pins bumped to `0.3.1` for the patch release scope.
+- Claim boundary: UI-only token/styling pass; no parser, import, API, Supabase, or Gmail behavior changed.

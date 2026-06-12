@@ -94,9 +94,9 @@
 - [ ] 依 `docs/gmail-server-sync-deploy-runbook.md` 完成驗證並補上 validation log
 
 #### UI 元件重設計 pass（本輪開工）
-- [ ] GmailSyncPanel 內部元件對齊 design token（表單、狀態指示、佇列列表）
-- [ ] ImportPanel 內部元件對齊 design token（檔案上傳區、preview table、結果列表）
-- [ ] 統一 form / table / badge 視覺語言，與 home 層級保持一致
+- [x] GmailSyncPanel 內部元件對齊 design token（狀態指示、佇列列表、無 PDF badge）
+- [x] ImportPanel 內部元件對齊 design token（preview table、結果訊息、recurring candidate 狀態）
+- [x] 統一 form / table / badge 視覺語言，與 home 層級保持一致
 
 #### 安全邊界強化 Phase F-1（本輪開工）
 - [x] RLS hardening map：逐表列出 RLS 狀態與對應路由（`docs/security-rls-map.md`）
@@ -181,3 +181,4 @@
 | 2026-06-12 | Gmail deployed health readiness | `scripts/gmail-server-sync-readiness.ps1 -ApiBaseUrl https://hearth-api.meiraybooks.workers.dev` PASS；僅確認 Worker health flags，不代表 migration/OAuth/Gmail 真實驗證完成。 |
 | 2026-06-12 | Gmail Supabase migration verifier | 新增 `scripts/gmail-server-sync-supabase-readiness.ps1`，可用 caller-provided DB URL read-only 驗證 migration 是否已套用；未提交任何 secret。 |
 | 2026-06-12 | 治理更新 | `ai-governance-framework` fast-forward 至 `9f7fa1e3a6b6ac7f90010f7048a23e44ae3ebb52`；dry-run PASS，F-7 final_status 保守為 `not_verified`（existing memory normalization 未驗證）。 |
+| 2026-06-12 | UI token pass | GmailSyncPanel / ImportPanel 狀態、badge、preview chip/table、mobile row behavior 對齊現有 design tokens；版本 bump 至 `0.3.1`；web check/build PASS，Browser smoke 0 app console errors。 |

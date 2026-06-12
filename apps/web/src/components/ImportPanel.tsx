@@ -357,16 +357,16 @@ export function ImportPanel({
             {filePreview ? (
               <div className="import-preview">
                 <div className="import-preview-meta">
-                  <span className="panel-inline-code">{filePreview.name}</span>
-                  <span>{filePreview.sizeKb} KB</span>
+                  <span className="import-preview-chip import-preview-chip--file">{filePreview.name}</span>
+                  <span className="import-preview-chip">{filePreview.sizeKb} KB</span>
                   {filePreview.estimatedDataRows > 0 ? (
-                    <span>約 {filePreview.estimatedDataRows} 筆資料列</span>
+                    <span className="import-preview-chip import-preview-chip--info">約 {filePreview.estimatedDataRows} 筆資料列</span>
                   ) : null}
-                  <span>可匯入 {filePreview.validRows} 筆</span>
-                  {filePreview.failedRows > 0 ? <span>錯誤 {filePreview.failedRows} 筆</span> : null}
-                  {filePreview.skipped > 0 ? <span>略過 {filePreview.skipped} 筆</span> : null}
+                  <span className="import-preview-chip import-preview-chip--success">可匯入 {filePreview.validRows} 筆</span>
+                  {filePreview.failedRows > 0 ? <span className="import-preview-chip import-preview-chip--error">錯誤 {filePreview.failedRows} 筆</span> : null}
+                  {filePreview.skipped > 0 ? <span className="import-preview-chip import-preview-chip--warning">略過 {filePreview.skipped} 筆</span> : null}
                   {filePreview.recurringCandidates > 0 ? (
-                    <span>recurring 候選 {filePreview.recurringCandidates} 筆</span>
+                    <span className="import-preview-chip import-preview-chip--info">recurring 候選 {filePreview.recurringCandidates} 筆</span>
                   ) : null}
                 </div>
                 {filePreview.headers.length > 0 ? (
@@ -421,7 +421,9 @@ export function ImportPanel({
           </form>
           {latestRecurringCandidates.length > 0 ? (
             <>
-              <p className="panel-message panel-message--muted">可直接建立週期模板的候選: {latestRecurringCandidates.length} 筆。</p>
+              <p className="panel-message panel-message--muted panel-status-message">
+                可直接建立週期模板的候選: {latestRecurringCandidates.length} 筆。
+              </p>
               <div className="recurring-actions">
                 <Button
                   disabled={isCreatingRecurring || isCreatingAndApplyingRecurring}
@@ -442,7 +444,7 @@ export function ImportPanel({
               </div>
             </>
           ) : null}
-          {message ? <p className="panel-message">{message}</p> : null}
+          {message ? <p className="panel-message panel-status-message panel-status-message--done">{message}</p> : null}
         </>
       ) : null}
     </article>

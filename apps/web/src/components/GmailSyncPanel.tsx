@@ -835,9 +835,9 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         </Button>
       </div>
 
-      {state.status === "loading" && <p className="panel-message panel-message--muted">{state.message}</p>}
-      {state.status === "error" && <p className="panel-message panel-message--error">錯誤：{state.message}</p>}
-      {state.status === "done" && <p className="panel-message">{state.message}</p>}
+      {state.status === "loading" && <p className="panel-message panel-message--muted panel-status-message">{state.message}</p>}
+      {state.status === "error" && <p className="panel-message panel-message--error panel-status-message">錯誤：{state.message}</p>}
+      {state.status === "done" && <p className="panel-message panel-status-message panel-status-message--done">{state.message}</p>}
 
       {emails.length > 0 && (
         <>
@@ -853,7 +853,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
                     <span className="gmail-email-bank">{BANK_DISPLAY_NAMES[email.bank]}</span>
                     <span className="gmail-email-subject">{email.subject}</span>
                     {!hasPdf && (
-                      <Badge variant="secondary">通知信，無 PDF 附件</Badge>
+                      <Badge variant="warning">通知信，無 PDF 附件</Badge>
                     )}
                   </div>
                   <div className="gmail-email-actions">

@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-12T08:56:23.054192+00:00",
+  "contract_injected": true,
+  "contract_hash": "388807858c9a385adb7e92884db0d3b19a65a3087cae237f1a465533604adfa1",
+  "scope": "feat",
+  "level": "L1",
+  "lang": "TypeScript",
+  "contract_fields": {
+    "LANG": "TypeScript",
+    "LEVEL": "L1",
+    "SCOPE": "feat",
+    "PLAN": "Continue Hearth repo-local work with a bounded GmailSyncPanel and ImportPanel UI token pass",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, governance/TESTING.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-12.md, memory/2026-06-11.md",
+    "CONTEXT": "Improve GmailSyncPanel and ImportPanel visual consistency using existing design tokens without changing parser semantics, import behavior, API contracts, or deployment state",
+    "PRESSURE": "SAFE (UI-only L1; no financial semantics or persistence changes)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L1\nSCOPE = feat\nPLAN = Continue Hearth repo-local work with a bounded GmailSyncPanel and ImportPanel UI token pass\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, governance/TESTING.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-12.md, memory/2026-06-11.md\nCONTEXT = Improve GmailSyncPanel and ImportPanel visual consistency using existing design tokens without changing parser semantics, import behavior, API co"
+}
