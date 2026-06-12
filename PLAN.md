@@ -87,7 +87,7 @@
 - [x] 本機 Gmail server-sync readiness 檢查已就緒：`scripts/gmail-server-sync-readiness.ps1 -PrintSqlChecks` PASS
 - [x] deployed Worker `/health` readiness flags 已驗證：`scripts/gmail-server-sync-readiness.ps1 -ApiBaseUrl https://hearth-api.meiraybooks.workers.dev` PASS
 - [x] Supabase migration read-only verifier 已就緒：`scripts/gmail-server-sync-supabase-readiness.ps1 -PrintSqlOnly` PASS
-- [ ] 執行 Supabase migration `20260507000000_add_gmail_server_sync.sql`（尚未確認已套用）
+- [x] 執行並驗證 Supabase migration `20260507000000_add_gmail_server_sync.sql`：caller-run `scripts/gmail-server-sync-supabase-readiness.ps1` PASS
 - [ ] Cloudflare Dashboard / Wrangler Secret 設定 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`
 - [ ] 重新登入 app，確認 `provider_refresh_token` 被捕獲並儲存於 `user_settings.gmail_refresh_token`
 - [ ] Gmail 真實驗證：確認永豐 5 月帳單可見、通知信顯示「無 PDF 附件」
@@ -182,3 +182,4 @@
 | 2026-06-12 | Gmail Supabase migration verifier | 新增 `scripts/gmail-server-sync-supabase-readiness.ps1`，可用 caller-provided DB URL read-only 驗證 migration 是否已套用；未提交任何 secret。 |
 | 2026-06-12 | 治理更新 | `ai-governance-framework` fast-forward 至 `9f7fa1e3a6b6ac7f90010f7048a23e44ae3ebb52`；dry-run PASS，F-7 final_status 保守為 `not_verified`（existing memory normalization 未驗證）。 |
 | 2026-06-12 | UI token pass | GmailSyncPanel / ImportPanel 狀態、badge、preview chip/table、mobile row behavior 對齊現有 design tokens；版本 bump 至 `0.3.1`；web check/build PASS，Browser smoke 0 app console errors。 |
+| 2026-06-12 | Gmail Supabase live verification | User-applied Gmail server-sync migration in Supabase SQL Editor and caller-run `scripts/gmail-server-sync-supabase-readiness.ps1` returned all five PASS checks; OAuth refresh-token capture and real Gmail ingestion still pending. |

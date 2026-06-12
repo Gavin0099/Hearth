@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-12T10:28:17.415807+00:00",
+  "contract_injected": true,
+  "contract_hash": "ce78f6d4b936a3821937e8ab4fc08f22dd8a1a58ab5a874210f235b3e90ae690",
+  "scope": "chore",
+  "level": "L1",
+  "lang": "Markdown",
+  "contract_fields": {
+    "LANG": "Markdown",
+    "LEVEL": "L1",
+    "SCOPE": "chore",
+    "PLAN": "Record live Supabase Gmail server-sync migration verification evidence and continue to OAuth/Gmail validation boundary",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, governance/TESTING.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-12.md",
+    "CONTEXT": "Record caller-run Supabase read-only verifier PASS for Gmail server-sync migration without storing secrets, then identify remaining OAuth refresh-token and real Gmail bill validation steps",
+    "PRESSURE": "SAFE (documentation and evidence update; no DB writes from Codex)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = Markdown\nLEVEL = L1\nSCOPE = chore\nPLAN = Record live Supabase Gmail server-sync migration verification evidence and continue to OAuth/Gmail validation boundary\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, governance/TESTING.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-12.md\nCONTEXT = Record caller-run Supabase read-only verifier PASS for Gmail server-sync migration without storing secrets, then identify remaining OAuth ref"
+}

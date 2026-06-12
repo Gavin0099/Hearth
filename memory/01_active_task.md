@@ -15,11 +15,11 @@
 - Verify Security F-1 documents against the current route and migration implementation.
 - GmailSyncPanel and ImportPanel UI token pass is complete for status messages, queue/email rows, preview chips/table, and mobile row behavior without changing import or parser semantics.
 - Use `scripts/gmail-server-sync-readiness.ps1 -PrintSqlChecks` before the manual Gmail server-sync deployment; the local readiness check passes but does not replace external Supabase/Cloudflare/Gmail validation.
-- Deployed Worker health flags now pass via `scripts/gmail-server-sync-readiness.ps1 -ApiBaseUrl https://hearth-api.meiraybooks.workers.dev`; this still does not prove Supabase migration application, OAuth refresh-token capture, or real Gmail bill ingestion.
-- Use `scripts/gmail-server-sync-supabase-readiness.ps1` with caller-provided `SUPABASE_DB_URL` / `DATABASE_URL` to verify the Gmail migration against Supabase read-only. `-PrintSqlOnly` passes locally; live DB verification has not been run.
+- Deployed Worker health flags now pass via `scripts/gmail-server-sync-readiness.ps1 -ApiBaseUrl https://hearth-api.meiraybooks.workers.dev`; this still does not prove OAuth refresh-token capture or real Gmail bill ingestion.
+- Gmail server-sync Supabase migration is now live-verified: after user-applied SQL Editor migration, caller-run `scripts/gmail-server-sync-supabase-readiness.ps1` returned PASS for `gmail_refresh_token`, `gmail_sync_queue`, RLS, owner policy, and unique constraint.
 - `stash@{0}` (`codex-pre-pull-tracked-20260611`) remains as a backup of pre-pull tracked dirty changes and can be dropped after explicit review.
 
 ## Next
 
 - Keep product work focused on: Gmail server-sync manual deployment validation and Security Phase F-1 verification.
-- Do not claim Gmail server-sync deployed until Supabase migration, Cloudflare secrets, OAuth refresh token capture, and real Gmail bill validation have all been performed.
+- Do not claim Gmail server-sync deployed until Cloudflare secrets, OAuth refresh token capture, and real Gmail bill validation have all been performed.

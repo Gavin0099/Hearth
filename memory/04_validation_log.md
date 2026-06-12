@@ -249,6 +249,18 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
   - verifier reads `SUPABASE_DB_URL` / `DATABASE_URL` from the caller environment or accepts `-DatabaseUrl`; no secrets are stored in repo files.
 - Claim boundary: live Supabase DB verification was not run because no connection string was available in the workspace.
 
+## 2026-06-12 Gmail Supabase Live Migration Verification
+
+- User applied `supabase/migrations/20260507000000_add_gmail_server_sync.sql` in Supabase SQL Editor; Supabase returned `Success. No rows returned`.
+- Caller-run `powershell -ExecutionPolicy Bypass -File scripts/gmail-server-sync-supabase-readiness.ps1` -> pass with portable `psql` at `C:\tmp\postgresql-binaries\pg18\postgresql-18.4.0-x86_64-pc-windows-msvc\bin\psql.exe`.
+- Scope covered:
+  - `user_settings.gmail_refresh_token column: PASS`
+  - `gmail_sync_queue table: PASS`
+  - `gmail_sync_queue RLS enabled: PASS`
+  - `gmail_sync_queue_owner policy: PASS`
+  - `gmail_sync_queue unique user/email/attachment: PASS`
+- Claim boundary: this verifies live Supabase migration shape only. Cloudflare Google secrets, OAuth refresh-token capture, scheduled Gmail sync, queue population, and real Gmail bill ingestion remain unverified.
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.
