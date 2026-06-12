@@ -1,7 +1,7 @@
 {
   "name": "@hearth/api",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
@@ -12,7 +12,7 @@
     "backfill:user-settings-secrets": "tsx scripts/backfill-user-settings-secrets.ts"
   },
   "dependencies": {
-    "@hearth/shared": "0.2.0",
+    "@hearth/shared": "0.3.0",
     "@supabase/supabase-js": "^2.49.1",
     "hono": "^4.7.2",
     "xlsx": "^0.18.5"
