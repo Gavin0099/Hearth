@@ -15,6 +15,20 @@
    - `gmail_sync_queue` 已建立，且有 RLS policy `gmail_sync_queue_owner`
    - `status` 值可正常插入 `pending`
 
+### Read-only Supabase verifier
+
+Use this when you need evidence that the migration is actually applied. The
+script only runs `SELECT` checks. Provide the connection string through the
+current shell environment and remove it afterwards; do not commit secrets.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/gmail-server-sync-supabase-readiness.ps1 -PrintSqlOnly
+
+$env:SUPABASE_DB_URL = "<postgres connection string>"
+powershell -ExecutionPolicy Bypass -File scripts/gmail-server-sync-supabase-readiness.ps1
+Remove-Item Env:\SUPABASE_DB_URL
+```
+
 ## Step 2 — Cloudflare Worker Secret 設定
 
 在 `apps/api/wrangler.jsonc` 的環境中綁定：

@@ -85,6 +85,7 @@
 - [x] backend migration 已就緒：`supabase/migrations/20260507000000_add_gmail_server_sync.sql` 存在
 - [x] 本機 Gmail server-sync readiness 檢查已就緒：`scripts/gmail-server-sync-readiness.ps1 -PrintSqlChecks` PASS
 - [x] deployed Worker `/health` readiness flags 已驗證：`scripts/gmail-server-sync-readiness.ps1 -ApiBaseUrl https://hearth-api.meiraybooks.workers.dev` PASS
+- [x] Supabase migration read-only verifier 已就緒：`scripts/gmail-server-sync-supabase-readiness.ps1 -PrintSqlOnly` PASS
 - [ ] 執行 Supabase migration `20260507000000_add_gmail_server_sync.sql`（尚未確認已套用）
 - [ ] Cloudflare Dashboard / Wrangler Secret 設定 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`
 - [ ] 重新登入 app，確認 `provider_refresh_token` 被捕獲並儲存於 `user_settings.gmail_refresh_token`
@@ -177,3 +178,4 @@
 | 2026-06-11 | 治理更新 | parent repo 與 AI Governance submodule 已更新到最新；version/drift/hook smoke 通過，runtime ledger dirty state 已清理。 |
 | 2026-06-11 | Gmail server-sync readiness | 新增 `scripts/gmail-server-sync-readiness.ps1`，本機確認 migration/runbook/config/code prerequisites；外部 Supabase/Cloudflare/Gmail 驗證仍未完成。 |
 | 2026-06-12 | Gmail deployed health readiness | `scripts/gmail-server-sync-readiness.ps1 -ApiBaseUrl https://hearth-api.meiraybooks.workers.dev` PASS；僅確認 Worker health flags，不代表 migration/OAuth/Gmail 真實驗證完成。 |
+| 2026-06-12 | Gmail Supabase migration verifier | 新增 `scripts/gmail-server-sync-supabase-readiness.ps1`，可用 caller-provided DB URL read-only 驗證 migration 是否已套用；未提交任何 secret。 |

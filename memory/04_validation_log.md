@@ -240,3 +240,11 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
   - local migration/runbook/config/code prerequisites still pass.
   - deployed `/health` endpoint returned acceptable status and configuration flags.
 - Claim boundary: this verifies Worker health configuration only. Supabase migration application, Cloudflare secret values beyond health flags, OAuth re-login refresh-token capture, and real Gmail bill ingestion remain unverified.
+
+## 2026-06-12 Gmail Supabase Migration Verifier
+
+- `powershell -ExecutionPolicy Bypass -File scripts/gmail-server-sync-supabase-readiness.ps1 -PrintSqlOnly` -> pass.
+- Scope covered:
+  - added a read-only verifier for `user_settings.gmail_refresh_token`, `gmail_sync_queue`, row-level security, `gmail_sync_queue_owner`, and the `(user_id, email_id, attachment_id)` unique constraint.
+  - verifier reads `SUPABASE_DB_URL` / `DATABASE_URL` from the caller environment or accepts `-DatabaseUrl`; no secrets are stored in repo files.
+- Claim boundary: live Supabase DB verification was not run because no connection string was available in the workspace.

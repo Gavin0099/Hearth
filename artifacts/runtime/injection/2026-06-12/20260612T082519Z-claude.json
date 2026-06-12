@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-12T08:25:19.032804+00:00",
+  "contract_injected": true,
+  "contract_hash": "03e799b18958d2debe111d2da024471aba9228d685dd19892df805267cb2425c",
+  "scope": "feat",
+  "level": "L1",
+  "lang": "PowerShell",
+  "contract_fields": {
+    "LANG": "PowerShell",
+    "LEVEL": "L1",
+    "SCOPE": "feat",
+    "PLAN": "Add a read-only Supabase Gmail server-sync migration verifier without storing secrets",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/02_tech_stack.md, memory/02_project_facts.md, memory/03_knowledge_base.md, memory/03_decisions.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-12.md, memory/2026-06-11.md, docs/gmail-server-sync-deploy-runbook.md",
+    "CONTEXT": "Create a local script that verifies the Gmail server-sync migration was applied through caller-provided Supabase connection environment variables, record bounded evidence, and keep DB writes and secret storage out of scope",
+    "PRESSURE": "SAFE (read-only migration verification tooling; no secrets committed; no production DB writes)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = PowerShell\nLEVEL = L1\nSCOPE = feat\nPLAN = Add a read-only Supabase Gmail server-sync migration verifier without storing secrets\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/02_tech_stack.md, memory/02_project_facts.md, memory/03_knowledge_base.md, memory/03_decisions.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-12.md, memory/2026-06-11.md, docs/gmail-server-sync-deploy-runbook.md\nCONTEXT = Create a local script that"
+}
