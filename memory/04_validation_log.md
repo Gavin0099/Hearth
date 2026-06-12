@@ -232,3 +232,11 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
   - secrets and cron implementation references for encrypted `gmail_refresh_token` use.
   - runbook coverage for migration, Cloudflare secrets, provider refresh token capture, and validation log update.
 - External deployed Worker health, Supabase migration application, Cloudflare secrets, OAuth re-login token capture, and real Gmail bill validation were not performed in this local readiness pass.
+
+## 2026-06-12 Gmail Server Sync Deployed Health Readiness
+
+- `powershell -ExecutionPolicy Bypass -File scripts/gmail-server-sync-readiness.ps1 -ApiBaseUrl https://hearth-api.meiraybooks.workers.dev` -> pass after rerunning with network escalation; initial sandbox attempt failed with a read/connection closure.
+- Scope covered:
+  - local migration/runbook/config/code prerequisites still pass.
+  - deployed `/health` endpoint returned acceptable status and configuration flags.
+- Claim boundary: this verifies Worker health configuration only. Supabase migration application, Cloudflare secret values beyond health flags, OAuth re-login refresh-token capture, and real Gmail bill ingestion remain unverified.

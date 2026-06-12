@@ -1,0 +1,12 @@
+[
+  {
+    "repo": "Hearth",
+    "timestamp": "20260612T081910Z",
+    "task_type": "review/gmail-server-sync-deployed-health",
+    "total_tokens": null,
+    "token_source_summary": "claude_code_internal",
+    "token_observability_level": "none",
+    "decision_usage_allowed": false,
+    "artifact_path": "artifacts/runtime/injection/2026-06-12/20260612T081910Z-claude.json"
+  }
+]
