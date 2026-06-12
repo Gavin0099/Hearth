@@ -261,6 +261,15 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
   - `gmail_sync_queue unique user/email/attachment: PASS`
 - Claim boundary: this verifies live Supabase migration shape only. Cloudflare Google secrets, OAuth refresh-token capture, scheduled Gmail sync, queue population, and real Gmail bill ingestion remain unverified.
 
+## 2026-06-12 Gmail Server Sync Post-Migration Deployment Boundary
+
+- `powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1` -> pass for `https://hearth-api.meiraybooks.workers.dev/health` and `https://hearth-web.pages.dev`; authenticated checks were skipped because no bearer token was provided.
+- `npx wrangler secret list --config apps/api/wrangler.jsonc` -> blocked because the non-interactive Codex environment has no `CLOUDFLARE_API_TOKEN`.
+- Scope covered:
+  - public API health and web root are reachable after the live Supabase migration verification.
+  - Wrangler CLI is available, but Cloudflare account-scoped secret evidence cannot be queried from this environment yet.
+- Claim boundary: Cloudflare `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `USER_SETTINGS_SECRET_KEY` presence/values, OAuth re-login refresh-token capture, scheduled Gmail queue population, and real Gmail bill ingestion remain unverified.
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.

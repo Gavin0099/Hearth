@@ -17,9 +17,10 @@
 - Use `scripts/gmail-server-sync-readiness.ps1 -PrintSqlChecks` before the manual Gmail server-sync deployment; the local readiness check passes but does not replace external Supabase/Cloudflare/Gmail validation.
 - Deployed Worker health flags now pass via `scripts/gmail-server-sync-readiness.ps1 -ApiBaseUrl https://hearth-api.meiraybooks.workers.dev`; this still does not prove OAuth refresh-token capture or real Gmail bill ingestion.
 - Gmail server-sync Supabase migration is now live-verified: after user-applied SQL Editor migration, caller-run `scripts/gmail-server-sync-supabase-readiness.ps1` returned PASS for `gmail_refresh_token`, `gmail_sync_queue`, RLS, owner policy, and unique constraint.
+- Post-migration public deployment smoke passes for `https://hearth-api.meiraybooks.workers.dev` and `https://hearth-web.pages.dev`; Cloudflare secret listing is blocked in this non-interactive Codex environment because `CLOUDFLARE_API_TOKEN` is not set.
 - `stash@{0}` (`codex-pre-pull-tracked-20260611`) remains as a backup of pre-pull tracked dirty changes and can be dropped after explicit review.
 
 ## Next
 
 - Keep product work focused on: Gmail server-sync manual deployment validation and Security Phase F-1 verification.
-- Do not claim Gmail server-sync deployed until Cloudflare secrets, OAuth refresh token capture, and real Gmail bill validation have all been performed.
+- Do not claim Gmail server-sync deployed until Cloudflare `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `USER_SETTINGS_SECRET_KEY` state, OAuth refresh token capture, and real Gmail bill validation have all been performed.

@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-12T10:35:49.190053+00:00",
+  "contract_injected": true,
+  "contract_hash": "e32a8b27f124428c7dde8d6a976eb414ac4ea290203b4035e475b0fc3190b6d2",
+  "scope": "review",
+  "level": "L1",
+  "lang": "PowerShell",
+  "contract_fields": {
+    "LANG": "PowerShell",
+    "LEVEL": "L1",
+    "SCOPE": "review",
+    "PLAN": "Continue Gmail server-sync deployment validation after Supabase migration verification",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, governance/TESTING.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-12.md",
+    "CONTEXT": "Verify deployed Worker readiness and inspect whether Cloudflare Google secrets/OAuth refresh-token capture can be validated without storing secrets",
+    "PRESSURE": "SAFE (read-only deployment validation; no secret persistence)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = PowerShell\nLEVEL = L1\nSCOPE = review\nPLAN = Continue Gmail server-sync deployment validation after Supabase migration verification\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, governance/TESTING.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-12.md\nCONTEXT = Verify deployed Worker readiness and inspect whether Cloudflare Google secrets/OAuth refresh-token capture can be validated without storing secrets\nPRESSURE = SAFE (read-"
+}

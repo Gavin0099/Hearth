@@ -183,3 +183,4 @@
 | 2026-06-12 | 治理更新 | `ai-governance-framework` fast-forward 至 `9f7fa1e3a6b6ac7f90010f7048a23e44ae3ebb52`；dry-run PASS，F-7 final_status 保守為 `not_verified`（existing memory normalization 未驗證）。 |
 | 2026-06-12 | UI token pass | GmailSyncPanel / ImportPanel 狀態、badge、preview chip/table、mobile row behavior 對齊現有 design tokens；版本 bump 至 `0.3.1`；web check/build PASS，Browser smoke 0 app console errors。 |
 | 2026-06-12 | Gmail Supabase live verification | User-applied Gmail server-sync migration in Supabase SQL Editor and caller-run `scripts/gmail-server-sync-supabase-readiness.ps1` returned all five PASS checks; OAuth refresh-token capture and real Gmail ingestion still pending. |
+| 2026-06-12 | Gmail deployment boundary | Post-migration API/web smoke PASS；Cloudflare secret list blocked by missing `CLOUDFLARE_API_TOKEN`，因此 Google secrets / OAuth refresh token / real Gmail ingestion 仍未 claim 完成。 |
