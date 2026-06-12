@@ -3,8 +3,9 @@
 ## Current State
 
 - Hearth `main` is synced with `origin/main`.
-- AI Governance submodule is updated to `9b0e6b7ebff2d085861fade1054e773eaa630df1`.
+- AI Governance submodule is updated to `9f7fa1e3a6b6ac7f90010f7048a23e44ae3ebb52`.
 - Governance drift currently passes with `severity=ok`.
+- F-7 apply reports framework pointer `already_current`, repo-local instruction `already_current`, memory writer coverage `verified`, hook validator enforcement `updated`, and existing memory normalization `not_verified`; do not claim `full_update_completed` until normalization is verified or explicitly marked not applicable.
 - Runtime ledger cleanup is complete: tracked append-only runtime logs were restored, generated artifacts were cleaned with explicit paths, and `dirty_runtime_ledger_detector.py` reported `dirty_count=0`.
 - Claude, GitHub Copilot, and Gemini closeout hooks point to Hearth's repo-local `ai-governance-framework` submodule and have smoke-tested compliant.
 

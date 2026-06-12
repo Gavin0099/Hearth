@@ -74,10 +74,11 @@
 
 ### 已完成（06-11 治理維運）
 - [x] parent `main` 已同步至 `origin/main`
-- [x] `ai-governance-framework` submodule 已更新至 `9b0e6b7ebff2d085861fade1054e773eaa630df1`
+- [x] `ai-governance-framework` submodule 已更新至 `9f7fa1e3a6b6ac7f90010f7048a23e44ae3ebb52`
 - [x] `governance/framework.lock.json`、`version_compatibility.json`、AGENTS / local hook paths 已對齊
 - [x] Claude / GitHub Copilot / Gemini closeout hooks 已 verify + smoke test compliant
 - [x] runtime append-only ledgers 已依 manual-promotion-only policy 清理，工作樹回到乾淨狀態
+- [x] 2026-06-12 F-7 apply：framework pointer already_current、repo-local instruction already_current、memory writer verified、hook validator updated；existing memory normalization 仍為 not_verified，因此不宣稱 full_update_completed
 
 ### 本輪重點（進行中）
 
@@ -179,3 +180,4 @@
 | 2026-06-11 | Gmail server-sync readiness | 新增 `scripts/gmail-server-sync-readiness.ps1`，本機確認 migration/runbook/config/code prerequisites；外部 Supabase/Cloudflare/Gmail 驗證仍未完成。 |
 | 2026-06-12 | Gmail deployed health readiness | `scripts/gmail-server-sync-readiness.ps1 -ApiBaseUrl https://hearth-api.meiraybooks.workers.dev` PASS；僅確認 Worker health flags，不代表 migration/OAuth/Gmail 真實驗證完成。 |
 | 2026-06-12 | Gmail Supabase migration verifier | 新增 `scripts/gmail-server-sync-supabase-readiness.ps1`，可用 caller-provided DB URL read-only 驗證 migration 是否已套用；未提交任何 secret。 |
+| 2026-06-12 | 治理更新 | `ai-governance-framework` fast-forward 至 `9f7fa1e3a6b6ac7f90010f7048a23e44ae3ebb52`；dry-run PASS，F-7 final_status 保守為 `not_verified`（existing memory normalization 未驗證）。 |

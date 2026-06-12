@@ -248,3 +248,15 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
   - added a read-only verifier for `user_settings.gmail_refresh_token`, `gmail_sync_queue`, row-level security, `gmail_sync_queue_owner`, and the `(user_id, email_id, attachment_id)` unique constraint.
   - verifier reads `SUPABASE_DB_URL` / `DATABASE_URL` from the caller environment or accepts `-DatabaseUrl`; no secrets are stored in repo files.
 - Claim boundary: live Supabase DB verification was not run because no connection string was available in the workspace.
+
+## 2026-06-12 AI Governance Update
+
+- `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.
+- `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework merge --ff-only origin/main` -> pass; submodule advanced from `9b0e6b7ebff2d085861fade1054e773eaa630df1` to `9f7fa1e3a6b6ac7f90010f7048a23e44ae3ebb52`.
+- `external_governance_submodule_updater.py --repo . --submodule-path ai-governance-framework --target-ref origin/main --format json` -> pass after update; nested HEAD matched target HEAD.
+- `f7_full_update.py --repo . --framework-root ai-governance-framework --submodule-path ai-governance-framework --apply --format json` -> pass with `framework_pointer=already_current`, `repo_local_instruction=already_current`, `memory_writer_coverage=verified`, `hook_validator_enforcement=updated`, `existing_memory_normalization=not_verified`, `final_status=not_verified`.
+- `governance_version_check.py --required-versions ai-governance-framework/governance/runtime/required_versions.yaml --version-manifest .governance/version_manifest.yaml --write-artifact artifacts/governance/version_compatibility.json --json` -> `verdict=compatible`; artifact was not rewritten because only `checked_at` differed.
+- `governance_drift_checker.py --repo . --framework-root ai-governance-framework --format human` -> pass (`severity=ok`).
+- `memory_workflow --check --repo . --run-guard` -> `completion_claim_allowed=True`.
+- `dirty_runtime_ledger_detector.py --project-root .` -> pass (`dirty_count=0`).
+- Claim boundary: F-7 was not claimed as `full_update_completed` because existing memory normalization remains unverified.
