@@ -14,10 +14,13 @@ import { importTransactionsCsv } from "../lib/imports";
 import type { PdfTextExtractionSource } from "../lib/pdf-parser";
 import { fetchUserSettingsSecrets } from "../lib/user-settings";
 import { saveBankSnapshot } from "../lib/bank-snapshots";
+import { getSupabaseBrowserClient } from "../lib/supabase";
 import {
   fetchImportJobs,
   updateImportJob,
+  fetchBankAccountMappings,
   type ImportJobRecord,
+  type BankAccountMappingRecord,
 } from "../lib/import-jobs";
 
 type GmailSyncPanelProps = {
@@ -341,6 +344,18 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
     });
   }, [session]);
 
+  // Reset auto-process guard on re-login so pending jobs are processed again with new token
+  useEffect(() => {
+    const client = getSupabaseBrowserClient();
+    if (!client) return;
+    const { data: { subscription } } = client.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN") {
+        autoProcessFired.current = false;
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   // Auto-process pending_parse jobs when provider_token is available
   useEffect(() => {
     if (!session?.provider_token || pendingQueue.length === 0 || autoProcessFired.current) return;
@@ -367,14 +382,30 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
     const pdfParser = await loadPdfParser();
     const settings = await fetchUserSettingsSecrets();
 
+    // Resolve bank_account_mapping fresh — never rely on stored mapped_account_id
+    const mappingsRes = await fetchBankAccountMappings();
+    const freshMappingIndex: Record<string, string> = {};
+    if (mappingsRes.status === "ok") {
+      for (const m of mappingsRes.items as BankAccountMappingRecord[]) {
+        if (m.enabled) {
+          freshMappingIndex[`${m.bank_key}:${m.source_type}`] = m.account_id;
+        }
+      }
+    }
+
     for (const item of pendingQueue) {
       const bank = item.bank_key as BankKey;
       const isBankStatement = item.source_type === "bank_account";
       setState({ status: "loading", message: `處理 ${BANK_DISPLAY_NAMES[bank] ?? bank}｜${item.email_subject}...` });
 
-      // Safety: skip if no mapped account — should be needs_review, not pending_parse
-      if (!item.mapped_account_id) {
-        await updateImportJob(item.id, { status: "needs_review", error_code: "no_account_mapping" });
+      // Re-resolve account from fresh mapping — never trust stored mapped_account_id
+      const resolvedAccountId = freshMappingIndex[`${bank}:${item.source_type}`] ?? null;
+      if (!resolvedAccountId) {
+        await updateImportJob(item.id, {
+          status: "needs_review",
+          review_reason: "missing_mapping",
+          error_code: "no_account_mapping",
+        });
         continue;
       }
 
@@ -397,7 +428,12 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         const text = extraction.text;
 
         if (!text.trim()) {
-          await updateImportJob(item.id, { status: "failed", error_code: "empty_text", error_message: "PDF 無可用文字" });
+          await updateImportJob(item.id, {
+            status: "failed",
+            review_reason: "parse_error",
+            error_code: "empty_text",
+            error_message: "PDF 無可用文字",
+          });
           continue;
         }
 
@@ -406,7 +442,12 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
           : parseCreditCardTransactions(pdfParser, bank, text);
 
         if (parsed.length === 0) {
-          await updateImportJob(item.id, { status: "failed", error_code: "no_transactions", error_message: "解析後無交易資料" });
+          await updateImportJob(item.id, {
+            status: "failed",
+            review_reason: "parse_error",
+            error_code: "no_transactions",
+            error_message: "解析後無交易資料",
+          });
           continue;
         }
 
@@ -419,7 +460,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
             ...parsed.map((tx) => `${tx.date},${tx.amount},${tx.currency ?? "TWD"},,${tx.description.replace(/,/g, " ")}`),
           ].join("\n");
           const result = await importTransactionsCsv(
-            item.mapped_account_id,
+            resolvedAccountId,
             new File([csvLines], `queue-bank.csv`, { type: "text/csv" }),
             `gmail_bank_${bank}` as Parameters<typeof importTransactionsCsv>[2],
           );
@@ -433,7 +474,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
             ...billedParsed.map((tx) => `${tx.date},${tx.amount},${tx.currency ?? "TWD"},,${tx.description.replace(/,/g, " ")}`),
           ].join("\n");
           const result = await importTransactionsCsv(
-            item.mapped_account_id,
+            resolvedAccountId,
             new File([csvLines], "queue-import.csv", { type: "text/csv" }),
             `gmail_pdf_${bank}` as Parameters<typeof importTransactionsCsv>[2],
           );
@@ -446,6 +487,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       } catch (err) {
         await updateImportJob(item.id, {
           status: "failed",
+          review_reason: "parse_error",
           error_code: "parse_error",
           error_message: err instanceof Error ? err.message : String(err),
         });
