@@ -100,10 +100,20 @@ export function ImportPanel({
       return;
     }
 
+    // Holdings xlsx has no row-level preview — skip
+    if (mode === "sinopac-holdings-xlsx") {
+      setFilePreview(null);
+      return;
+    }
+
     setPreviewLoading(true);
     let preview;
     try {
-      preview = await previewImportFile(mode, accountId, file);
+      preview = await previewImportFile(
+        mode as Exclude<typeof mode, "sinopac-holdings-xlsx">,
+        accountId,
+        file,
+      );
     } catch (error) {
       setFilePreview(null);
       setMessage(error instanceof Error ? `預覽失敗: ${error.message}` : "預覽失敗。");
