@@ -10,7 +10,7 @@ export type ImportJobRecord = {
   bank_key: string;
   source_type: "credit_card" | "bank_account";
   mapped_account_id: string | null;
-  status: "pending_parse" | "parsed" | "imported" | "failed" | "needs_review";
+  status: "pending_parse" | "parsed" | "imported" | "failed" | "needs_review" | "auth_required";
   error_code: string | null;
   error_message: string | null;
   imported_count: number | null;
@@ -32,7 +32,7 @@ export async function fetchImportJobs(status?: string): Promise<
 export async function updateImportJob(
   id: string,
   update: {
-    status: "parsed" | "imported" | "failed" | "needs_review";
+    status: "parsed" | "imported" | "failed" | "needs_review" | "auth_required" | "pending_parse";
     imported_count?: number;
     skipped_count?: number;
     error_code?: string;

@@ -11,7 +11,7 @@ export type ImportJobRecord = {
   bank_key: string;
   source_type: "credit_card" | "bank_account";
   mapped_account_id: string | null;
-  status: "pending_parse" | "parsed" | "imported" | "failed" | "needs_review";
+  status: "pending_parse" | "parsed" | "imported" | "failed" | "needs_review" | "auth_required";
   error_code: string | null;
   error_message: string | null;
   imported_count: number | null;
@@ -63,7 +63,7 @@ importJobsRoutes.patch("/:id", async (c) => {
     error_message?: string;
   }>();
 
-  const allowed = ["parsed", "imported", "failed", "needs_review"];
+  const allowed = ["parsed", "imported", "failed", "needs_review", "auth_required", "pending_parse"];
   if (!allowed.includes(body.status)) {
     return c.json({ error: "invalid status", status: "error" }, 400);
   }

@@ -352,7 +352,12 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
   async function handleProcessQueue() {
     const accessToken = session?.provider_token;
     if (!accessToken) {
-      setState({ status: "error", message: "目前沒有 Gmail 授權，請重新登入後再試。" });
+      // Token 過期，不是 parser 失敗，保留 pending_parse 讓使用者重新登入後再觸發
+      setState({
+        status: "error",
+        message: `有 ${pendingQueue.length} 封帳單待匯入，但 Gmail 授權已過期，請重新登入後會自動繼續。`,
+      });
+      setQueueRunning(false);
       return;
     }
     setQueueRunning(true);
