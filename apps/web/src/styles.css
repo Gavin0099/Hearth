@@ -398,6 +398,10 @@ textarea:focus-visible {
   margin-bottom: 18px;
 }
 
+.home-portfolio-workspace {
+  margin-bottom: 18px;
+}
+
 .home-section-title-row {
   display: flex;
   align-items: baseline;
@@ -430,6 +434,7 @@ textarea:focus-visible {
 
 .home-overview > *,
 .home-primary-workspace > *,
+.home-portfolio-workspace > *,
 .home-secondary-workspace > * {
   opacity: 0;
   transform: translateY(8px);

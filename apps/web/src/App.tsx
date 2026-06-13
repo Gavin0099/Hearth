@@ -247,14 +247,17 @@ export function App() {
             </div>
           </section>
 
+          <section className="home-portfolio-workspace">
+            <PortfolioPanel refreshKey={reportRefreshKey} session={session} />
+          </section>
+
           <section className="home-secondary-workspace">
             <div className="home-section-title-row">
               <h3>進階檢視</h3>
-              <p>匯入完成後再檢查月報、淨值與帳戶設定</p>
+              <p>匯入完成後再檢查月報與帳戶設定</p>
             </div>
             <div className="home-secondary-grid">
               <MonthlyReportPanel refreshKey={reportRefreshKey} session={session} />
-              <PortfolioPanel refreshKey={reportRefreshKey} session={session} />
               <AccountsPanel session={session} />
             </div>
           </section>
