@@ -62,6 +62,23 @@ export type StockTradeImportResponse =
       status: "error";
     };
 
+export type HoldingsImportResponse =
+  | {
+      source: "sinopac-holdings-xlsx";
+      imported: number;
+      skipped: number;
+      prices_updated: number;
+      runtime: "cloudflare-worker";
+      persistence: "supabase";
+      status: "ok";
+      errors: string[];
+    }
+  | {
+      code: "unauthorized" | "validation_error" | "database_error";
+      error: string;
+      status: "error";
+    };
+
 export type ImportPreviewSource =
   | "transactions-csv"
   | "sinopac-tw"

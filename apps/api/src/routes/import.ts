@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type {
   DividendImportResponse,
+  HoldingsImportResponse,
   ImportPreviewResponse,
   StockTradeImportResponse,
   TransactionCsvImportResponse,
@@ -18,6 +19,7 @@ import {
   unauthorizedImportResponse,
 } from "../lib/import-workflows";
 import { parseSinopacTransactionsCsv } from "../lib/sinopac";
+import { parseSinopacHoldingsXlsx } from "../lib/sinopac-holdings";
 import type { ApiEnv } from "../types";
 
 const createImportStub = (source: string) => ({
