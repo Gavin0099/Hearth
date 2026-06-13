@@ -18,6 +18,9 @@ const BANK_ACCOUNT_KEYWORDS = [
   "綜合對帳單", "存款對帳單", "活期對帳", "銀行對帳", "帳戶對帳",
 ];
 
+// Overlap window subtracted from last_successful_scan_at to avoid missing emails near the boundary
+const SCAN_OVERLAP_DAYS = 2;
+
 type MsgPart = {
   filename?: string;
   mimeType: string;
@@ -54,6 +57,15 @@ function detectSourceType(subject: string): "credit_card" | "bank_account" {
     }
   }
   return "credit_card";
+}
+
+// Returns the Gmail `after:` date string.
+// Uses last_successful_scan_at - overlap if available; falls back to 35 days for first run.
+function computeAfterDate(lastSuccessfulScanAt: string | null): string {
+  const since = lastSuccessfulScanAt
+    ? new Date(new Date(lastSuccessfulScanAt).getTime() - SCAN_OVERLAP_DAYS * 24 * 60 * 60 * 1000)
+    : new Date(Date.now() - 35 * 24 * 60 * 60 * 1000);
+  return `${since.getFullYear()}/${String(since.getMonth() + 1).padStart(2, "0")}/${String(since.getDate()).padStart(2, "0")}`;
 }
 
 async function exchangeRefreshToken(
@@ -96,13 +108,13 @@ async function syncUserGmail(
   env: WorkerBindings,
   supabase: ReturnType<typeof createSupabaseAdminClient>,
   afterDate: string,
-): Promise<{ queued: number; errors: string[] }> {
+): Promise<{ queued: number; errors: string[]; scanSucceeded: boolean }> {
   const errors: string[] = [];
   let queued = 0;
 
   const refreshToken = await decryptSecretValue(encryptedRefreshToken, env);
   if (!refreshToken) {
-    return { queued: 0, errors: ["failed to decrypt refresh token"] };
+    return { queued: 0, errors: ["failed to decrypt refresh token"], scanSucceeded: false };
   }
 
   const accessToken = await exchangeRefreshToken(
@@ -111,7 +123,7 @@ async function syncUserGmail(
     env.GOOGLE_CLIENT_SECRET!,
   );
   if (!accessToken) {
-    return { queued: 0, errors: ["failed to exchange refresh token"] };
+    return { queued: 0, errors: ["failed to exchange refresh token"], scanSucceeded: false };
   }
 
   // Fetch bank_account_mapping for this user to resolve mapped_account_id
@@ -138,9 +150,10 @@ async function syncUserGmail(
     )) as { messages?: { id: string }[] };
     messages = list.messages ?? [];
   } catch (err) {
-    return { queued: 0, errors: [err instanceof Error ? err.message : String(err)] };
+    return { queued: 0, errors: [err instanceof Error ? err.message : String(err)], scanSucceeded: false };
   }
 
+  // Gmail list fetch succeeded — individual message errors do not block timestamp update
   for (const msg of messages) {
     try {
       const detail = (await gmailGet(`/messages/${msg.id}?format=full`, accessToken)) as {
@@ -163,7 +176,6 @@ async function syncUserGmail(
 
       const sourceType = detectSourceType(subject);
       const mappedAccountId = mappingIndex[`${bankKey}:${sourceType}`] ?? null;
-      // No mapping → needs_review so we never import to wrong account
       const status = mappedAccountId ? "pending_parse" : "needs_review";
 
       const attachments = extractPdfAttachments(detail.payload as MsgPart);
@@ -212,14 +224,7 @@ async function syncUserGmail(
     }
   }
 
-  await supabase
-    .from("user_settings")
-    .upsert(
-      { user_id: userId, gmail_last_sync_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-      { onConflict: "user_id" },
-    );
-
-  return { queued, errors };
+  return { queued, errors, scanSucceeded: true };
 }
 
 export async function runGmailSync(env: WorkerBindings): Promise<void> {
@@ -231,12 +236,9 @@ export async function runGmailSync(env: WorkerBindings): Promise<void> {
   const supabase = createSupabaseAdminClient(env);
   const startedAt = new Date().toISOString();
 
-  const since = new Date(Date.now() - 35 * 24 * 60 * 60 * 1000);
-  const afterDate = `${since.getFullYear()}/${String(since.getMonth() + 1).padStart(2, "0")}/${String(since.getDate()).padStart(2, "0")}`;
-
   const { data: settings, error: settingsError } = await supabase
     .from("user_settings")
-    .select("user_id, gmail_refresh_token")
+    .select("user_id, gmail_refresh_token, gmail_last_successful_scan_at")
     .not("gmail_refresh_token", "is", null);
 
   if (settingsError) {
@@ -252,20 +254,40 @@ export async function runGmailSync(env: WorkerBindings): Promise<void> {
 
   let totalQueued = 0;
   const allErrors: string[] = [];
+  const userReports: Array<{ user_id: string; afterDate: string; queued: number; scanSucceeded: boolean }> = [];
 
   for (const row of settings ?? []) {
     if (!row.gmail_refresh_token) continue;
-    const { queued, errors } = await syncUserGmail(
+
+    const lastSuccessfulScanAt = (row as Record<string, unknown>).gmail_last_successful_scan_at as string | null ?? null;
+    const afterDate = computeAfterDate(lastSuccessfulScanAt);
+
+    const { queued, errors, scanSucceeded } = await syncUserGmail(
       row.user_id,
       row.gmail_refresh_token,
       env,
       supabase,
       afterDate,
     );
+
     totalQueued += queued;
     for (const e of errors) {
       allErrors.push(`[${row.user_id}] ${e}`);
     }
+    userReports.push({ user_id: row.user_id, afterDate, queued, scanSucceeded });
+
+    const now = new Date().toISOString();
+    await supabase
+      .from("user_settings")
+      .upsert(
+        {
+          user_id: row.user_id,
+          gmail_last_sync_at: now,
+          ...(scanSucceeded ? { gmail_last_successful_scan_at: now } : {}),
+          updated_at: now,
+        },
+        { onConflict: "user_id" },
+      );
   }
 
   const finishedAt = new Date().toISOString();
@@ -277,6 +299,12 @@ export async function runGmailSync(env: WorkerBindings): Promise<void> {
     report: {
       users_processed: (settings ?? []).length,
       jobs_created: totalQueued,
+      scan_windows: userReports.map((r) => ({
+        user_id: r.user_id,
+        after_date: r.afterDate,
+        queued: r.queued,
+        scan_succeeded: r.scanSucceeded,
+      })),
       errors: allErrors,
     },
   });

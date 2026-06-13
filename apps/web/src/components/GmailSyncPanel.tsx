@@ -47,6 +47,13 @@ const BANK_DISPLAY_NAMES: Record<BankKey, string> = {
   mega: "兆豐",
 };
 
+const REVIEW_REASON_LABELS: Record<string, string> = {
+  missing_mapping: "尚未設定帳戶對應",
+  parse_error: "帳單解析失敗，需人工確認",
+  unknown_bank: "無法辨識銀行來源",
+  account_mapping_invalid: "帳戶對應已失效，請重新設定",
+};
+
 const BANK_NAME_KEYWORDS: Record<BankKey, string[]> = {
   sinopac: ["永豐", "sinopac"],
   esun: ["玉山", "esun"],
@@ -858,16 +865,24 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
       {needsReviewQueue.length > 0 && (
         <div className="queue-notice gmail-queue queue-notice--review">
           <span className="queue-notice-count">
-            <strong>{needsReviewQueue.length}</strong> 封帳單找不到對應帳戶，請至設定頁配置銀行帳戶對應後重新同步。
+            <strong>{needsReviewQueue.length}</strong> 封帳單需要人工確認（詳見下方原因）
           </span>
           <ul className="gmail-review-list">
-            {needsReviewQueue.map((item) => (
-              <li key={item.id} className="panel-copy panel-copy--tight">
-                {BANK_DISPLAY_NAMES[item.bank_key as BankKey] ?? item.bank_key}
-                {" — "}
-                {item.email_subject}
-              </li>
-            ))}
+            {needsReviewQueue.map((item) => {
+              const reasonLabel = item.review_reason
+                ? (REVIEW_REASON_LABELS[item.review_reason] ?? item.review_reason)
+                : "原因不明";
+              return (
+                <li key={item.id} className="panel-copy panel-copy--tight">
+                  <span className="gmail-email-bank">
+                    {BANK_DISPLAY_NAMES[item.bank_key as BankKey] ?? item.bank_key}
+                  </span>
+                  {" — "}
+                  {item.email_subject}
+                  <span className="gmail-review-reason"> [{reasonLabel}]</span>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
