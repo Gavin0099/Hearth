@@ -61,6 +61,7 @@ export function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [reportRefreshKey, setReportRefreshKey] = useState(0);
+  const [gmailRefreshKey, setGmailRefreshKey] = useState(0);
   const [currentView, setCurrentView] = useState<AppView>("home");
   const isSupabaseConfigured = Boolean(env.supabaseUrl && env.supabaseAnonKey);
 
@@ -128,6 +129,7 @@ export function App() {
   }
 
   function handleImported() { setReportRefreshKey((k) => k + 1); }
+  function handleMappingSaved() { setGmailRefreshKey((k) => k + 1); }
 
   const authStatusLabel = authLoading ? "登入狀態檢查中" : session ? "已登入" : "未登入";
   const authStatusTone = authLoading ? "warning" : session ? "success" : "info";
@@ -236,7 +238,7 @@ export function App() {
               <p>每日優先完成的兩個步驟</p>
             </div>
             <div className="home-primary-grid">
-              <GmailSyncPanel session={session} onImported={handleImported} />
+              <GmailSyncPanel session={session} onImported={handleImported} refreshKey={gmailRefreshKey} />
               <ImportPanel
                 onImported={handleImported}
                 onRecurringTemplatesCreated={() => {}}
@@ -294,7 +296,7 @@ export function App() {
       {currentView === "settings" && (
         <Suspense fallback={<section className="two-column"><p>載入中...</p></section>}>
           <section className="two-column">
-            <SettingsPanel session={session} />
+            <SettingsPanel session={session} onMappingSaved={handleMappingSaved} />
             <OpsPanel session={session} />
           </section>
         </Suspense>
