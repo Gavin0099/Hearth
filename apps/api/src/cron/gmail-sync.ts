@@ -13,6 +13,11 @@ const BANK_SENDERS: Record<string, string> = {
   mega: "billhunter@billhunter.megabank.com.tw",
 };
 
+// Subject keywords that indicate bank account statements (vs credit card)
+const BANK_ACCOUNT_KEYWORDS = [
+  "綜合對帳單", "存款對帳單", "活期對帳", "銀行對帳", "帳戶對帳",
+];
+
 type MsgPart = {
   filename?: string;
   mimeType: string;
@@ -39,6 +44,16 @@ function identifyBank(fromHeader: string): string | null {
     }
   }
   return null;
+}
+
+function detectSourceType(subject: string): "credit_card" | "bank_account" {
+  const lower = subject.toLowerCase();
+  for (const keyword of BANK_ACCOUNT_KEYWORDS) {
+    if (lower.includes(keyword.toLowerCase())) {
+      return "bank_account";
+    }
+  }
+  return "credit_card";
 }
 
 async function exchangeRefreshToken(
@@ -99,6 +114,18 @@ async function syncUserGmail(
     return { queued: 0, errors: ["failed to exchange refresh token"] };
   }
 
+  // Fetch bank_account_mapping for this user to resolve mapped_account_id
+  const { data: mappings } = await supabase
+    .from("bank_account_mapping")
+    .select("bank_key, source_type, account_id")
+    .eq("user_id", userId)
+    .eq("enabled", true);
+
+  const mappingIndex: Record<string, string> = {};
+  for (const m of mappings ?? []) {
+    mappingIndex[`${m.bank_key}:${m.source_type}`] = m.account_id;
+  }
+
   const allSenders = Object.values(BANK_SENDERS);
   const senderQuery = allSenders.map((s) => `from:${s}`).join(" OR ");
   const query = `(${senderQuery}) after:${afterDate} has:attachment filename:pdf`;
@@ -131,23 +158,31 @@ async function syncUserGmail(
       const from = headers.find((h) => h.name === "From")?.value ?? "";
       const date = headers.find((h) => h.name === "Date")?.value ?? "";
 
-      const bank = identifyBank(from);
-      if (!bank) continue;
+      const bankKey = identifyBank(from);
+      if (!bankKey) continue;
+
+      const sourceType = detectSourceType(subject);
+      const mappedAccountId = mappingIndex[`${bankKey}:${sourceType}`] ?? null;
+      // No mapping → needs_review so we never import to wrong account
+      const status = mappedAccountId ? "pending_parse" : "needs_review";
 
       const attachments = extractPdfAttachments(detail.payload as MsgPart);
       for (const att of attachments) {
-        const { error } = await supabase.from("gmail_sync_queue").upsert(
+        const { error } = await supabase.from("import_jobs").upsert(
           {
             user_id: userId,
-            bank,
-            email_id: msg.id,
+            gmail_message_id: msg.id,
+            attachment_id: att.attachmentId,
             email_subject: subject,
             email_date: date,
-            attachment_id: att.attachmentId,
-            attachment_filename: att.filename,
-            status: "pending",
+            filename: att.filename,
+            bank_key: bankKey,
+            source_type: sourceType,
+            mapped_account_id: mappedAccountId,
+            status,
+            updated_at: new Date().toISOString(),
           },
-          { onConflict: "user_id,email_id,attachment_id", ignoreDuplicates: true },
+          { onConflict: "user_id,gmail_message_id,attachment_id", ignoreDuplicates: true },
         );
         if (!error) queued++;
       }
@@ -220,12 +255,12 @@ export async function runGmailSync(env: WorkerBindings): Promise<void> {
     status: allErrors.length > 0 ? "error" : "ok",
     report: {
       users_processed: (settings ?? []).length,
-      emails_queued: totalQueued,
+      jobs_created: totalQueued,
       errors: allErrors,
     },
   });
 
   console.log(
-    `[gmail-sync] Done. users=${(settings ?? []).length} queued=${totalQueued} errors=${allErrors.length}`,
+    `[gmail-sync] Done. users=${(settings ?? []).length} jobs_created=${totalQueued} errors=${allErrors.length}`,
   );
 }

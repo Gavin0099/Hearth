@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import type { AccountRecord, ParsedPdfTransaction } from "@hearth/shared";
 import { Button } from "./ui/button";
@@ -14,7 +14,11 @@ import { importTransactionsCsv } from "../lib/imports";
 import type { PdfTextExtractionSource } from "../lib/pdf-parser";
 import { fetchUserSettingsSecrets } from "../lib/user-settings";
 import { saveBankSnapshot } from "../lib/bank-snapshots";
-import { getSupabaseBrowserClient } from "../lib/supabase";
+import {
+  fetchImportJobs,
+  updateImportJob,
+  type ImportJobRecord,
+} from "../lib/import-jobs";
 
 type GmailSyncPanelProps = {
   session: Session | null;
@@ -27,16 +31,7 @@ type SyncState =
   | { status: "error"; message: string }
   | { status: "done"; message: string };
 
-type QueueItem = {
-  id: string;
-  bank: string;
-  email_id: string;
-  email_subject: string;
-  email_date: string;
-  attachment_id: string;
-  attachment_filename: string;
-  status: string;
-};
+type QueueItem = ImportJobRecord;
 
 const GMAIL_ENABLED_BANKS = ["sinopac", "esun", "cathay", "taishin", "ctbc", "mega"] as const satisfies BankKey[];
 
@@ -326,25 +321,33 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
   const [emails, setEmails] = useState<GmailBillEmail[]>([]);
   const [accounts, setAccounts] = useState<AccountRecord[]>([]);
   const [pendingQueue, setPendingQueue] = useState<QueueItem[]>([]);
+  const [needsReviewQueue, setNeedsReviewQueue] = useState<QueueItem[]>([]);
   const [queueRunning, setQueueRunning] = useState(false);
+  const autoProcessFired = useRef(false);
 
   useEffect(() => {
     if (!session) {
       setPendingQueue([]);
+      setNeedsReviewQueue([]);
+      autoProcessFired.current = false;
       return;
     }
-    const supabase = getSupabaseBrowserClient();
-    if (!supabase) return;
-    void supabase
-      .from("gmail_sync_queue")
-      .select("id, bank, email_id, email_subject, email_date, attachment_id, attachment_filename, status")
-      .eq("status", "pending")
-      .order("email_date", { ascending: false })
-      .limit(50)
-      .then(({ data }) => {
-        setPendingQueue(data ?? []);
-      });
+
+    void fetchImportJobs("pending_parse").then((res) => {
+      if (res.status === "ok") setPendingQueue(res.items);
+    });
+    void fetchImportJobs("needs_review").then((res) => {
+      if (res.status === "ok") setNeedsReviewQueue(res.items);
+    });
   }, [session]);
+
+  // Auto-process pending_parse jobs when provider_token is available
+  useEffect(() => {
+    if (!session?.provider_token || pendingQueue.length === 0 || autoProcessFired.current) return;
+    autoProcessFired.current = true;
+    void handleProcessQueue();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.provider_token, pendingQueue.length]);
 
   async function handleProcessQueue() {
     const accessToken = session?.provider_token;
@@ -355,24 +358,21 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
     setQueueRunning(true);
     let importedTotal = 0;
     let skippedTotal = 0;
-    const supabase = getSupabaseBrowserClient()!;
-    const markQueue = (id: string, status: string) =>
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (supabase.from("gmail_sync_queue") as any).update({ status, processed_at: new Date().toISOString() }).eq("id", id);
+
     const pdfParser = await loadPdfParser();
     const settings = await fetchUserSettingsSecrets();
-    const accountsResult = await fetchAccounts();
-    if (accountsResult.status === "error") {
-      setState({ status: "error", message: accountsResult.error });
-      setQueueRunning(false);
-      return;
-    }
-    const freshAccounts = accountsResult.items;
-    setAccounts(freshAccounts);
 
     for (const item of pendingQueue) {
-      const bank = item.bank as BankKey;
+      const bank = item.bank_key as BankKey;
+      const isBankStatement = item.source_type === "bank_account";
       setState({ status: "loading", message: `處理 ${BANK_DISPLAY_NAMES[bank] ?? bank}｜${item.email_subject}...` });
+
+      // Safety: skip if no mapped account — should be needs_review, not pending_parse
+      if (!item.mapped_account_id) {
+        await updateImportJob(item.id, { status: "needs_review", error_code: "no_account_mapping" });
+        continue;
+      }
+
       try {
         const defaultPw = settings.default_pdf_password ?? "";
         const password =
@@ -381,13 +381,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
           : bank === "taishin" ? (settings.taishin_pdf_password ?? defaultPw)
           : defaultPw;
 
-        const isBankStatement =
-          item.email_subject.includes("綜合對帳單") ||
-          item.email_subject.includes("存款對帳單") ||
-          item.attachment_filename.includes("綜合對帳單") ||
-          item.attachment_filename.toLowerCase().includes("statement");
-
-        const bytes = await downloadAttachment(item.email_id, item.attachment_id, accessToken);
+        const bytes = await downloadAttachment(item.gmail_message_id, item.attachment_id, accessToken);
         const extraction = await extractPdfTextWithOptionalBlankFallback(
           pdfParser,
           bytes,
@@ -398,7 +392,7 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         const text = extraction.text;
 
         if (!text.trim()) {
-          await markQueue(item.id, "error");
+          await updateImportJob(item.id, { status: "failed", error_code: "empty_text", error_message: "PDF 無可用文字" });
           continue;
         }
 
@@ -407,63 +401,49 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
           : parseCreditCardTransactions(pdfParser, bank, text);
 
         if (parsed.length === 0) {
-          await markQueue(item.id, "skipped");
+          await updateImportJob(item.id, { status: "failed", error_code: "no_transactions", error_message: "解析後無交易資料" });
           continue;
         }
 
+        let jobImported = 0;
+        let jobSkipped = 0;
+
         if (isBankStatement) {
-          const bySection = new Map<string, typeof parsed>();
-          for (const tx of parsed) {
-            const key = `${tx.currency ?? "TWD"}__${tx.subAccount ?? ""}`;
-            if (!bySection.has(key)) bySection.set(key, []);
-            bySection.get(key)!.push(tx);
-          }
-          for (const txList of bySection.values()) {
-            const currency = txList[0].currency ?? "TWD";
-            const subAccount = txList[0].subAccount;
-            const targetAccountId = resolveImportAccountId(bank, freshAccounts, currency, subAccount);
-            if (!targetAccountId) continue;
-            const csvLines = [
-              "date,amount,currency,category,description",
-              ...txList.map((tx) => `${tx.date},${tx.amount},${tx.currency},,${tx.description.replace(/,/g, " ")}`),
-            ].join("\n");
-            const result = await importTransactionsCsv(
-              targetAccountId,
-              new File([csvLines], `queue-bank-${currency}.csv`, { type: "text/csv" }),
-              `gmail_bank_${bank}` as Parameters<typeof importTransactionsCsv>[2],
-            );
-            if (result.status === "ok") {
-              importedTotal += result.imported;
-              skippedTotal += result.skipped;
-            }
-          }
+          const csvLines = [
+            "date,amount,currency,category,description",
+            ...parsed.map((tx) => `${tx.date},${tx.amount},${tx.currency ?? "TWD"},,${tx.description.replace(/,/g, " ")}`),
+          ].join("\n");
+          const result = await importTransactionsCsv(
+            item.mapped_account_id,
+            new File([csvLines], `queue-bank.csv`, { type: "text/csv" }),
+            `gmail_bank_${bank}` as Parameters<typeof importTransactionsCsv>[2],
+          );
+          if (result.status === "ok") { jobImported = result.imported; jobSkipped = result.skipped; }
         } else {
           const emailSendDate = item.email_date ? new Date(item.email_date) : new Date();
           const billingMonth = `${emailSendDate.getFullYear()}-${String(emailSendDate.getMonth() + 1).padStart(2, "0")}-01`;
           const billedParsed = parsed.map((tx) => ({ ...tx, date: billingMonth }));
-          const accountId = resolveImportAccountId(bank, freshAccounts);
-          if (!accountId) {
-            await markQueue(item.id, "skipped");
-            continue;
-          }
           const csvLines = [
             "date,amount,currency,category,description",
-            ...billedParsed.map((tx) => `${tx.date},${tx.amount},${tx.currency},,${tx.description.replace(/,/g, " ")}`),
+            ...billedParsed.map((tx) => `${tx.date},${tx.amount},${tx.currency ?? "TWD"},,${tx.description.replace(/,/g, " ")}`),
           ].join("\n");
           const result = await importTransactionsCsv(
-            accountId,
+            item.mapped_account_id,
             new File([csvLines], "queue-import.csv", { type: "text/csv" }),
             `gmail_pdf_${bank}` as Parameters<typeof importTransactionsCsv>[2],
           );
-          if (result.status === "ok") {
-            importedTotal += result.imported;
-            skippedTotal += result.skipped;
-          }
+          if (result.status === "ok") { jobImported = result.imported; jobSkipped = result.skipped; }
         }
 
-        await markQueue(item.id, "processed");
-      } catch {
-        await markQueue(item.id, "error");
+        await updateImportJob(item.id, { status: "imported", imported_count: jobImported, skipped_count: jobSkipped });
+        importedTotal += jobImported;
+        skippedTotal += jobSkipped;
+      } catch (err) {
+        await updateImportJob(item.id, {
+          status: "failed",
+          error_code: "parse_error",
+          error_message: err instanceof Error ? err.message : String(err),
+        });
       }
     }
 
@@ -806,21 +786,42 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
         自動抓取永豐、玉山、國泰、台新、中信、兆豐帳單（信用卡＋綜合對帳單），匯入後以銀行標籤區分，不需要逐封指定帳戶。
       </p>
 
-      {pendingQueue.length > 0 && (
+      {(pendingQueue.length > 0 || queueRunning) && (
         <div className="queue-notice gmail-queue">
           <span className="queue-notice-count">
-            伺服器已偵測到 <strong>{pendingQueue.length}</strong> 封待匯入帳單
+            {queueRunning
+              ? "自動匯入進行中..."
+              : <>伺服器偵測到 <strong>{pendingQueue.length}</strong> 封待處理帳單（已設定帳戶對應）</>
+            }
           </span>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => void handleProcessQueue()}
-            disabled={queueRunning || state.status === "loading"}
-            loading={queueRunning}
-            type="button"
-          >
-            {queueRunning ? "匯入中..." : "一鍵匯入佇列"}
-          </Button>
+          {!queueRunning && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void handleProcessQueue()}
+              disabled={state.status === "loading"}
+              type="button"
+            >
+              立即匯入
+            </Button>
+          )}
+        </div>
+      )}
+
+      {needsReviewQueue.length > 0 && (
+        <div className="queue-notice gmail-queue queue-notice--review">
+          <span className="queue-notice-count">
+            <strong>{needsReviewQueue.length}</strong> 封帳單找不到對應帳戶，請至設定頁配置銀行帳戶對應後重新同步。
+          </span>
+          <ul className="gmail-review-list">
+            {needsReviewQueue.map((item) => (
+              <li key={item.id} className="panel-copy panel-copy--tight">
+                {BANK_DISPLAY_NAMES[item.bank_key as BankKey] ?? item.bank_key}
+                {" — "}
+                {item.email_subject}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

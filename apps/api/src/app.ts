@@ -10,6 +10,8 @@ import { userSettingsRoutes } from "./routes/user-settings";
 import { bankSnapshotsRoutes } from "./routes/bank-snapshots";
 import { categorizationRulesRoutes } from "./routes/categorization-rules";
 import { opsRoutes } from "./routes/ops";
+import { bankAccountMappingRoutes } from "./routes/bank-account-mapping";
+import { importJobsRoutes } from "./routes/import-jobs";
 import type { ApiEnv, WorkerBindings } from "./types";
 import {
   getBearerToken,
@@ -142,6 +144,8 @@ export function createApp(dependencies: Partial<AppDependencies> = {}) {
   app.route("/api/bank-snapshots", bankSnapshotsRoutes);
   app.route("/api/categorization-rules", categorizationRulesRoutes);
   app.route("/api/ops", opsRoutes);
+  app.route("/api/bank-account-mapping", bankAccountMappingRoutes);
+  app.route("/api/import-jobs", importJobsRoutes);
 
   return app;
 }
