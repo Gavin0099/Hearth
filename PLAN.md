@@ -84,14 +84,11 @@
 
 #### 手動部署（需人工操作）
 - [x] backend migration 已就緒：`supabase/migrations/20260507000000_add_gmail_server_sync.sql` 存在
-- [x] 本機 Gmail server-sync readiness 檢查已就緒：`scripts/gmail-server-sync-readiness.ps1 -PrintSqlChecks` PASS
-- [x] deployed Worker `/health` readiness flags 已驗證：`scripts/gmail-server-sync-readiness.ps1 -ApiBaseUrl https://hearth-api.meiraybooks.workers.dev` PASS
-- [x] Supabase migration read-only verifier 已就緒：`scripts/gmail-server-sync-supabase-readiness.ps1 -PrintSqlOnly` PASS
-- [x] 執行並驗證 Supabase migration `20260507000000_add_gmail_server_sync.sql`：caller-run `scripts/gmail-server-sync-supabase-readiness.ps1` PASS
-- [ ] Cloudflare Dashboard / Wrangler Secret 設定 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`
-- [ ] 重新登入 app，確認 `provider_refresh_token` 被捕獲並儲存於 `user_settings.gmail_refresh_token`
-- [ ] Gmail 真實驗證：確認永豐 5 月帳單可見、通知信顯示「無 PDF 附件」
-- [ ] 依 `docs/gmail-server-sync-deploy-runbook.md` 完成驗證並補上 validation log
+- [x] 執行 Supabase migration `20260507000000_add_gmail_server_sync.sql`（2026-06-13 完成）
+- [x] Cloudflare Dashboard / Wrangler Secret 設定 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`（2026-06-13 完成）
+- [x] 重新登入 app，確認 `provider_refresh_token` 被捕獲並儲存於 `user_settings.gmail_refresh_token`（2026-06-13 完成）
+- [x] Gmail 真實驗證：找到 42 封帳單，永豐信用卡／綜合對帳單可見，匯入正常（2026-06-13 完成）
+- [x] 依 `docs/gmail-server-sync-deploy-runbook.md` 完成驗證並補上 validation log（2026-06-13 完成）
 
 #### UI 元件重設計 pass（本輪開工）
 - [x] GmailSyncPanel 內部元件對齊 design token（狀態指示、佇列列表、無 PDF badge）

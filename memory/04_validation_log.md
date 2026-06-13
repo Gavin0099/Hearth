@@ -293,3 +293,13 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
   - `ImportPanel` preview chips, preview table surface, recurring candidate/result messages, and mobile responsive constraints.
   - root/api/web/shared package versions and internal `@hearth/shared` pins bumped to `0.3.1` for the patch release scope.
 - Claim boundary: UI-only token/styling pass; no parser, import, API, Supabase, or Gmail behavior changed.
+
+## 2026-06-13 Gmail Server Sync 完整驗收
+
+- Step 1: `20260507000000_add_gmail_server_sync.sql` 套用成功（`gmail_refresh_token` 欄位 + `gmail_sync_queue` 資料表 + RLS policy）
+- Step 2: Cloudflare Worker Secrets 設定完成（`GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`、`USER_SETTINGS_SECRET_KEY`）
+- Step 3: `gmail_refresh_token` 已捕獲並加密儲存於 `user_settings`；修復 `App.tsx` 同時帶 `gmail_connected: true` 的 bug
+- Step 4: Gmail 同步驗證通過——找到 42 封帳單，永豐信用卡 / 綜合對帳單可見，匯入流程正常
+- 修正 `apps/web/.env.production` API URL（`reiko0099` → `meiraybooks`）
+- 修正 `apps/api/wrangler.jsonc` `APP_ENV` development → production
+- hearth-web 與 hearth-api 重新部署完成
