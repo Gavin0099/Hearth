@@ -94,7 +94,8 @@ reportRoutes.get("/monthly", async (c) => {
   }
 
   const monthStart = `${year}-${String(month).padStart(2, "0")}-01`;
-  const monthEnd = `${year}-${String(month).padStart(2, "0")}-31`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const monthEnd = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
   const createSupabaseAdminClient = c.get("createSupabaseAdminClient");
   const supabase = createSupabaseAdminClient(c.env);

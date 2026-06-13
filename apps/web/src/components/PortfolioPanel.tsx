@@ -33,8 +33,8 @@ type LoadState =
     | {
         status: "success";
         holdings: Extract<PortfolioHoldingsResponse, { status: "ok" }>;
-        netWorth: Extract<NetWorthResponse, { status: "ok" }>;
-        dividends: Extract<PortfolioDividendsResponse, { status: "ok" }>;
+        netWorth: Extract<NetWorthResponse, { status: "ok" }> | null;
+        dividends: Extract<PortfolioDividendsResponse, { status: "ok" }> | null;
       };
 
 const fmtTwd = new Intl.NumberFormat("zh-TW", {
@@ -189,14 +189,6 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
         setState({ status: "error", message: holdingsResult.error });
         return;
       }
-      if (netWorthResult.status === "error") {
-        setState({ status: "error", message: netWorthResult.error });
-        return;
-      }
-      if (dividendsResult.status === "error") {
-        setState({ status: "error", message: dividendsResult.error });
-        return;
-      }
 
       if (fxResult.status === "ok") setFxRates(fxResult.rates);
       if (costsResult.status === "ok") setTradeCosts(costsResult.items);
@@ -208,8 +200,8 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
       setState({
         status: "success",
         holdings: holdingsResult,
-        netWorth: netWorthResult,
-        dividends: dividendsResult,
+        netWorth: netWorthResult.status === "ok" ? netWorthResult : null,
+        dividends: dividendsResult.status === "ok" ? dividendsResult : null,
       });
     }
 
@@ -393,39 +385,41 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
       {state.status === "success" ? (
         <>
           {/* 淨值摘要 */}
-          <section className="net-worth-summary">
-            <div className="net-worth-total">
-              <span className="label">總資產淨值</span>
-              <span className="value">{fmtTwd.format(state.netWorth.totalNetWorthTwd)}</span>
-            </div>
-            <div className="net-worth-breakdown">
-              <div>
-                <span className="label">銀行現金</span>
-                <span className="value">{fmtTwd.format(state.netWorth.cashBankTwd)}</span>
+          {state.netWorth ? (
+            <section className="net-worth-summary">
+              <div className="net-worth-total">
+                <span className="label">總資產淨值</span>
+                <span className="value">{fmtTwd.format(state.netWorth.totalNetWorthTwd)}</span>
               </div>
-              <div>
-                <span className="label">信用卡餘額</span>
-                <span className="value">{fmtTwd.format(state.netWorth.cashCreditTwd)}</span>
+              <div className="net-worth-breakdown">
+                <div>
+                  <span className="label">銀行現金</span>
+                  <span className="value">{fmtTwd.format(state.netWorth.cashBankTwd)}</span>
+                </div>
+                <div>
+                  <span className="label">信用卡餘額</span>
+                  <span className="value">{fmtTwd.format(state.netWorth.cashCreditTwd)}</span>
+                </div>
+                <div>
+                  <span className="label">投資市值</span>
+                  <span className="value">{fmtTwd.format(state.netWorth.investmentsTwd)}</span>
+                </div>
+                <div>
+                  <span className="label">累計配息</span>
+                  <span className="value">{fmtTwd.format(state.netWorth.dividendsReceivedTwd)}</span>
+                </div>
+                <div>
+                  <span className="label">今年配息</span>
+                  <span className="value">{fmtTwd.format(state.netWorth.dividendsYearToDateTwd)}</span>
+                </div>
               </div>
-              <div>
-                <span className="label">投資市值</span>
-                <span className="value">{fmtTwd.format(state.netWorth.investmentsTwd)}</span>
-              </div>
-              <div>
-                <span className="label">累計配息</span>
-                <span className="value">{fmtTwd.format(state.netWorth.dividendsReceivedTwd)}</span>
-              </div>
-              <div>
-                <span className="label">今年配息</span>
-                <span className="value">{fmtTwd.format(state.netWorth.dividendsYearToDateTwd)}</span>
-              </div>
-            </div>
-            {state.netWorth.priceAsOf ? (
-              <p className="price-as-of">報價日期：{state.netWorth.priceAsOf}</p>
-            ) : state.netWorth.investmentsTwd > 0 ? (
-              <p className="price-as-of">尚無報價，以成本計算</p>
-            ) : null}
-          </section>
+              {state.netWorth.priceAsOf ? (
+                <p className="price-as-of">報價日期：{state.netWorth.priceAsOf}</p>
+              ) : state.netWorth.investmentsTwd > 0 ? (
+                <p className="price-as-of">尚無報價，以成本計算</p>
+              ) : null}
+            </section>
+          ) : null}
 
           {/* 淨值歷史走勢圖 */}
           {history.length >= 2 ? (
@@ -651,7 +645,7 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
           ) : null}
 
           {/* 最近配息 */}
-          {state.dividends.items.length > 0 ? (
+          {state.dividends && state.dividends.items.length > 0 ? (
             <section className="holdings-list">
               <h3>最近配息</h3>
               <ul>
