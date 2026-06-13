@@ -324,3 +324,87 @@ importRoutes.post(
       return c.json<DividendImportResponse>(importResult.response, importResult.status);
     })(),
 );
+
+importRoutes.post(
+  "/sinopac-holdings-xlsx",
+  async (c): Promise<Response> =>
+    (async () => {
+      const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
+      const user = await resolveAuthenticatedUser(c.req.raw, c.env);
+      if (!user) {
+        return c.json<HoldingsImportResponse>(unauthorizedImportResponse(), 401);
+      }
+
+      const requestData = await readOwnedImportFile(c, "Excel");
+      if (!requestData.ok) {
+        return c.json<HoldingsImportResponse>(requestData.error, requestData.status);
+      }
+      const { accountId, file } = requestData;
+
+      const importContext = await resolveOwnedImportContext(c, user.id, accountId);
+      if (!importContext.ok) {
+        return c.json<HoldingsImportResponse>(importContext.error, importContext.status);
+      }
+      const { supabase } = importContext;
+
+      const buffer = await file.arrayBuffer();
+      const { rows, errors } = parseSinopacHoldingsXlsx(buffer);
+
+      if (rows.length === 0) {
+        return c.json<HoldingsImportResponse>(
+          { code: "validation_error", error: errors[0] ?? "找不到有效持倉資料", status: "error" },
+          400,
+        );
+      }
+
+      const today = new Date().toISOString().slice(0, 10);
+      let imported = 0;
+      let skipped = 0;
+      let prices_updated = 0;
+
+      for (const row of rows) {
+        const { error: holdingError } = await supabase
+          .from("holdings")
+          .upsert(
+            {
+              account_id: accountId,
+              ticker: row.ticker,
+              name: row.name,
+              total_shares: row.total_shares,
+              avg_cost: row.avg_cost,
+              currency: "TWD",
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "account_id,ticker" },
+          );
+
+        if (holdingError) {
+          errors.push(`持倉更新失敗 ${row.ticker}: ${holdingError.message}`);
+          skipped++;
+        } else {
+          imported++;
+        }
+
+        if (row.close_price > 0) {
+          const { error: priceError } = await supabase
+            .from("price_snapshots")
+            .upsert(
+              { ticker: row.ticker, snapshot_date: today, close_price: row.close_price, currency: "TWD" },
+              { onConflict: "ticker,snapshot_date" },
+            );
+          if (!priceError) prices_updated++;
+        }
+      }
+
+      return c.json<HoldingsImportResponse>({
+        source: "sinopac-holdings-xlsx",
+        imported,
+        skipped,
+        prices_updated,
+        runtime: "cloudflare-worker",
+        persistence: "supabase",
+        status: "ok",
+        errors,
+      });
+    })(),
+);

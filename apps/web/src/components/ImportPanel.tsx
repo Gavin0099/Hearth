@@ -8,6 +8,7 @@ import {
   importDividendsCsv,
   importExcelMonthly,
   importForeignStockCsv,
+  importSinopacHoldingsXlsx,
   importSinopacStockCsv,
   importSinopacTransactionsCsv,
   importTransactionsCsv,
@@ -35,7 +36,7 @@ export function ImportPanel({
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importMode, setImportMode] = useState<
-    "normalized" | "sinopac-tw" | "credit-card-tw" | "excel-monthly" | "sinopac-stock" | "foreign-stock-csv" | "dividends-csv"
+    "normalized" | "sinopac-tw" | "credit-card-tw" | "excel-monthly" | "sinopac-stock" | "foreign-stock-csv" | "dividends-csv" | "sinopac-holdings-xlsx"
   >("normalized");
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -173,6 +174,8 @@ export function ImportPanel({
           ? await importForeignStockCsv(selectedAccountId, selectedFile)
         : importMode === "dividends-csv"
           ? await importDividendsCsv(selectedAccountId, selectedFile)
+        : importMode === "sinopac-holdings-xlsx"
+          ? await importSinopacHoldingsXlsx(selectedAccountId, selectedFile)
           : await importTransactionsCsv(selectedAccountId, selectedFile);
     setIsSubmitting(false);
 
@@ -185,6 +188,15 @@ export function ImportPanel({
     setLatestRecurringCandidates(
       "recurringCandidates" in result ? (result.recurringCandidates ?? []) : [],
     );
+
+    if (result.source === "sinopac-holdings-xlsx") {
+      setMessage(
+        `持倉更新完成：${result.imported} 檔更新，${result.skipped} 檔失敗，價格快照 ${result.prices_updated} 檔。` +
+        (result.errors.length > 0 ? ` 錯誤：${result.errors.join("；")}` : ""),
+      );
+      onImported();
+      return;
+    }
 
     const extraInfo =
       result.source === "sinopac-stock" || result.source === "foreign-stock-csv"
@@ -315,7 +327,8 @@ export function ImportPanel({
                       | "excel-monthly"
                       | "sinopac-stock"
                       | "foreign-stock-csv"
-                      | "dividends-csv",
+                      | "dividends-csv"
+                      | "sinopac-holdings-xlsx",
                   )
                 }
               >
@@ -324,6 +337,7 @@ export function ImportPanel({
                 <option value="credit-card-tw">信用卡 CSV</option>
                 <option value="excel-monthly">Excel 月帳本</option>
                 <option value="sinopac-stock">永豐台股交易 CSV</option>
+                <option value="sinopac-holdings-xlsx">永豐台股持倉 XLSX</option>
                 <option value="dividends-csv">配息紀錄 CSV</option>
                 <option value="foreign-stock-csv">複委託交易 CSV</option>
               </select>
@@ -342,11 +356,11 @@ export function ImportPanel({
               </select>
             </label>
             <label className="import-field import-file-field">
-              {importMode === "excel-monthly" ? "Excel 檔案" : "CSV 檔案"}
+              {importMode === "excel-monthly" || importMode === "sinopac-holdings-xlsx" ? "Excel 檔案" : "CSV 檔案"}
               <input
                 className="import-file-input"
                 accept={
-                  importMode === "excel-monthly"
+                  importMode === "excel-monthly" || importMode === "sinopac-holdings-xlsx"
                     ? ".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                     : ".csv,text/csv,.txt"
                 }

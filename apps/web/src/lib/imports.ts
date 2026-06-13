@@ -1,5 +1,6 @@
 import type {
   DividendImportResponse,
+  HoldingsImportResponse,
   ImportPreviewResponse,
   StockTradeImportResponse,
   TransactionCsvImportResponse,
@@ -81,6 +82,20 @@ export async function previewImportFile(
     body: formData,
   });
   return (await response.json()) as ImportPreviewResponse;
+}
+
+export async function importSinopacHoldingsXlsx(
+  accountId: string,
+  file: File,
+): Promise<HoldingsImportResponse> {
+  const formData = new FormData();
+  formData.set("account_id", accountId);
+  formData.set("file", file);
+  const response = await apiFetch("/api/import/sinopac-holdings-xlsx", {
+    method: "POST",
+    body: formData,
+  });
+  return (await response.json()) as HoldingsImportResponse;
 }
 
 async function importStockTrades(
