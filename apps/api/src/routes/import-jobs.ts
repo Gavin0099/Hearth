@@ -61,8 +61,8 @@ importJobsRoutes.patch("/:id", async (c) => {
     review_reason?: string | null;
     imported_count?: number;
     skipped_count?: number;
-    error_code?: string;
-    error_message?: string;
+    error_code?: string | null;
+    error_message?: string | null;
   }>();
 
   const allowed = ["parsed", "imported", "failed", "needs_review", "auth_required", "pending_parse"];

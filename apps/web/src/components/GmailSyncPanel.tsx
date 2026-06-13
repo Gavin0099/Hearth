@@ -26,6 +26,7 @@ import {
 type GmailSyncPanelProps = {
   session: Session | null;
   onImported: () => void;
+  refreshKey?: number;
 };
 
 type SyncState =
@@ -326,19 +327,22 @@ function buildEsunLoanDebugSuffix(
   return ` 玉山貸款偵測：0 筆。bankStatement=${isBankStatement ? "yes" : "no"}；原文線索=${rawPreview || "無"}；OCR線索=${preview}`;
 }
 
-export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
+export function GmailSyncPanel({ session, onImported, refreshKey }: GmailSyncPanelProps) {
   const [state, setState] = useState<SyncState>({ status: "idle" });
   const [emails, setEmails] = useState<GmailBillEmail[]>([]);
   const [accounts, setAccounts] = useState<AccountRecord[]>([]);
   const [pendingQueue, setPendingQueue] = useState<QueueItem[]>([]);
   const [needsReviewQueue, setNeedsReviewQueue] = useState<QueueItem[]>([]);
+  const [failedQueue, setFailedQueue] = useState<QueueItem[]>([]);
   const [queueRunning, setQueueRunning] = useState(false);
+  const [retryingJobId, setRetryingJobId] = useState<string | null>(null);
   const autoProcessFired = useRef(false);
 
   useEffect(() => {
     if (!session) {
       setPendingQueue([]);
       setNeedsReviewQueue([]);
+      setFailedQueue([]);
       autoProcessFired.current = false;
       return;
     }
@@ -349,7 +353,10 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
     void fetchImportJobs("needs_review").then((res) => {
       if (res.status === "ok") setNeedsReviewQueue(res.items);
     });
-  }, [session]);
+    void fetchImportJobs("failed").then((res) => {
+      if (res.status === "ok") setFailedQueue(res.items);
+    });
+  }, [session, refreshKey]);
 
   // Reset auto-process guard on re-login so pending jobs are processed again with new token
   useEffect(() => {
@@ -505,6 +512,29 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
     setQueueRunning(false);
     setState({ status: "done", message: `佇列處理完成，新增 ${importedTotal} 筆，略過 ${skippedTotal} 筆。` });
     onImported();
+  }
+
+  async function handleRetry(item: QueueItem) {
+    setRetryingJobId(item.id);
+    try {
+      await updateImportJob(item.id, {
+        status: "pending_parse",
+        error_code: null,
+        error_message: null,
+        review_reason: null,
+      });
+      setFailedQueue((prev) => prev.filter((j) => j.id !== item.id));
+      setNeedsReviewQueue((prev) => prev.filter((j) => j.id !== item.id));
+      setPendingQueue((prev) => [
+        { ...item, status: "pending_parse", error_code: null, error_message: null, review_reason: null },
+        ...prev,
+      ]);
+      autoProcessFired.current = false;
+    } catch {
+      setState({ status: "error", message: `重試失敗：${item.email_subject}` });
+    } finally {
+      setRetryingJobId(null);
+    }
   }
 
   async function handleConnect() {
@@ -872,14 +902,69 @@ export function GmailSyncPanel({ session, onImported }: GmailSyncPanelProps) {
               const reasonLabel = item.review_reason
                 ? (REVIEW_REASON_LABELS[item.review_reason] ?? item.review_reason)
                 : "原因不明";
+              const canRetry = item.review_reason === "parse_error";
+              const needsMapping = item.review_reason === "missing_mapping";
               return (
-                <li key={item.id} className="panel-copy panel-copy--tight">
-                  <span className="gmail-email-bank">
-                    {BANK_DISPLAY_NAMES[item.bank_key as BankKey] ?? item.bank_key}
-                  </span>
-                  {" — "}
-                  {item.email_subject}
-                  <span className="gmail-review-reason"> [{reasonLabel}]</span>
+                <li key={item.id} className="panel-copy panel-copy--tight gmail-review-item">
+                  <div className="gmail-review-item-meta">
+                    <span className="gmail-email-bank">
+                      {BANK_DISPLAY_NAMES[item.bank_key as BankKey] ?? item.bank_key}
+                    </span>
+                    {" — "}
+                    {item.email_subject}
+                    <span className="gmail-review-reason"> [{reasonLabel}]</span>
+                  </div>
+                  {canRetry && (
+                    <button
+                      className="action-button"
+                      type="button"
+                      disabled={retryingJobId === item.id}
+                      onClick={() => void handleRetry(item)}
+                    >
+                      {retryingJobId === item.id ? "重試中..." : "重試"}
+                    </button>
+                  )}
+                  {needsMapping && (
+                    <span className="panel-copy--tight gmail-review-hint">請先至設定頁配置帳戶對應</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+      {failedQueue.length > 0 && (
+        <div className="queue-notice gmail-queue queue-notice--failed">
+          <span className="queue-notice-count">
+            <strong>{failedQueue.length}</strong> 封帳單匯入失敗
+          </span>
+          <ul className="gmail-review-list">
+            {failedQueue.map((item) => {
+              const warningNote =
+                item.error_code === "empty_text" ? "（PDF 無文字層，重試後可能仍失敗）"
+                : item.error_code === "no_transactions" ? "（重試後可能仍無資料）"
+                : "";
+              return (
+                <li key={item.id} className="panel-copy panel-copy--tight gmail-review-item">
+                  <div className="gmail-review-item-meta">
+                    <span className="gmail-email-bank">
+                      {BANK_DISPLAY_NAMES[item.bank_key as BankKey] ?? item.bank_key}
+                    </span>
+                    {" — "}
+                    {item.email_subject}
+                    {warningNote && (
+                      <span className="gmail-review-reason"> {warningNote}</span>
+                    )}
+                  </div>
+                  <button
+                    className="action-button"
+                    type="button"
+                    disabled={retryingJobId === item.id}
+                    onClick={() => void handleRetry(item)}
+                  >
+                    {retryingJobId === item.id ? "重試中..." : "重試"}
+                  </button>
                 </li>
               );
             })}

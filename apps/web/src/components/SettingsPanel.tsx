@@ -17,6 +17,7 @@ import {
 
 type SettingsPanelProps = {
   session: Session | null;
+  onMappingSaved?: () => void;
 };
 
 const BANK_DISPLAY_NAMES: Record<string, string> = {
@@ -38,7 +39,7 @@ function StatusText({ enabled }: { enabled: boolean | undefined }) {
   return <span>{enabled ? "已設定" : "未設定"}</span>;
 }
 
-function BankAccountMappingSection({ session }: { session: Session }) {
+function BankAccountMappingSection({ session, onMappingSaved }: { session: Session; onMappingSaved?: () => void }) {
   const [mappings, setMappings] = useState<BankAccountMappingRecord[]>([]);
   const [accounts, setAccounts] = useState<AccountRecord[]>([]);
   const [newBank, setNewBank] = useState("sinopac");
@@ -69,6 +70,7 @@ function BankAccountMappingSection({ session }: { session: Session }) {
       const refreshed = await fetchBankAccountMappings();
       if (refreshed.status === "ok") setMappings(refreshed.items);
       setMessage("對應已儲存。");
+      onMappingSaved?.();
     } else {
       setMessage(`儲存失敗：${res.error}`);
     }
@@ -146,7 +148,7 @@ function BankAccountMappingSection({ session }: { session: Session }) {
   );
 }
 
-export function SettingsPanel({ session }: SettingsPanelProps) {
+export function SettingsPanel({ session, onMappingSaved }: SettingsPanelProps) {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [defaultPw, setDefaultPw] = useState("");
   const [sinopacPw, setSinopacPw] = useState("");
@@ -343,7 +345,7 @@ export function SettingsPanel({ session }: SettingsPanelProps) {
         </p>
       ) : null}
 
-      <BankAccountMappingSection session={session} />
+      <BankAccountMappingSection session={session} onMappingSaved={onMappingSaved} />
     </article>
   );
 }

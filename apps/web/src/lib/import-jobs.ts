@@ -37,8 +37,8 @@ export async function updateImportJob(
     review_reason?: string | null;
     imported_count?: number;
     skipped_count?: number;
-    error_code?: string;
-    error_message?: string;
+    error_code?: string | null;
+    error_message?: string | null;
   },
 ): Promise<void> {
   await apiFetch(`/api/import-jobs/${id}`, {
