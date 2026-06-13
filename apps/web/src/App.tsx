@@ -97,7 +97,7 @@ export function App() {
         void apiFetch("/api/user-settings", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ gmail_refresh_token: nextSession.provider_refresh_token }),
+          body: JSON.stringify({ gmail_refresh_token: nextSession.provider_refresh_token, gmail_connected: true }),
         });
       }
     });
