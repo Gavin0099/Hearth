@@ -40,7 +40,7 @@ const SettingsPanel = lazy(() =>
   import("./components/SettingsPanel").then((module) => ({ default: module.SettingsPanel })),
 );
 
-type AppView = "home" | "ledger" | "bank" | "loan" | "insurance" | "settings";
+type AppView = "home" | "ledger" | "bank" | "loan" | "insurance" | "portfolio" | "settings";
 
 const buildCommit = __APP_COMMIT__;
 const buildTime = __APP_BUILD_TIME__;
@@ -182,6 +182,13 @@ export function App() {
             保險
           </button>
           <button
+            className={`app-nav-tab${currentView === "portfolio" ? " active" : ""}`}
+            onClick={() => setCurrentView("portfolio")}
+            type="button"
+          >
+            投資組合
+          </button>
+          <button
             className={`app-nav-tab${currentView === "settings" ? " active" : ""}`}
             onClick={() => setCurrentView("settings")}
             type="button"
@@ -247,10 +254,6 @@ export function App() {
             </div>
           </section>
 
-          <section className="home-portfolio-workspace">
-            <PortfolioPanel refreshKey={reportRefreshKey} session={session} />
-          </section>
-
           <section className="home-secondary-workspace">
             <div className="home-section-title-row">
               <h3>進階檢視</h3>
@@ -292,6 +295,14 @@ export function App() {
         <Suspense fallback={<section className="two-column"><p>載入中...</p></section>}>
           <section className="two-column">
             <InsurancePanel session={session} />
+          </section>
+        </Suspense>
+      )}
+
+      {currentView === "portfolio" && (
+        <Suspense fallback={<section className="two-column"><p>載入中...</p></section>}>
+          <section className="two-column">
+            <PortfolioPanel refreshKey={reportRefreshKey} session={session} />
           </section>
         </Suspense>
       )}
