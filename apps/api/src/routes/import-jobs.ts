@@ -12,6 +12,7 @@ export type ImportJobRecord = {
   source_type: "credit_card" | "bank_account";
   mapped_account_id: string | null;
   status: "pending_parse" | "parsed" | "imported" | "failed" | "needs_review" | "auth_required";
+  review_reason: string | null;
   error_code: string | null;
   error_message: string | null;
   imported_count: number | null;
@@ -56,7 +57,8 @@ importJobsRoutes.patch("/:id", async (c) => {
 
   const id = c.req.param("id");
   const body = await c.req.json<{
-    status: "parsed" | "imported" | "failed" | "needs_review";
+    status: "parsed" | "imported" | "failed" | "needs_review" | "auth_required" | "pending_parse";
+    review_reason?: string | null;
     imported_count?: number;
     skipped_count?: number;
     error_code?: string;
@@ -75,6 +77,7 @@ importJobsRoutes.patch("/:id", async (c) => {
     .from("import_jobs")
     .update({
       status: body.status,
+      review_reason: body.review_reason !== undefined ? body.review_reason : null,
       imported_count: body.imported_count ?? null,
       skipped_count: body.skipped_count ?? null,
       error_code: body.error_code ?? null,

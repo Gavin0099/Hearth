@@ -11,6 +11,7 @@ export type ImportJobRecord = {
   source_type: "credit_card" | "bank_account";
   mapped_account_id: string | null;
   status: "pending_parse" | "parsed" | "imported" | "failed" | "needs_review" | "auth_required";
+  review_reason: string | null;
   error_code: string | null;
   error_message: string | null;
   imported_count: number | null;
@@ -33,6 +34,7 @@ export async function updateImportJob(
   id: string,
   update: {
     status: "parsed" | "imported" | "failed" | "needs_review" | "auth_required" | "pending_parse";
+    review_reason?: string | null;
     imported_count?: number;
     skipped_count?: number;
     error_code?: string;

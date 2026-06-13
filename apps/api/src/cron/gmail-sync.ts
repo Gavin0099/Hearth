@@ -168,23 +168,44 @@ async function syncUserGmail(
 
       const attachments = extractPdfAttachments(detail.payload as MsgPart);
       for (const att of attachments) {
-        const { error } = await supabase.from("import_jobs").upsert(
-          {
-            user_id: userId,
-            gmail_message_id: msg.id,
-            attachment_id: att.attachmentId,
-            email_subject: subject,
-            email_date: date,
-            filename: att.filename,
-            bank_key: bankKey,
-            source_type: sourceType,
-            mapped_account_id: mappedAccountId,
-            status,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id,gmail_message_id,attachment_id", ignoreDuplicates: true },
-        );
-        if (!error) queued++;
+        // Try INSERT first. On duplicate-key conflict (23505), attempt reconciliation.
+        const { error: insertError } = await supabase.from("import_jobs").insert({
+          user_id: userId,
+          gmail_message_id: msg.id,
+          attachment_id: att.attachmentId,
+          email_subject: subject,
+          email_date: date,
+          filename: att.filename,
+          bank_key: bankKey,
+          source_type: sourceType,
+          mapped_account_id: mappedAccountId,
+          status,
+          review_reason: mappedAccountId ? null : "missing_mapping",
+          updated_at: new Date().toISOString(),
+        });
+
+        if (insertError?.code === "23505") {
+          // Job already exists. Upgrade only if: was needs_review + missing_mapping AND now we have a mapping.
+          if (mappedAccountId) {
+            await supabase
+              .from("import_jobs")
+              .update({
+                status: "pending_parse",
+                mapped_account_id: mappedAccountId,
+                review_reason: null,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("user_id", userId)
+              .eq("gmail_message_id", msg.id)
+              .eq("attachment_id", att.attachmentId)
+              .eq("status", "needs_review")
+              .eq("review_reason", "missing_mapping");
+            queued++;
+          }
+          // Job exists in another state (imported, failed, parsed) — leave it alone.
+        } else if (!insertError) {
+          queued++;
+        }
       }
     } catch (err) {
       errors.push(`msg ${msg.id}: ${err instanceof Error ? err.message : String(err)}`);
