@@ -7,7 +7,7 @@
     "nodejs_compat"
   ],
   "vars": {
-    "APP_ENV": "development"
+    "APP_ENV": "production"
   },
   // Required secret:
   // wrangler secret put USER_SETTINGS_SECRET_KEY
