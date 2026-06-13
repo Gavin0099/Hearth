@@ -13,13 +13,43 @@ const BANK_SENDERS: Record<string, string> = {
   mega: "billhunter@billhunter.megabank.com.tw",
 };
 
-// Subject keywords that indicate bank account statements (vs credit card)
 const BANK_ACCOUNT_KEYWORDS = [
   "綜合對帳單", "存款對帳單", "活期對帳", "銀行對帳", "帳戶對帳",
 ];
 
-// Overlap window subtracted from last_successful_scan_at to avoid missing emails near the boundary
+// ── Subrequest budget ────────────────────────────────────────────────────────
+// Cloudflare Workers free plan: 50 external subrequests / invocation.
+// Budget breakdown per user:
+//   FIXED  : 1 OAuth exchange + 1 mapping SELECT + 1 Gmail list + 1 settings upsert = 4
+//   PER MSG: 1 Gmail message GET + 1 import_jobs INSERT/UPDATE = 2
+//   GLOBAL : 1 job_runs INSERT
+// computeSafeMaxResults ensures we don't exceed the budget across all users.
+// On paid/Standard plan you can raise SUBREQUEST_BUDGET to 950+ and relax the cap.
+const SUBREQUEST_BUDGET = 45;          // headroom below free-plan 50
+const SUBREQUEST_FIXED_GLOBAL = 1;     // job_runs insert
+const SUBREQUEST_FIXED_PER_USER = 4;
+const SUBREQUEST_PER_MESSAGE = 2;
+const SUBREQUEST_MAX_RESULTS_CAP = 50; // never request more than this regardless of plan
+
+function computeSafeMaxResults(userCount: number): number {
+  if (userCount === 0) return SUBREQUEST_MAX_RESULTS_CAP;
+  const available = SUBREQUEST_BUDGET - SUBREQUEST_FIXED_GLOBAL;
+  const perUserBudget = Math.floor(available / userCount) - SUBREQUEST_FIXED_PER_USER;
+  return Math.max(1, Math.min(SUBREQUEST_MAX_RESULTS_CAP, Math.floor(perUserBudget / SUBREQUEST_PER_MESSAGE)));
+}
+
+// ── Scan window ──────────────────────────────────────────────────────────────
+// Uses last_successful_scan_at - overlap if available; falls back to 35 days for first run.
 const SCAN_OVERLAP_DAYS = 2;
+
+function computeAfterDate(lastSuccessfulScanAt: string | null): string {
+  const since = lastSuccessfulScanAt
+    ? new Date(new Date(lastSuccessfulScanAt).getTime() - SCAN_OVERLAP_DAYS * 24 * 60 * 60 * 1000)
+    : new Date(Date.now() - 35 * 24 * 60 * 60 * 1000);
+  return `${since.getFullYear()}/${String(since.getMonth() + 1).padStart(2, "0")}/${String(since.getDate()).padStart(2, "0")}`;
+}
+
+// ── Types ────────────────────────────────────────────────────────────────────
 
 type MsgPart = {
   filename?: string;
@@ -42,9 +72,7 @@ function extractPdfAttachments(part: MsgPart): { attachmentId: string; filename:
 function identifyBank(fromHeader: string): string | null {
   const lower = fromHeader.toLowerCase();
   for (const [bank, sender] of Object.entries(BANK_SENDERS)) {
-    if (lower.includes(sender.toLowerCase())) {
-      return bank;
-    }
+    if (lower.includes(sender.toLowerCase())) return bank;
   }
   return null;
 }
@@ -52,21 +80,12 @@ function identifyBank(fromHeader: string): string | null {
 function detectSourceType(subject: string): "credit_card" | "bank_account" {
   const lower = subject.toLowerCase();
   for (const keyword of BANK_ACCOUNT_KEYWORDS) {
-    if (lower.includes(keyword.toLowerCase())) {
-      return "bank_account";
-    }
+    if (lower.includes(keyword.toLowerCase())) return "bank_account";
   }
   return "credit_card";
 }
 
-// Returns the Gmail `after:` date string.
-// Uses last_successful_scan_at - overlap if available; falls back to 35 days for first run.
-function computeAfterDate(lastSuccessfulScanAt: string | null): string {
-  const since = lastSuccessfulScanAt
-    ? new Date(new Date(lastSuccessfulScanAt).getTime() - SCAN_OVERLAP_DAYS * 24 * 60 * 60 * 1000)
-    : new Date(Date.now() - 35 * 24 * 60 * 60 * 1000);
-  return `${since.getFullYear()}/${String(since.getMonth() + 1).padStart(2, "0")}/${String(since.getDate()).padStart(2, "0")}`;
-}
+// ── OAuth ────────────────────────────────────────────────────────────────────
 
 async function exchangeRefreshToken(
   refreshToken: string,
@@ -96,11 +115,11 @@ async function gmailGet(path: string, accessToken: string): Promise<unknown> {
   const response = await fetch(`${GMAIL_API_BASE}${path}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!response.ok) {
-    throw new Error(`Gmail API ${response.status}: ${path}`);
-  }
+  if (!response.ok) throw new Error(`Gmail API ${response.status}: ${path}`);
   return response.json();
 }
+
+// ── Per-user sync ────────────────────────────────────────────────────────────
 
 async function syncUserGmail(
   userId: string,
@@ -108,25 +127,22 @@ async function syncUserGmail(
   env: WorkerBindings,
   supabase: ReturnType<typeof createSupabaseAdminClient>,
   afterDate: string,
-): Promise<{ queued: number; errors: string[]; scanSucceeded: boolean }> {
+  maxResults: number,
+): Promise<{ queued: number; messagesFetched: number; errors: string[]; scanSucceeded: boolean }> {
   const errors: string[] = [];
   let queued = 0;
+  let messagesFetched = 0;
 
   const refreshToken = await decryptSecretValue(encryptedRefreshToken, env);
   if (!refreshToken) {
-    return { queued: 0, errors: ["failed to decrypt refresh token"], scanSucceeded: false };
+    return { queued: 0, messagesFetched: 0, errors: ["failed to decrypt refresh token"], scanSucceeded: false };
   }
 
-  const accessToken = await exchangeRefreshToken(
-    refreshToken,
-    env.GOOGLE_CLIENT_ID!,
-    env.GOOGLE_CLIENT_SECRET!,
-  );
+  const accessToken = await exchangeRefreshToken(refreshToken, env.GOOGLE_CLIENT_ID!, env.GOOGLE_CLIENT_SECRET!);
   if (!accessToken) {
-    return { queued: 0, errors: ["failed to exchange refresh token"], scanSucceeded: false };
+    return { queued: 0, messagesFetched: 0, errors: ["failed to exchange refresh token"], scanSucceeded: false };
   }
 
-  // Fetch bank_account_mapping for this user to resolve mapped_account_id
   const { data: mappings } = await supabase
     .from("bank_account_mapping")
     .select("bank_key, source_type, account_id")
@@ -145,12 +161,18 @@ async function syncUserGmail(
   let messages: { id: string }[] = [];
   try {
     const list = (await gmailGet(
-      `/messages?${new URLSearchParams({ q: query, maxResults: "50" })}`,
+      `/messages?${new URLSearchParams({ q: query, maxResults: String(maxResults) })}`,
       accessToken,
     )) as { messages?: { id: string }[] };
     messages = list.messages ?? [];
+    messagesFetched = messages.length;
   } catch (err) {
-    return { queued: 0, errors: [err instanceof Error ? err.message : String(err)], scanSucceeded: false };
+    return {
+      queued: 0,
+      messagesFetched: 0,
+      errors: [err instanceof Error ? err.message : String(err)],
+      scanSucceeded: false,
+    };
   }
 
   // Gmail list fetch succeeded — individual message errors do not block timestamp update
@@ -180,7 +202,6 @@ async function syncUserGmail(
 
       const attachments = extractPdfAttachments(detail.payload as MsgPart);
       for (const att of attachments) {
-        // Try INSERT first. On duplicate-key conflict (23505), attempt reconciliation.
         const { error: insertError } = await supabase.from("import_jobs").insert({
           user_id: userId,
           gmail_message_id: msg.id,
@@ -197,7 +218,7 @@ async function syncUserGmail(
         });
 
         if (insertError?.code === "23505") {
-          // Job already exists. Upgrade only if: was needs_review + missing_mapping AND now we have a mapping.
+          // Job already exists. Upgrade only if: needs_review + missing_mapping AND now has mapping.
           if (mappedAccountId) {
             await supabase
               .from("import_jobs")
@@ -214,7 +235,6 @@ async function syncUserGmail(
               .eq("review_reason", "missing_mapping");
             queued++;
           }
-          // Job exists in another state (imported, failed, parsed) — leave it alone.
         } else if (!insertError) {
           queued++;
         }
@@ -224,8 +244,10 @@ async function syncUserGmail(
     }
   }
 
-  return { queued, errors, scanSucceeded: true };
+  return { queued, messagesFetched, errors, scanSucceeded: true };
 }
+
+// ── Entry point ───────────────────────────────────────────────────────────────
 
 export async function runGmailSync(env: WorkerBindings): Promise<void> {
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
@@ -252,42 +274,50 @@ export async function runGmailSync(env: WorkerBindings): Promise<void> {
     return;
   }
 
+  const userCount = (settings ?? []).length;
+  const requestedMaxResults = 50;
+  const effectiveMaxResults = computeSafeMaxResults(userCount);
+
   let totalQueued = 0;
   const allErrors: string[] = [];
-  const userReports: Array<{ user_id: string; afterDate: string; queued: number; scanSucceeded: boolean }> = [];
+  const userReports: Array<{
+    user_id: string;
+    afterDate: string;
+    messagesFetched: number;
+    queued: number;
+    scanSucceeded: boolean;
+  }> = [];
 
   for (const row of settings ?? []) {
     if (!row.gmail_refresh_token) continue;
 
-    const lastSuccessfulScanAt = (row as Record<string, unknown>).gmail_last_successful_scan_at as string | null ?? null;
+    const lastSuccessfulScanAt =
+      (row as Record<string, unknown>).gmail_last_successful_scan_at as string | null ?? null;
     const afterDate = computeAfterDate(lastSuccessfulScanAt);
 
-    const { queued, errors, scanSucceeded } = await syncUserGmail(
+    const { queued, messagesFetched, errors, scanSucceeded } = await syncUserGmail(
       row.user_id,
       row.gmail_refresh_token,
       env,
       supabase,
       afterDate,
+      effectiveMaxResults,
     );
 
     totalQueued += queued;
-    for (const e of errors) {
-      allErrors.push(`[${row.user_id}] ${e}`);
-    }
-    userReports.push({ user_id: row.user_id, afterDate, queued, scanSucceeded });
+    for (const e of errors) allErrors.push(`[${row.user_id}] ${e}`);
+    userReports.push({ user_id: row.user_id, afterDate, messagesFetched, queued, scanSucceeded });
 
     const now = new Date().toISOString();
-    await supabase
-      .from("user_settings")
-      .upsert(
-        {
-          user_id: row.user_id,
-          gmail_last_sync_at: now,
-          ...(scanSucceeded ? { gmail_last_successful_scan_at: now } : {}),
-          updated_at: now,
-        },
-        { onConflict: "user_id" },
-      );
+    await supabase.from("user_settings").upsert(
+      {
+        user_id: row.user_id,
+        gmail_last_sync_at: now,
+        ...(scanSucceeded ? { gmail_last_successful_scan_at: now } : {}),
+        updated_at: now,
+      },
+      { onConflict: "user_id" },
+    );
   }
 
   const finishedAt = new Date().toISOString();
@@ -297,11 +327,15 @@ export async function runGmailSync(env: WorkerBindings): Promise<void> {
     run_finished_at: finishedAt,
     status: allErrors.length > 0 ? "error" : "ok",
     report: {
-      users_processed: (settings ?? []).length,
+      users_processed: userCount,
       jobs_created: totalQueued,
+      subrequest_budget: SUBREQUEST_BUDGET,
+      requested_max_results: requestedMaxResults,
+      effective_max_results: effectiveMaxResults,
       scan_windows: userReports.map((r) => ({
         user_id: r.user_id,
         after_date: r.afterDate,
+        messages_fetched: r.messagesFetched,
         queued: r.queued,
         scan_succeeded: r.scanSucceeded,
       })),
@@ -310,6 +344,6 @@ export async function runGmailSync(env: WorkerBindings): Promise<void> {
   });
 
   console.log(
-    `[gmail-sync] Done. users=${(settings ?? []).length} jobs_created=${totalQueued} errors=${allErrors.length}`,
+    `[gmail-sync] Done. users=${userCount} effective_max=${effectiveMaxResults} jobs_created=${totalQueued} errors=${allErrors.length}`,
   );
 }
