@@ -125,11 +125,6 @@ function NetWorthChart({ snapshots }: { snapshots: NetWorthSnapshotRecord[] }) {
 
 export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
   const [state, setState] = useState<LoadState>({ status: "idle" });
-  const [priceDate, setPriceDate] = useState(todayIso);
-  const [priceInputs, setPriceInputs] = useState<Record<string, string>>({});
-  const [priceSaving, setPriceSaving] = useState(false);
-  const [priceMessage, setPriceMessage] = useState<string | null>(null);
-
   const [fxRates, setFxRates] = useState<FxRateRecord[]>([]);
   const [fxDate, setFxDate] = useState(todayIso);
   const [fxInputs, setFxInputs] = useState<Record<string, string>>({});
@@ -242,85 +237,11 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
     }
   }
 
-  async function handleSavePrices() {
-    const entries = Object.entries(priceInputs)
-      .filter(([, v]) => v.trim() !== "")
-      .map(([ticker, v]) => ({
-        ticker,
-        date: priceDate,
-        close_price: parseFloat(v.replace(/,/g, "")),
-        currency: "TWD",
-      }))
-      .filter((e) => e.close_price > 0);
-
-    if (entries.length === 0) {
-      setPriceMessage("請至少輸入一個有效報價。");
-      return;
-    }
-
-    setPriceSaving(true);
-    setPriceMessage(null);
-    const result = await savePriceSnapshots(entries);
-    setPriceSaving(false);
-
-    if (result.status === "error") {
-      setPriceMessage(`儲存失敗：${result.error}`);
-    } else {
-      setPriceMessage(`已儲存 ${result.saved} 筆報價。`);
-      setPriceInputs({});
-    }
-  }
-
-  async function handlePriceCsvUpload(file: File) {
-    const text = await file.text();
-    const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
-    const entries: { ticker: string; date: string; close_price: number; currency?: string }[] = [];
-    const errors: string[] = [];
-
-    for (let i = 0; i < lines.length; i++) {
-      const parts = lines[i].split(",").map((p) => p.trim());
-      if (i === 0 && parts[0].toLowerCase() === "ticker") continue;
-      const [ticker, date, closePriceRaw, currency] = parts;
-      if (!ticker || !date || !closePriceRaw) {
-        errors.push(`第 ${i + 1} 行格式錯誤`);
-        continue;
-      }
-      const close_price = parseFloat(closePriceRaw.replace(/,/g, ""));
-      if (isNaN(close_price) || close_price <= 0) {
-        errors.push(`第 ${i + 1} 行收盤價無效`);
-        continue;
-      }
-      entries.push({ ticker: ticker.toUpperCase(), date, close_price, currency: currency || "TWD" });
-    }
-
-    if (entries.length === 0) {
-      setPriceMessage(errors.length > 0 ? `解析失敗：${errors[0]}` : "CSV 內無有效資料。");
-      return;
-    }
-
-    setPriceSaving(true);
-    setPriceMessage(null);
-    const result = await savePriceSnapshots(entries);
-    setPriceSaving(false);
-
-    const warn = errors.length > 0 ? `（${errors.length} 行略過）` : "";
-    if (result.status === "error") {
-      setPriceMessage(`儲存失敗：${result.error}${warn}`);
-    } else {
-      setPriceMessage(`已從 CSV 儲存 ${result.saved} 筆報價${warn}。`);
-    }
-  }
-
   async function handleDeletePrice(ticker: string, date: string) {
     setDeletingPriceTicker(ticker);
-    setPriceMessage(null);
     const result = await deletePriceSnapshot(ticker, date);
     setDeletingPriceTicker(null);
-    if (result.status === "error") {
-      setPriceMessage(`刪除失敗：${result.error}`);
-    } else {
-      setPriceMessage(`已刪除 ${ticker} ${date} 的報價。`);
-      // Refresh holdings to reflect removal
+    if (result.status !== "error") {
       const updated = await fetchPortfolioHoldings();
       if (updated.status !== "error") {
         setState((prev) =>
@@ -533,59 +454,6 @@ export function PortfolioPanel({ session, refreshKey }: PortfolioPanelProps) {
                 {autoUpdateMessage ? <p className="portfolio-status-text panel-message--muted">{autoUpdateMessage}</p> : null}
               </section>
 
-              {/* 更新報價 */}
-              <section className="price-update">
-                <h3>手動更新報價</h3>
-                <label>
-                  報價日期
-                  <input
-                    type="date"
-                    value={priceDate}
-                    onChange={(e) => setPriceDate(e.target.value)}
-                  />
-                </label>
-                <div className="price-inputs">
-                  {state.holdings.items.map((item) => (
-                    <label key={item.ticker}>
-                      {item.ticker}{item.name ? ` (${item.name})` : ""}
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="收盤價"
-                        value={priceInputs[item.ticker] ?? ""}
-                        onChange={(e) =>
-                          setPriceInputs((prev) => ({ ...prev, [item.ticker]: e.target.value }))
-                        }
-                      />
-                    </label>
-                  ))}
-                </div>
-                <button
-                  className="action-button"
-                  disabled={priceSaving}
-                  onClick={() => void handleSavePrices()}
-                  type="button"
-                >
-                  {priceSaving ? "儲存中..." : "儲存報價"}
-                </button>
-                <label className="csv-upload-label">
-                  或上傳 CSV（<code>ticker,date,close_price[,currency]</code>）
-                  <input
-                    type="file"
-                    accept=".csv,text/csv"
-                    disabled={priceSaving}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) void handlePriceCsvUpload(file);
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
-                {priceMessage ? (
-                  <p className="panel-message panel-message--muted">{priceMessage}</p>
-                ) : null}
-              </section>
             </>
           ) : (
             <p className="panel-message panel-message--muted">目前沒有持倉資料，匯入台股或複委託交易後這裡會顯示。</p>
