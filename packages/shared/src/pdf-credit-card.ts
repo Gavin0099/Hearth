@@ -1267,6 +1267,10 @@ export type ParsedLoanRecord = {
   interest: number;
   penalty: number;
   remainingBalance: number;
+  // Optional: marks this record as an amortization seed for auto-schedule computation
+  scheduleType?: "amortization";
+  monthlyPayment?: number;  // fixed payment amount
+  monthlyRate?: number;     // monthly interest rate (e.g. 0.001809 for 2.17% annual)
 };
 
 export type BenefitItem = {

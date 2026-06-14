@@ -28,7 +28,47 @@ function formatOptionalAmount(n: number): string {
 }
 
 function isBalanceSnapshot(record: ParsedLoanRecord): boolean {
-  return record.paymentAmount <= 0 && record.principal <= 0 && record.interest <= 0 && record.penalty <= 0;
+  return record.scheduleType !== "amortization" && record.paymentAmount <= 0 && record.principal <= 0 && record.interest <= 0 && record.penalty <= 0;
+}
+
+function isAmortizationSeed(record: ParsedLoanRecord): boolean {
+  return record.scheduleType === "amortization" && !!record.monthlyPayment && !!record.monthlyRate;
+}
+
+type ComputedAmortRow = {
+  paymentDate: string;
+  principal: number;
+  interest: number;
+  paymentAmount: number;
+  remainingBalance: number;
+  status: "past" | "current" | "future";
+};
+
+function computeAmortizationSchedule(seed: ParsedLoanRecord, today: Date = new Date()): ComputedAmortRow[] {
+  if (!isAmortizationSeed(seed)) return [];
+  const rate = seed.monthlyRate!;
+  const pmt = seed.monthlyPayment!;
+  const ref = new Date(seed.paymentDate);
+  const day = ref.getDate();
+  let year = ref.getFullYear();
+  let month = ref.getMonth(); // 0-indexed
+  let balance = seed.remainingBalance;
+  const todayYM = today.getFullYear() * 12 + today.getMonth();
+  const rows: ComputedAmortRow[] = [];
+  while (balance > 1 && rows.length < 480) {
+    month++;
+    if (month > 11) { month = 0; year++; }
+    const interest = Math.round(balance * rate);
+    const principal = Math.min(pmt - interest, balance);
+    const payment = principal + interest;
+    balance = Math.max(0, balance - principal);
+    const rowYM = year * 12 + month;
+    const status = rowYM < todayYM ? "past" : rowYM === todayYM ? "current" : "future";
+    const mm = String(month + 1).padStart(2, "0");
+    const dd = String(day).padStart(2, "0");
+    rows.push({ paymentDate: `${year}-${mm}-${dd}`, principal, interest, paymentAmount: payment, remainingBalance: balance, status });
+  }
+  return rows;
 }
 
 type LoanSnapshotItem = BankSnapshot & { data: ParsedLoanRecord[] };
@@ -66,6 +106,7 @@ export function LoanPanel({ session }: { session: Session | null }) {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState("");
+  const [expandedAmort, setExpandedAmort] = useState<Set<string>>(new Set());
 
   async function loadSnapshots() {
     setLoadError(null);
@@ -148,14 +189,30 @@ export function LoanPanel({ session }: { session: Session | null }) {
 
   if (!session) return null;
 
-  const availableMonths = [...new Set(snapshots.map((snap) => snap.statement_date.slice(0, 7)))]
+  // Separate amortization seeds (one-time setup) from regular monthly snapshots
+  type AmortSeed = { snap: LoanSnapshotItem; record: ParsedLoanRecord; snapIdx: number };
+  const amortSeeds: AmortSeed[] = [];
+  const regularSnapshots: LoanSnapshotItem[] = [];
+  for (const snap of snapshots) {
+    const records = Array.isArray(snap.data) ? snap.data : [];
+    const seeds = records.map((r, i) => ({ rec: r, idx: i })).filter(({ rec }) => isAmortizationSeed(rec));
+    if (seeds.length > 0) {
+      seeds.forEach(({ rec, idx }) => amortSeeds.push({ snap, record: rec, snapIdx: idx }));
+      const nonSeed = records.filter((r) => !isAmortizationSeed(r));
+      if (nonSeed.length > 0) regularSnapshots.push({ ...snap, data: nonSeed });
+    } else {
+      regularSnapshots.push(snap);
+    }
+  }
+
+  const availableMonths = [...new Set(regularSnapshots.map((snap) => snap.statement_date.slice(0, 7)))]
     .sort()
     .reverse()
     .slice(0, 4);
 
   const monthSnapshots = selectedMonth
-    ? snapshots.filter((snap) => snap.statement_date.startsWith(selectedMonth))
-    : snapshots;
+    ? regularSnapshots.filter((snap) => snap.statement_date.startsWith(selectedMonth))
+    : regularSnapshots;
 
   const byBank = new Map<string, LoanSnapshotItem[]>();
   for (const snap of monthSnapshots) {
@@ -163,11 +220,25 @@ export function LoanPanel({ session }: { session: Session | null }) {
     byBank.get(snap.bank)!.push(snap);
   }
 
+  const today = new Date();
+  const amortCurrentBalances = amortSeeds.map(({ record }) => {
+    const rows = computeAmortizationSchedule(record, today);
+    const pastOrCurrent = rows.filter((r) => r.status !== "future");
+    const currentOrLast = pastOrCurrent[pastOrCurrent.length - 1] ?? rows[0];
+    return currentOrLast?.remainingBalance ?? record.remainingBalance;
+  });
+
   const monthRecords = monthSnapshots.flatMap((snap) => (Array.isArray(snap.data) ? snap.data : []));
-  const totalRemainingBalance = monthRecords.reduce((sum, record) => sum + record.remainingBalance, 0);
-  const snapshotCount = monthRecords.length;
-  const bankCount = byBank.size;
-  const largestSnapshot = monthRecords.reduce<ParsedLoanRecord | null>((largest, record) => {
+  const regularBalance = monthRecords.reduce((sum, record) => sum + record.remainingBalance, 0);
+  const amortBalance = amortCurrentBalances.reduce((sum, b) => sum + b, 0);
+  const totalRemainingBalance = regularBalance + amortBalance;
+  const snapshotCount = monthRecords.length + amortSeeds.length;
+  const bankCount = byBank.size + new Set(amortSeeds.map((s) => s.snap.bank)).size;
+  const allRecordsForLargest = [
+    ...monthRecords,
+    ...amortSeeds.map(({ record }, i) => ({ ...record, remainingBalance: amortCurrentBalances[i] })),
+  ];
+  const largestSnapshot = allRecordsForLargest.reduce<ParsedLoanRecord | null>((largest, record) => {
     if (!largest || record.remainingBalance > largest.remainingBalance) {
       return record;
     }
@@ -391,8 +462,122 @@ export function LoanPanel({ session }: { session: Session | null }) {
         </section>
       ))}
 
-      {!loading && snapshots.length > 0 && monthSnapshots.length === 0 && (
+      {!loading && snapshots.length > 0 && monthSnapshots.length === 0 && amortSeeds.length === 0 && (
         <p className="panel-message panel-message--muted">這個月份目前沒有貸款資料。</p>
+      )}
+
+      {amortSeeds.length > 0 && (
+        <section className="ledger-account-section detail-bank-section amort-section">
+          <div className="detail-bank-header">
+            <h3 className="ledger-account-heading">自動計算攤還</h3>
+            <span className="detail-bank-pill amort-pill">依利率自動推算</span>
+          </div>
+          {amortSeeds.map(({ snap, record, snapIdx }, seedI) => {
+            const key = `${snap.id}-amort-${snapIdx}`;
+            const expanded = expandedAmort.has(key);
+            const rows = computeAmortizationSchedule(record, today);
+            const currentRow = rows.find((r) => r.status === "current");
+            const currentBalance = currentRow?.remainingBalance ?? record.remainingBalance;
+            const annualRate = (record.monthlyRate! * 12 * 100).toFixed(2);
+            const remainingMonths = rows.filter((r) => r.status !== "past").length;
+            return (
+              <div key={key} className="snapshot-block amort-block">
+                <div className="snapshot-header">
+                  <div className="snapshot-meta">
+                    <div className="snapshot-statement-date">{BANK_DISPLAY_NAMES[snap.bank] ?? snap.bank}　{record.accountNo}</div>
+                    <div className="snapshot-record-count">年利率 {annualRate}%　月繳 NT$ {formatAmount(record.monthlyPayment!)}　剩 {remainingMonths} 期</div>
+                  </div>
+                  <div className="amort-header-actions">
+                    <button
+                      className="action-button action-button--small"
+                      type="button"
+                      onClick={() => setExpandedAmort((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(key)) next.delete(key); else next.add(key);
+                        return next;
+                      })}
+                    >
+                      {expanded ? "收合" : "展開攤還表"}
+                    </button>
+                    <button
+                      className="snapshot-delete-button"
+                      disabled={deletingIds.has(key)}
+                      onClick={async () => {
+                        setDeletingIds((prev) => new Set([...prev, key]));
+                        try {
+                          const allRecords = Array.isArray(snap.data) ? snap.data : [];
+                          const newData = allRecords.filter((_, i) => i !== snapIdx);
+                          if (newData.length === 0) await deleteBankSnapshot(snap.id);
+                          else await saveBankSnapshot(snap.bank, "loan", snap.statement_date, newData);
+                          await loadSnapshots();
+                        } catch (err) {
+                          setLoadError(err instanceof Error ? err.message : "刪除失敗");
+                        } finally {
+                          setDeletingIds((prev) => { const next = new Set(prev); next.delete(key); return next; });
+                        }
+                      }}
+                      type="button"
+                    >
+                      刪除
+                    </button>
+                  </div>
+                </div>
+                <div className="amort-summary-row">
+                  <div className="detail-metric">
+                    <span className="label">目前餘額（推算）</span>
+                    <strong className="positive">TWD {formatAmount(currentBalance)}</strong>
+                  </div>
+                  {currentRow && (
+                    <>
+                      <div className="detail-metric">
+                        <span className="label">本月繳款日</span>
+                        <strong>{formatDate(currentRow.paymentDate)}</strong>
+                      </div>
+                      <div className="detail-metric">
+                        <span className="label">本月本金</span>
+                        <strong>{formatAmount(currentRow.principal)}</strong>
+                      </div>
+                      <div className="detail-metric">
+                        <span className="label">本月利息</span>
+                        <strong className="negative">{formatAmount(currentRow.interest)}</strong>
+                      </div>
+                    </>
+                  )}
+                  <div className="detail-metric">
+                    <span className="label">參考資料日</span>
+                    <strong>{formatDate(record.paymentDate)}</strong>
+                  </div>
+                </div>
+                {expanded && (
+                  <div className="amort-table-wrapper">
+                    <table className="amort-table">
+                      <thead>
+                        <tr>
+                          <th>繳款日</th>
+                          <th className="amort-num">本金</th>
+                          <th className="amort-num">利息</th>
+                          <th className="amort-num">繳款</th>
+                          <th className="amort-num">餘額</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map((row) => (
+                          <tr key={row.paymentDate} className={`amort-row amort-row--${row.status}`}>
+                            <td>{formatDate(row.paymentDate)}</td>
+                            <td className="amort-num">{formatAmount(row.principal)}</td>
+                            <td className="amort-num negative">{formatAmount(row.interest)}</td>
+                            <td className="amort-num">{formatAmount(row.paymentAmount)}</td>
+                            <td className="amort-num">{formatAmount(row.remainingBalance)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </section>
       )}
     </article>
   );

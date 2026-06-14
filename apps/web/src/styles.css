@@ -1856,6 +1856,56 @@ tr:hover .ledger-delete-btn {
   letter-spacing: 0.02em;
 }
 
+/* Amortization schedule */
+.amort-section { border-top: 2px solid var(--accent, #2563eb); }
+.amort-pill { background: color-mix(in srgb, var(--accent, #2563eb) 12%, transparent); color: var(--accent, #2563eb); }
+.amort-block {}
+.amort-header-actions { display: flex; gap: 8px; align-items: center; }
+.action-button--small { padding: 4px 10px; font-size: 0.8rem; }
+.amort-summary-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px 16px;
+  padding: 10px 14px;
+  background: color-mix(in srgb, var(--accent, #2563eb) 5%, var(--surface-1, #fff));
+  border-radius: 6px;
+  margin: 8px 0;
+}
+.amort-table-wrapper {
+  overflow-x: auto;
+  max-height: 400px;
+  overflow-y: auto;
+  margin-top: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #e2e8f0);
+}
+.amort-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.amort-table th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-2, #f8fafc);
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  font-weight: 600;
+  color: var(--text-2, #64748b);
+}
+.amort-table td {
+  padding: 5px 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border, #e2e8f0) 50%, transparent);
+}
+.amort-num { text-align: right; }
+.amort-row--past { opacity: 0.45; }
+.amort-row--current {
+  background: color-mix(in srgb, var(--accent, #2563eb) 10%, transparent);
+  font-weight: 600;
+}
+.amort-row--current td { border-bottom-color: var(--accent, #2563eb); }
+
 .insurance-card-body {
   display: grid;
   gap: 10px 16px;
