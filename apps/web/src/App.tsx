@@ -222,47 +222,25 @@ export function App() {
             </article>
             <div className="home-kpi-grid">
               <article className="home-kpi-card">
-                <p>主工作流</p>
-                <strong>匯入帳單</strong>
-                <span>先完成 Gmail 同步，再執行資料匯入</span>
+                <p>資料來源</p>
+                <strong>設定 → Gmail / 匯入</strong>
+                <span>帳單同步與 CSV 匯入在設定頁</span>
               </article>
               <article className="home-kpi-card">
-                <p>檢查重點</p>
+                <p>每月檢查</p>
                 <strong>月報分類</strong>
                 <span>確認未分類是否下降</span>
               </article>
               <article className="home-kpi-card">
-                <p>收斂指標</p>
-                <strong>淨值趨勢</strong>
-                <span>觀察 90 天曲線是否合理</span>
+                <p>投資追蹤</p>
+                <strong>投資組合</strong>
+                <span>持倉明細與淨值走勢</span>
               </article>
             </div>
           </section>
 
-          <section className="home-primary-workspace">
-            <div className="home-section-title-row">
-              <h3>核心工作區</h3>
-              <p>每日優先完成的兩個步驟</p>
-            </div>
-            <div className="home-primary-grid">
-              <GmailSyncPanel session={session} onImported={handleImported} refreshKey={gmailRefreshKey} />
-              <ImportPanel
-                onImported={handleImported}
-                onRecurringTemplatesCreated={() => {}}
-                session={session}
-              />
-            </div>
-          </section>
-
           <section className="home-secondary-workspace">
-            <div className="home-section-title-row">
-              <h3>進階檢視</h3>
-              <p>匯入完成後再檢查月報與帳戶設定</p>
-            </div>
-            <div className="home-secondary-grid">
-              <MonthlyReportPanel refreshKey={reportRefreshKey} session={session} />
-              <AccountsPanel session={session} />
-            </div>
+            <MonthlyReportPanel refreshKey={reportRefreshKey} session={session} />
           </section>
         </Suspense>
       )}
@@ -310,7 +288,18 @@ export function App() {
       {currentView === "settings" && (
         <Suspense fallback={<section className="two-column"><p>載入中...</p></section>}>
           <section className="two-column">
+            <GmailSyncPanel session={session} onImported={handleImported} refreshKey={gmailRefreshKey} />
+            <ImportPanel
+              onImported={handleImported}
+              onRecurringTemplatesCreated={() => {}}
+              session={session}
+            />
+          </section>
+          <section className="two-column">
+            <AccountsPanel session={session} />
             <SettingsPanel session={session} onMappingSaved={handleMappingSaved} />
+          </section>
+          <section className="two-column">
             <OpsPanel session={session} />
           </section>
         </Suspense>
