@@ -11,7 +11,7 @@ export const scheduled: ExportedHandlerScheduledHandler<WorkerBindings> = async 
   env: WorkerBindings,
   ctx: ExecutionContext,
 ): Promise<void> => {
-  if (controller.cron === "0 2 5 * *") {
+  if (controller.cron === "0 2 * * *") {
     ctx.waitUntil(runGmailSync(env));
   } else {
     ctx.waitUntil(runDailyUpdate(env));

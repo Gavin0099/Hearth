@@ -336,6 +336,7 @@ export function GmailSyncPanel({ session, onImported, refreshKey }: GmailSyncPan
   const [failedQueue, setFailedQueue] = useState<QueueItem[]>([]);
   const [queueRunning, setQueueRunning] = useState(false);
   const [retryingJobId, setRetryingJobId] = useState<string | null>(null);
+  const [jobsByMsgId, setJobsByMsgId] = useState<Map<string, ImportJobRecord>>(new Map());
   const autoProcessFired = useRef(false);
 
   useEffect(() => {
@@ -579,6 +580,22 @@ export function GmailSyncPanel({ session, onImported, refreshKey }: GmailSyncPan
       .map((result) => result.bank);
 
     setEmails(loadedEmails);
+
+    // Load all import_jobs to show per-email status flags
+    void fetchImportJobs().then((res) => {
+      if (res.status === "ok") {
+        const map = new Map<string, ImportJobRecord>();
+        for (const job of res.items) {
+          // Prefer higher-priority status: imported > pending_parse > needs_review > failed
+          const existing = map.get(job.gmail_message_id);
+          const priority: Record<string, number> = { imported: 4, pending_parse: 3, needs_review: 2, failed: 1 };
+          if (!existing || (priority[job.status] ?? 0) > (priority[existing.status] ?? 0)) {
+            map.set(job.gmail_message_id, job);
+          }
+        }
+        setJobsByMsgId(map);
+      }
+    });
 
     if (loadedEmails.length === 0 && failedBanks.length > 0) {
       setState({
@@ -995,6 +1012,8 @@ export function GmailSyncPanel({ session, onImported, refreshKey }: GmailSyncPan
               const hasPdf = email.attachments.some(
                 (a) => a.mimeType === "application/pdf" || a.filename.endsWith(".pdf"),
               );
+              const job = jobsByMsgId.get(email.id);
+              const jobStatus = job?.status;
               return (
                 <li key={email.id} className="gmail-email-item panel-row-item">
                   <div className="gmail-email-meta">
@@ -1003,6 +1022,10 @@ export function GmailSyncPanel({ session, onImported, refreshKey }: GmailSyncPan
                     {!hasPdf && (
                       <Badge variant="warning">通知信，無 PDF 附件</Badge>
                     )}
+                    {jobStatus === "imported" && <Badge variant="success">已匯入</Badge>}
+                    {jobStatus === "pending_parse" && <Badge variant="info">排隊中</Badge>}
+                    {jobStatus === "needs_review" && <Badge variant="warning">需設定帳戶</Badge>}
+                    {jobStatus === "failed" && <Badge variant="error">解析失敗</Badge>}
                   </div>
                   <div className="gmail-email-actions">
                     <Button
@@ -1013,7 +1036,7 @@ export function GmailSyncPanel({ session, onImported, refreshKey }: GmailSyncPan
                       type="button"
                       title={!hasPdf ? "此信無 PDF 附件，無法匯入" : undefined}
                     >
-                      匯入
+                      {jobStatus === "imported" ? "重新匯入" : "匯入"}
                     </Button>
                   </div>
                 </li>

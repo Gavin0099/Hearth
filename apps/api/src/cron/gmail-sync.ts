@@ -41,11 +41,12 @@ function computeSafeMaxResults(userCount: number): number {
 // ── Scan window ──────────────────────────────────────────────────────────────
 // Uses last_successful_scan_at - overlap if available; falls back to 35 days for first run.
 const SCAN_OVERLAP_DAYS = 2;
+const INITIAL_SCAN_DAYS = 180; // first-ever scan: look back 6 months
 
 function computeAfterDate(lastSuccessfulScanAt: string | null): string {
   const since = lastSuccessfulScanAt
     ? new Date(new Date(lastSuccessfulScanAt).getTime() - SCAN_OVERLAP_DAYS * 24 * 60 * 60 * 1000)
-    : new Date(Date.now() - 35 * 24 * 60 * 60 * 1000);
+    : new Date(Date.now() - INITIAL_SCAN_DAYS * 24 * 60 * 60 * 1000);
   return `${since.getFullYear()}/${String(since.getMonth() + 1).padStart(2, "0")}/${String(since.getDate()).padStart(2, "0")}`;
 }
 

@@ -10,6 +10,7 @@ const badgeVariants = cva("ui-badge", {
       success: "ui-badge-success",
       warning: "ui-badge-warning",
       info: "ui-badge-info",
+      error: "ui-badge-error",
       outline: "ui-badge-outline",
     },
   },
