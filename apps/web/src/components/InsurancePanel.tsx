@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import type { ParsedInsuranceRecord } from "@hearth/shared";
+import type { ParsedInsuranceRecord, BenefitItem } from "@hearth/shared";
 import { fetchBankSnapshots, deleteBankSnapshot, saveBankSnapshot, type BankSnapshot } from "../lib/bank-snapshots";
 
 type CoverageCategory = "death" | "accidental" | "hospitalization" | "critical" | "cancer" | "disability";
@@ -326,33 +326,42 @@ export function InsurancePanel({ session }: { session: Session | null }) {
 
                   {isExpanded && (
                     <div className="coverage-card-detail" onClick={(e) => e.stopPropagation()}>
-                      <table className="coverage-detail-table">
-                        <thead>
-                          <tr>
-                            <th>給付型態</th>
-                            <th>保單名稱</th>
-                            <th>保額</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {cat.items.map((item, i) => (
-                            <tr key={i}>
-                              <td><span className="coverage-subtype-badge">{getSubtypeLabel(item.productName)}</span></td>
-                              <td className="coverage-detail-name">{item.productName}</td>
-                              <td className="coverage-detail-amount">NT$ {formatAmount(item.coverage)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      <div className="coverage-policy-list">
+                        {cat.items.map((item, i) => {
+                          const rec = monthRecords.find((r) => r.productName === item.productName && r.coverage === item.coverage);
+                          const hasBenefits = Array.isArray(rec?.benefits) && (rec.benefits as BenefitItem[]).length > 0;
+                          return (
+                            <div key={i} className="coverage-policy-block">
+                              <div className="coverage-policy-header">
+                                <span className="coverage-subtype-badge">{getSubtypeLabel(item.productName)}</span>
+                                <span className="coverage-policy-name">{item.productName}</span>
+                              </div>
+                              {hasBenefits ? (
+                                <table className="coverage-benefit-table">
+                                  <tbody>
+                                    {(rec!.benefits as BenefitItem[]).map((b, bi) => (
+                                      <tr key={bi}>
+                                        <td className="benefit-label">{b.label}</td>
+                                        <td className="benefit-amount">{b.amount.toLocaleString("zh-TW")} {b.unit}</td>
+                                        {b.note && <td className="benefit-note">{b.note}</td>}
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              ) : (
+                                <div className="coverage-benefit-fallback">主約保額 NT$ {formatAmount(item.coverage)}</div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
 
                       {cfg.key === "hospitalization" && (
-                        <p className="coverage-card-caveat">⚠ 終身累計限額（實支實付型）與每次限額性質不同，保額不可直接加總</p>
+                        <p className="coverage-card-caveat">⚠ 終身累計限額（實支實付）與每次限額性質不同，不可直接加總</p>
                       )}
-
                       {cfg.key === "cancer" && (
-                        <p className="coverage-card-caveat">⚠ 防癌各項給付依實際理賠項目計算；初次罹癌一次金於確診後一次性給付</p>
+                        <p className="coverage-card-caveat">⚠ 防癌各項給付依實際理賠項目；初次罹癌一次金於確診後一次性給付</p>
                       )}
-
                       {cfg.key === "disability" && (
                         <div className="coverage-disability-note">
                           <p className="coverage-disability-heading">失能等級說明（依「失能程度與保險金給付表」）</p>
@@ -365,7 +374,6 @@ export function InsurancePanel({ session }: { session: Session | null }) {
                               </div>
                             ))}
                           </div>
-                          <p className="coverage-card-caveat">⚠ 好心200為月給付型，依失能等級決定每月給付額度；實際比例請參閱保單條款</p>
                         </div>
                       )}
                     </div>

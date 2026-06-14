@@ -1269,6 +1269,13 @@ export type ParsedLoanRecord = {
   remainingBalance: number;
 };
 
+export type BenefitItem = {
+  label: string;    // e.g. "住院醫療日額", "重大傷病一次金"
+  amount: number;   // e.g. 2000
+  unit: string;     // e.g. "元/日", "元/次", "元（一次性）"
+  note?: string;    // e.g. "第1–30天", "第31天起"
+};
+
 export type ParsedInsuranceRecord = {
   insuranceType: 'non-investment' | 'investment';
   policyNo: string;
@@ -1283,6 +1290,7 @@ export type ParsedInsuranceRecord = {
   paymentPeriod: string;
   accumulatedPremium: number;
   nextPaymentDate: string;
+  benefits?: BenefitItem[];
 };
 
 // ─────────────────────────────────────────────────────────────

@@ -2125,6 +2125,76 @@ tr:hover .ledger-delete-btn {
   text-align: right;
 }
 
+.coverage-policy-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.coverage-policy-block {
+  background: rgba(91, 66, 44, 0.03);
+  border: 1px solid rgba(91, 66, 44, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.coverage-policy-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.coverage-policy-name {
+  font-size: 0.78rem;
+  color: #5a4a3a;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.coverage-benefit-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.coverage-benefit-table td {
+  padding: 3px 6px 3px 0;
+  font-size: 0.8rem;
+  vertical-align: baseline;
+  border-bottom: 1px solid rgba(91, 66, 44, 0.05);
+}
+
+.coverage-benefit-table tr:last-child td {
+  border-bottom: none;
+}
+
+.benefit-label {
+  color: #7a6758;
+  white-space: nowrap;
+  width: 40%;
+}
+
+.benefit-amount {
+  font-weight: 600;
+  color: #1f1a17;
+  white-space: nowrap;
+}
+
+.benefit-note {
+  color: #9b8070;
+  font-size: 0.74rem;
+  padding-left: 8px !important;
+}
+
+.coverage-benefit-fallback {
+  font-size: 0.8rem;
+  color: #7a6758;
+  padding: 2px 0;
+}
+
 .coverage-card-caveat {
   margin: 0;
   font-size: 0.75rem;
