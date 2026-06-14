@@ -23,6 +23,7 @@ type BenefitGroupEntry = {
   unit: string;
   note?: string;
   receiptType?: string;
+  sublabel?: string;
 };
 
 type BenefitGroup = {
@@ -31,19 +32,34 @@ type BenefitGroup = {
   hasReceiptConflict: boolean;
 };
 
+// Labels that should be merged into one display group
+const BENEFIT_MERGE_GROUPS: Array<{ displayLabel: string; labels: string[] }> = [
+  { displayLabel: "病房費 / 住院日額", labels: ["病房費", "病房費補貼", "住院醫療日額"] },
+  { displayLabel: "意外身故 / 失能", labels: ["意外身故/失能", "意外身故/失能（附加）"] },
+];
+
+function resolveGroupLabel(label: string): string {
+  for (const g of BENEFIT_MERGE_GROUPS) {
+    if (g.labels.includes(label)) return g.displayLabel;
+  }
+  return label;
+}
+
 function groupBenefitsByLabel(records: ParsedInsuranceRecord[]): BenefitGroup[] {
   const map = new Map<string, BenefitGroupEntry[]>();
   for (const rec of records) {
     const benefits = rec.benefits as BenefitItem[] | undefined;
     if (!Array.isArray(benefits)) continue;
     for (const b of benefits) {
-      if (!map.has(b.label)) map.set(b.label, []);
-      map.get(b.label)!.push({
+      const groupLabel = resolveGroupLabel(b.label);
+      if (!map.has(groupLabel)) map.set(groupLabel, []);
+      map.get(groupLabel)!.push({
         policyName: rec.productName,
         amount: b.amount,
         unit: b.unit,
         note: b.note,
         receiptType: b.receiptType,
+        sublabel: groupLabel !== b.label ? b.label : undefined,
       });
     }
   }
@@ -381,7 +397,10 @@ export function InsurancePanel({ session }: { session: Session | null }) {
                                             <span className={`receipt-badge receipt-badge--${entry.receiptType}`}>{entry.receiptType}</span>
                                           </td>
                                         )}
-                                        <td className="benefit-label">{entry.policyName.replace(/全球人壽|台灣人壽|富邦人壽/g, (m) => ({ "全球人壽": "全球", "台灣人壽": "台壽", "富邦人壽": "富邦" }[m] ?? m))}</td>
+                                        <td className="benefit-label">
+                                          {entry.policyName.replace(/全球人壽|台灣人壽|富邦人壽/g, (m) => ({ "全球人壽": "全球", "台灣人壽": "台壽", "富邦人壽": "富邦" }[m] ?? m))}
+                                          {entry.sublabel && <span className="benefit-sublabel">{entry.sublabel}</span>}
+                                        </td>
                                         <td className="benefit-amount">{entry.amount.toLocaleString("zh-TW")} {entry.unit}</td>
                                         {entry.note && <td className="benefit-note">{entry.note}</td>}
                                       </tr>

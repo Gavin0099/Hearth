@@ -2189,6 +2189,13 @@ tr:hover .ledger-delete-btn {
   padding-left: 8px !important;
 }
 
+.benefit-sublabel {
+  display: block;
+  font-size: 0.7rem;
+  color: #9b8070;
+  margin-top: 1px;
+}
+
 .coverage-benefit-fallback {
   font-size: 0.8rem;
   color: #7a6758;
