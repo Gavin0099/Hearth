@@ -3,6 +3,31 @@ import type { Session } from "@supabase/supabase-js";
 import type { ParsedInsuranceRecord } from "@hearth/shared";
 import { fetchBankSnapshots, deleteBankSnapshot, saveBankSnapshot, type BankSnapshot } from "../lib/bank-snapshots";
 
+type CoverageCategory = "death" | "accidental" | "hospitalization" | "critical" | "cancer" | "disability";
+
+const COVERAGE_CONFIG: Array<{ key: CoverageCategory; label: string; note: string; keywords: RegExp }> = [
+  { key: "death",          label: "壽險身故",  note: "壽險保額合計",    keywords: /壽險|定期壽/        },
+  { key: "accidental",     label: "意外身故",  note: "傷害險保額合計",  keywords: /傷害/               },
+  { key: "hospitalization",label: "住院醫療",  note: "醫療險保額合計",  keywords: /住院|醫療|急診/     },
+  { key: "critical",       label: "重大疾病",  note: "重大疾病一次金",  keywords: /重大疾病|重大傷病/  },
+  { key: "cancer",         label: "癌症防癌",  note: "防癌保額合計",    keywords: /防癌|癌症/          },
+  { key: "disability",     label: "失能長照",  note: "失能照護保額",    keywords: /失能|照護|長照/     },
+];
+
+function buildCoverageSummary(records: ParsedInsuranceRecord[]) {
+  const totals = Object.fromEntries(COVERAGE_CONFIG.map((c) => [c.key, { total: 0, products: [] as string[] }])) as Record<CoverageCategory, { total: number; products: string[] }>;
+  for (const rec of records) {
+    for (const cfg of COVERAGE_CONFIG) {
+      if (cfg.keywords.test(rec.productName)) {
+        totals[cfg.key].total += rec.coverage;
+        totals[cfg.key].products.push(rec.productName);
+        break;
+      }
+    }
+  }
+  return totals;
+}
+
 const BANK_DISPLAY_NAMES: Record<string, string> = {
   sinopac: "永豐",
   esun: "玉山",
@@ -195,6 +220,7 @@ export function InsurancePanel({ session }: { session: Session | null }) {
   const nonInvestmentCount = monthRecords.filter((record) => record.insuranceType === "non-investment").length;
   const nextPremiumTotal = monthRecords.reduce((sum, record) => sum + record.nextPremium, 0);
   const accumulatedPremiumTotal = monthRecords.reduce((sum, record) => sum + record.accumulatedPremium, 0);
+  const coverageSummary = buildCoverageSummary(monthRecords);
 
   return (
     <article className="panel detail-panel ledger-panel review-panel insurance-panel">
@@ -239,6 +265,33 @@ export function InsurancePanel({ session }: { session: Session | null }) {
           <span>僅統計本頁當前月份</span>
         </section>
       </div>
+
+      {monthRecords.length > 0 && (
+        <section className="coverage-summary-section">
+          <h3 className="coverage-summary-title">保障總覽</h3>
+          <div className="coverage-summary-grid">
+            {COVERAGE_CONFIG.map((cfg) => {
+              const cat = coverageSummary[cfg.key];
+              return (
+                <div key={cfg.key} className={`coverage-card coverage-card--${cfg.key}`}>
+                  <p className="coverage-card-label">{cfg.label}</p>
+                  <strong className="coverage-card-amount">
+                    {cat.total > 0 ? `NT$ ${formatAmount(cat.total)}` : "—"}
+                  </strong>
+                  <span className="coverage-card-note">{cfg.note}</span>
+                  {cat.products.length > 0 && (
+                    <div className="coverage-card-products">
+                      {cat.products.map((name) => (
+                        <span key={name} className="coverage-product-tag">{name}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <div className="detail-panel-actions">
         <button

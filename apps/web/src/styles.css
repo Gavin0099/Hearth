@@ -1984,6 +1984,89 @@ tr:hover .ledger-delete-btn {
   font-size: 0.92rem;
 }
 
+/* ── Coverage Summary ─────────────────────────────── */
+.coverage-summary-section {
+  margin: 24px 0 8px;
+}
+
+.coverage-summary-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9b8070;
+  margin: 0 0 12px;
+}
+
+.coverage-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.coverage-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid currentColor;
+  border-radius: var(--radius-md);
+  padding: 14px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.coverage-card--death          { color: #3b6da8; }
+.coverage-card--accidental     { color: #b57618; }
+.coverage-card--hospitalization{ color: #2c8f5b; }
+.coverage-card--critical       { color: #7c4bb5; }
+.coverage-card--cancer         { color: #b43d2c; }
+.coverage-card--disability     { color: #0d9488; }
+
+.coverage-card-label {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: currentColor;
+  opacity: 0.9;
+}
+
+.coverage-card-amount {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1f1a17;
+  display: block;
+  margin: 2px 0;
+}
+
+.coverage-card-note {
+  font-size: 0.78rem;
+  color: #9b8070;
+  display: block;
+}
+
+.coverage-card-products {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.coverage-product-tag {
+  font-size: 0.7rem;
+  color: #7a6758;
+  background: rgba(91, 66, 44, 0.06);
+  border: 1px solid rgba(91, 66, 44, 0.1);
+  border-radius: 6px;
+  padding: 2px 6px;
+  line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .coverage-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 .review-workspace {
   display: grid;
   grid-template-columns: minmax(0, 1.65fr) minmax(320px, 1fr);
