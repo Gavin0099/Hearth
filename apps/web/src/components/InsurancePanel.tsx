@@ -17,6 +17,42 @@ const COVERAGE_CONFIG: Array<{ key: CoverageCategory; label: string; note: strin
 type CoverageSummaryItem = { productName: string; coverage: number };
 type CoverageSummaryData = Record<CoverageCategory, { total: number; items: CoverageSummaryItem[] }>;
 
+type BenefitGroupEntry = {
+  policyName: string;
+  amount: number;
+  unit: string;
+  note?: string;
+  receiptType?: string;
+};
+
+type BenefitGroup = {
+  label: string;
+  entries: BenefitGroupEntry[];
+  hasReceiptConflict: boolean;
+};
+
+function groupBenefitsByLabel(records: ParsedInsuranceRecord[]): BenefitGroup[] {
+  const map = new Map<string, BenefitGroupEntry[]>();
+  for (const rec of records) {
+    const benefits = rec.benefits as BenefitItem[] | undefined;
+    if (!Array.isArray(benefits)) continue;
+    for (const b of benefits) {
+      if (!map.has(b.label)) map.set(b.label, []);
+      map.get(b.label)!.push({
+        policyName: rec.productName,
+        amount: b.amount,
+        unit: b.unit,
+        note: b.note,
+        receiptType: b.receiptType,
+      });
+    }
+  }
+  return [...map.entries()].map(([label, entries]) => {
+    const types = new Set(entries.map((e) => e.receiptType).filter(Boolean));
+    return { label, entries, hasReceiptConflict: types.has("正本") && types.has("副本") };
+  });
+}
+
 function buildCoverageSummary(records: ParsedInsuranceRecord[]): CoverageSummaryData {
   const totals = Object.fromEntries(
     COVERAGE_CONFIG.map((c) => [c.key, { total: 0, items: [] as CoverageSummaryItem[] }]),
@@ -324,60 +360,76 @@ export function InsurancePanel({ session }: { session: Session | null }) {
                     <span className="coverage-card-chevron">{isExpanded ? "▲" : "▼"}</span>
                   </div>
 
-                  {isExpanded && (
-                    <div className="coverage-card-detail" onClick={(e) => e.stopPropagation()}>
-                      <div className="coverage-policy-list">
-                        {cat.items.map((item, i) => {
-                          const rec = monthRecords.find((r) => r.productName === item.productName && r.coverage === item.coverage);
-                          const hasBenefits = Array.isArray(rec?.benefits) && (rec.benefits as BenefitItem[]).length > 0;
-                          return (
-                            <div key={i} className="coverage-policy-block">
-                              <div className="coverage-policy-header">
-                                <span className="coverage-subtype-badge">{getSubtypeLabel(item.productName)}</span>
-                                <span className="coverage-policy-name">{item.productName}</span>
-                              </div>
-                              {hasBenefits ? (
+                  {isExpanded && (() => {
+                    const catRecords = monthRecords.filter((r) => cfg.keywords.test(r.productName));
+                    const benefitGroups = groupBenefitsByLabel(catRecords);
+                    const hasBenefitData = benefitGroups.length > 0;
+
+                    return (
+                      <div className="coverage-card-detail" onClick={(e) => e.stopPropagation()}>
+                        {hasBenefitData ? (
+                          <div className="benefit-group-list">
+                            {benefitGroups.map((group) => (
+                              <div key={group.label} className="benefit-group">
+                                <div className="benefit-group-label">{group.label}</div>
                                 <table className="coverage-benefit-table">
                                   <tbody>
-                                    {(rec!.benefits as BenefitItem[]).map((b, bi) => (
-                                      <tr key={bi}>
-                                        <td className="benefit-label">{b.label}</td>
-                                        <td className="benefit-amount">{b.amount.toLocaleString("zh-TW")} {b.unit}</td>
-                                        {b.note && <td className="benefit-note">{b.note}</td>}
+                                    {group.entries.map((entry, i) => (
+                                      <tr key={i}>
+                                        {entry.receiptType && (
+                                          <td className="benefit-receipt-cell">
+                                            <span className={`receipt-badge receipt-badge--${entry.receiptType}`}>{entry.receiptType}</span>
+                                          </td>
+                                        )}
+                                        <td className="benefit-label">{entry.policyName.replace(/全球人壽|台灣人壽|富邦人壽/g, (m) => ({ "全球人壽": "全球", "台灣人壽": "台壽", "富邦人壽": "富邦" }[m] ?? m))}</td>
+                                        <td className="benefit-amount">{entry.amount.toLocaleString("zh-TW")} {entry.unit}</td>
+                                        {entry.note && <td className="benefit-note">{entry.note}</td>}
                                       </tr>
                                     ))}
                                   </tbody>
                                 </table>
-                              ) : (
-                                <div className="coverage-benefit-fallback">主約保額 NT$ {formatAmount(item.coverage)}</div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {cfg.key === "hospitalization" && (
-                        <p className="coverage-card-caveat">⚠ 終身累計限額（實支實付）與每次限額性質不同，不可直接加總</p>
-                      )}
-                      {cfg.key === "cancer" && (
-                        <p className="coverage-card-caveat">⚠ 防癌各項給付依實際理賠項目；初次罹癌一次金於確診後一次性給付</p>
-                      )}
-                      {cfg.key === "disability" && (
-                        <div className="coverage-disability-note">
-                          <p className="coverage-disability-heading">失能等級說明（依「失能程度與保險金給付表」）</p>
-                          <div className="coverage-grade-table">
-                            {DISABILITY_GRADES.map((g) => (
-                              <div key={g.level} className="coverage-grade-row">
-                                <span className="coverage-grade-level">{g.level}</span>
-                                <span className="coverage-grade-desc">{g.desc}</span>
-                                <span className="coverage-grade-note">{g.note}</span>
+                                {group.hasReceiptConflict && (
+                                  <p className="receipt-conflict-note">
+                                    ⚡ 住院後先送<strong>正本</strong>給正本保險公司理賠，再以<strong>副本</strong>送其他保險公司
+                                  </p>
+                                )}
                               </div>
                             ))}
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                        ) : (
+                          <div className="coverage-policy-list">
+                            {cat.items.map((item, i) => (
+                              <div key={i} className="coverage-policy-block">
+                                <div className="coverage-policy-header">
+                                  <span className="coverage-subtype-badge">{getSubtypeLabel(item.productName)}</span>
+                                  <span className="coverage-policy-name">{item.productName}</span>
+                                </div>
+                                <div className="coverage-benefit-fallback">主約保額 NT$ {formatAmount(item.coverage)}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {cfg.key === "cancer" && (
+                          <p className="coverage-card-caveat">⚠ 防癌各項給付依實際理賠項目；初次罹癌一次金於確診後一次性給付</p>
+                        )}
+                        {cfg.key === "disability" && (
+                          <div className="coverage-disability-note">
+                            <p className="coverage-disability-heading">失能等級說明（依「失能程度與保險金給付表」）</p>
+                            <div className="coverage-grade-table">
+                              {DISABILITY_GRADES.map((g) => (
+                                <div key={g.level} className="coverage-grade-row">
+                                  <span className="coverage-grade-level">{g.level}</span>
+                                  <span className="coverage-grade-desc">{g.desc}</span>
+                                  <span className="coverage-grade-note">{g.note}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })}

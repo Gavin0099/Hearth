@@ -1270,10 +1270,11 @@ export type ParsedLoanRecord = {
 };
 
 export type BenefitItem = {
-  label: string;    // e.g. "住院醫療日額", "重大傷病一次金"
-  amount: number;   // e.g. 2000
-  unit: string;     // e.g. "元/日", "元/次", "元（一次性）"
-  note?: string;    // e.g. "第1–30天", "第31天起"
+  label: string;        // e.g. "住院醫療雜費", "重大傷病一次金"
+  amount: number;       // e.g. 2000
+  unit: string;         // e.g. "元/日", "元/次", "元（一次性）"
+  note?: string;        // e.g. "第1–30天", "第31天起"
+  receiptType?: "正本" | "副本" | "日額";  // 申請方式
 };
 
 export type ParsedInsuranceRecord = {
