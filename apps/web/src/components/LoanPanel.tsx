@@ -229,13 +229,25 @@ export function LoanPanel({ session }: { session: Session | null }) {
   });
 
   const monthRecords = monthSnapshots.flatMap((snap) => (Array.isArray(snap.data) ? snap.data : []));
-  const regularBalance = monthRecords.reduce((sum, record) => sum + record.remainingBalance, 0);
+
+  // Deduplicate by accountNo: keep only the latest record per account for balance totals
+  function latestByAccount(records: ParsedLoanRecord[]): ParsedLoanRecord[] {
+    const map = new Map<string, ParsedLoanRecord>();
+    for (const r of records) {
+      const existing = map.get(r.accountNo);
+      if (!existing || r.paymentDate > existing.paymentDate) map.set(r.accountNo, r);
+    }
+    return [...map.values()];
+  }
+
+  const dedupedRecords = latestByAccount(monthRecords);
+  const regularBalance = dedupedRecords.reduce((sum, r) => sum + r.remainingBalance, 0);
   const amortBalance = amortCurrentBalances.reduce((sum, b) => sum + b, 0);
   const totalRemainingBalance = regularBalance + amortBalance;
-  const snapshotCount = monthRecords.length + amortSeeds.length;
+  const snapshotCount = dedupedRecords.length + amortSeeds.length;
   const bankCount = byBank.size + new Set(amortSeeds.map((s) => s.snap.bank)).size;
   const allRecordsForLargest = [
-    ...monthRecords,
+    ...dedupedRecords,
     ...amortSeeds.map(({ record }, i) => ({ ...record, remainingBalance: amortCurrentBalances[i] })),
   ];
   const largestSnapshot = allRecordsForLargest.reduce<ParsedLoanRecord | null>((largest, record) => {
