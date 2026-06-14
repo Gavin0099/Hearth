@@ -14,19 +14,43 @@ const COVERAGE_CONFIG: Array<{ key: CoverageCategory; label: string; note: strin
   { key: "disability",     label: "失能長照",  note: "失能照護保額",    keywords: /失能|照護|長照/     },
 ];
 
-function buildCoverageSummary(records: ParsedInsuranceRecord[]) {
-  const totals = Object.fromEntries(COVERAGE_CONFIG.map((c) => [c.key, { total: 0, products: [] as string[] }])) as Record<CoverageCategory, { total: number; products: string[] }>;
+type CoverageSummaryItem = { productName: string; coverage: number };
+type CoverageSummaryData = Record<CoverageCategory, { total: number; items: CoverageSummaryItem[] }>;
+
+function buildCoverageSummary(records: ParsedInsuranceRecord[]): CoverageSummaryData {
+  const totals = Object.fromEntries(
+    COVERAGE_CONFIG.map((c) => [c.key, { total: 0, items: [] as CoverageSummaryItem[] }]),
+  ) as CoverageSummaryData;
   for (const rec of records) {
     for (const cfg of COVERAGE_CONFIG) {
       if (cfg.keywords.test(rec.productName)) {
         totals[cfg.key].total += rec.coverage;
-        totals[cfg.key].products.push(rec.productName);
+        totals[cfg.key].items.push({ productName: rec.productName, coverage: rec.coverage });
         break;
       }
     }
   }
   return totals;
 }
+
+function getSubtypeLabel(productName: string): string {
+  if (/初次罹患/.test(productName))       return "初次罹癌一次金";
+  if (/加倍安心|富邦.*醫/.test(productName)) return "終身累計限額";
+  if (/急診/.test(productName))           return "急診每次限額";
+  if (/住院/.test(productName))           return "住院每次限額";
+  if (/失能|照護|長照/.test(productName)) return "月給付型";
+  if (/防癌/.test(productName))           return "防癌各項給付";
+  if (/重大疾病|重大傷病/.test(productName)) return "重大疾病一次金";
+  if (/傷害/.test(productName))           return "意外身故/失能";
+  if (/壽險/.test(productName))           return "身故保障";
+  return "保障型";
+}
+
+const DISABILITY_GRADES = [
+  { level: "第1–3級", desc: "極嚴重失能", note: "日常生活完全依賴他人協助（臥床、植物人等）" },
+  { level: "第4–6級", desc: "嚴重失能",   note: "吃飯、穿衣、如廁等日常生活需他人協助" },
+  { level: "第7–11級",desc: "部分失能",   note: "肢體、視力、聽力等部分機能喪失" },
+];
 
 const BANK_DISPLAY_NAMES: Record<string, string> = {
   sinopac: "永豐",
@@ -111,6 +135,15 @@ export function InsurancePanel({ session }: { session: Session | null }) {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState("");
+  const [expandedCards, setExpandedCards] = useState<Set<CoverageCategory>>(new Set());
+
+  function toggleCard(key: CoverageCategory) {
+    setExpandedCards((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
 
   async function loadSnapshots() {
     setLoadError(null);
@@ -272,18 +305,69 @@ export function InsurancePanel({ session }: { session: Session | null }) {
           <div className="coverage-summary-grid">
             {COVERAGE_CONFIG.map((cfg) => {
               const cat = coverageSummary[cfg.key];
+              const isExpanded = expandedCards.has(cfg.key);
               return (
-                <div key={cfg.key} className={`coverage-card coverage-card--${cfg.key}`}>
-                  <p className="coverage-card-label">{cfg.label}</p>
-                  <strong className="coverage-card-amount">
-                    {cat.total > 0 ? `NT$ ${formatAmount(cat.total)}` : "—"}
-                  </strong>
-                  <span className="coverage-card-note">{cfg.note}</span>
-                  {cat.products.length > 0 && (
-                    <div className="coverage-card-products">
-                      {cat.products.map((name) => (
-                        <span key={name} className="coverage-product-tag">{name}</span>
-                      ))}
+                <div
+                  key={cfg.key}
+                  className={`coverage-card coverage-card--${cfg.key}${isExpanded ? " expanded" : ""}`}
+                  onClick={() => toggleCard(cfg.key)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === "Enter" && toggleCard(cfg.key)}
+                >
+                  <div className="coverage-card-main">
+                    <p className="coverage-card-label">{cfg.label}</p>
+                    <strong className="coverage-card-amount">
+                      {cat.total > 0 ? `NT$ ${formatAmount(cat.total)}` : "—"}
+                    </strong>
+                    <span className="coverage-card-note">{cfg.note}</span>
+                    <span className="coverage-card-chevron">{isExpanded ? "▲" : "▼"}</span>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="coverage-card-detail" onClick={(e) => e.stopPropagation()}>
+                      <table className="coverage-detail-table">
+                        <thead>
+                          <tr>
+                            <th>給付型態</th>
+                            <th>保單名稱</th>
+                            <th>保額</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {cat.items.map((item, i) => (
+                            <tr key={i}>
+                              <td><span className="coverage-subtype-badge">{getSubtypeLabel(item.productName)}</span></td>
+                              <td className="coverage-detail-name">{item.productName}</td>
+                              <td className="coverage-detail-amount">NT$ {formatAmount(item.coverage)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+
+                      {cfg.key === "hospitalization" && (
+                        <p className="coverage-card-caveat">⚠ 終身累計限額（實支實付型）與每次限額性質不同，保額不可直接加總</p>
+                      )}
+
+                      {cfg.key === "cancer" && (
+                        <p className="coverage-card-caveat">⚠ 防癌各項給付依實際理賠項目計算；初次罹癌一次金於確診後一次性給付</p>
+                      )}
+
+                      {cfg.key === "disability" && (
+                        <div className="coverage-disability-note">
+                          <p className="coverage-disability-heading">失能等級說明（依「失能程度與保險金給付表」）</p>
+                          <div className="coverage-grade-table">
+                            {DISABILITY_GRADES.map((g) => (
+                              <div key={g.level} className="coverage-grade-row">
+                                <span className="coverage-grade-level">{g.level}</span>
+                                <span className="coverage-grade-desc">{g.desc}</span>
+                                <span className="coverage-grade-note">{g.note}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <p className="coverage-card-caveat">⚠ 好心200為月給付型，依失能等級決定每月給付額度；實際比例請參閱保單條款</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
