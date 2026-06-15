@@ -17,6 +17,7 @@ import { saveBankSnapshot } from "../lib/bank-snapshots";
 import { getSupabaseBrowserClient } from "../lib/supabase";
 import {
   fetchImportJobs,
+  enqueueGmailSearchResults,
   updateImportJob,
   fetchBankAccountMappings,
   type ImportJobRecord,
@@ -71,7 +72,7 @@ function getJobStatusView(status?: ImportJobRecord["status"]): {
     case "parsed":
       return { label: "已解析", variant: "info", buttonLabel: "匯入" };
     case "pending_parse":
-      return { label: "待解析", variant: "info", buttonLabel: "匯入" };
+      return { label: "待匯入", variant: "info", buttonLabel: "匯入" };
     case "needs_review":
       return { label: "需設定帳戶", variant: "warning", buttonLabel: "匯入" };
     case "failed":
@@ -89,7 +90,7 @@ function getSearchResultStatusView(status?: ImportJobRecord["status"]): {
   buttonLabel: string;
 } {
   if (status) return getJobStatusView(status);
-  return { label: "本次找到", variant: "info", buttonLabel: "匯入" };
+  return { label: "尚未入庫", variant: "default", buttonLabel: "建立並匯入" };
 }
 
 const BANK_DISPLAY_NAMES: Record<BankKey, string> = {
@@ -647,13 +648,14 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
 
     setEmails(loadedEmails);
 
-    // Load all import_jobs to show per-email status flags
-    void fetchImportJobs().then((res) => {
-      if (res.status === "ok") {
-        setAllJobs(res.items);
-        setJobsByMsgId(buildJobStatusMap(res.items));
-      }
-    });
+    const enqueueResult = await enqueueGmailSearchResults(loadedEmails);
+    if (enqueueResult.status === "error") {
+      setState({ status: "error", message: `建立 Gmail 匯入工作失敗：${enqueueResult.error}` });
+      return;
+    }
+
+    autoProcessFired.current = false;
+    await loadQueues();
 
     if (loadedEmails.length === 0 && failedBanks.length > 0) {
       setState({

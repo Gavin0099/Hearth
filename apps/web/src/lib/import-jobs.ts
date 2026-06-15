@@ -39,6 +39,25 @@ export async function triggerGmailSyncNow(): Promise<
   return res.json();
 }
 
+export async function enqueueGmailSearchResults(emails: Array<{
+  id: string;
+  subject: string;
+  date: string;
+  bank: string;
+  attachments: Array<{ id: string; filename: string; mimeType: string }>;
+}>): Promise<
+  | { status: "ok"; created: number; updated: number; skipped: number }
+  | { status: "error"; error: string }
+> {
+  const res = await apiFetch("/api/import-jobs/from-gmail-search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ emails }),
+  });
+  if (!res.ok) return { status: "error", error: `HTTP ${res.status}` };
+  return res.json();
+}
+
 export async function updateImportJob(
   id: string,
   update: {

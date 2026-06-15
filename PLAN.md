@@ -186,3 +186,4 @@
 | 2026-06-15 | Gmail fetched-status visibility | `GmailSyncPanel` 載入時同步讀取 `import_jobs`，顯示已偵測 / 已處理帳單清單與狀態 badge；版本 bump 至 `0.3.4`。 |
 | 2026-06-15 | Security schema/ops hardening | `supabase/schema.sql` 重建為 migrations 串接快照並新增 drift gate；`/api/ops/*` 改為 admin allowlist；ops DB/internal errors 改泛用回應；版本 bump 至 `0.3.5`。 |
 | 2026-06-15 | Gmail search result flags | Gmail 搜尋結果列永遠顯示狀態 flag；有 `import_jobs` 時顯示既有狀態，尚未入庫時顯示「本次找到」；版本 bump 至 `0.3.6`。 |
+| 2026-06-15 | Gmail search auto-import jobs | 手動 Gmail 搜尋結果會寫入 current-user `import_jobs`，既有 `已匯入` job 不降級，新增/補 mapping job 進 `待匯入` queue 並觸發既有自動 parse/import；版本 bump 至 `0.3.7`。 |

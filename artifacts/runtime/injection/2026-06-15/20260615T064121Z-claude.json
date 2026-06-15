@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-15T06:41:21.263746+00:00",
+  "contract_injected": true,
+  "contract_hash": "bd2ce119e4b16d95cdbdd4d9aed5015ed760902f8cf61247bea2b50e95716a69",
+  "scope": "fix",
+  "level": "L2",
+  "lang": "TypeScript",
+  "contract_fields": {
+    "LANG": "TypeScript",
+    "LEVEL": "L2",
+    "SCOPE": "fix",
+    "PLAN": "Persist Gmail search results as import_jobs and trigger existing auto-import queue processing; show imported status instead of found-only flags",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/02_tech_stack.md, memory/03_knowledge_base.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-15.md",
+    "CONTEXT": "Fix GmailSyncPanel manual search so results become user-owned import_jobs and auto-import can run",
+    "PRESSURE": "ELEVATED (auth-scoped import job creation and auto-import workflow)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L2\nSCOPE = fix\nPLAN = Persist Gmail search results as import_jobs and trigger existing auto-import queue processing; show imported status instead of found-only flags\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/02_tech_stack.md, memory/03_knowledge_base.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-15.md\nCONTEXT = Fix GmailSyncPanel manual search so results become user-owned import_jobs and auto-im"
+}

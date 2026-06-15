@@ -326,6 +326,17 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - Search results with no matching `import_jobs` record now show `本次找到`, so the current Gmail scan is visibly flagged even before persistence/parse.
 - Bumped root/api/web/shared package versions and internal `@hearth/shared` pins to `0.3.6`.
 
+## 2026-06-15 Gmail Search Auto-Import Jobs
+
+- Added authenticated `POST /api/import-jobs/from-gmail-search` to persist browser Gmail search results as current-user `import_jobs`; account mapping is resolved server-side from `bank_account_mapping`.
+- Duplicate Gmail attachment jobs are not downgraded; only `needs_review` + `missing_mapping` rows can be promoted back to `pending_parse` when a mapping now exists.
+- `GmailSyncPanel` now calls the new endpoint after manual Gmail search, reloads queues, resets the auto-process guard, and uses the existing background queue processor to download/parse/import mapped jobs.
+- Status flags now represent processing/import status: existing jobs show persisted status, newly queued jobs show `待匯入`, and missing jobs only have a short `尚未入庫` transient state before enqueue completes.
+- Added `apps/api/tests/import-jobs.test.ts`.
+- `npm.cmd --workspace @hearth/api run test -- tests/import-jobs.test.ts` -> pass (`177/177`).
+- `npm.cmd run check` -> pass for api/web/shared.
+- Claim boundary: local API/UI wiring and type safety verified; production deploy and live Gmail auto-import evidence still need to be run.
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.

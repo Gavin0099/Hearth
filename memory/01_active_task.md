@@ -21,7 +21,7 @@
 - Gmail login auto-detect is implemented locally: authenticated `/api/import-jobs/sync-now` scans only the current user, `App` triggers it once per loaded/sign-in session, and `GmailSyncPanel` reloads pending queues for browser-side parse/import.
 - Gmail background auto-parse is implemented locally: when the user is logged in outside Settings, `App` mounts `GmailSyncPanel` in background mode so pending Gmail PDFs are downloaded and parsed/imported without requiring navigation to Settings.
 - Gmail fetched-status visibility is implemented locally: `GmailSyncPanel` now reads all current-user `import_jobs` on load and shows a detected/processed list plus status badges for matched Gmail search results.
-- Gmail search result flags are implemented locally: every Gmail search result now shows a visible status flag, falling back to `本次找到` when no `import_jobs` record exists yet.
+- Gmail search auto-import jobs are implemented locally: manual Gmail search results are persisted as current-user `import_jobs`; existing imported jobs stay `已匯入`, new mapped jobs enter `待匯入`, and the existing queue processor can auto-download/parse/import them.
 - Security review hardening is in progress locally: `supabase/schema.sql` is rebuilt from ordered migrations, schema drift check script is added, `/api/ops/*` requires an admin allowlist, and ops DB/internal errors are sanitized.
 - `stash@{0}` (`codex-pre-pull-tracked-20260611`) remains as a backup of pre-pull tracked dirty changes and can be dropped after explicit review.
 

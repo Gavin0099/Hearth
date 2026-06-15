@@ -1,7 +1,7 @@
 {
   "name": "@hearth/web",
   "private": true,
-  "version": "0.3.6",
+  "version": "0.3.7",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,7 @@
     "deploy": "npm run build && npx wrangler pages deploy dist --project-name hearth-web"
   },
   "dependencies": {
-    "@hearth/shared": "0.3.6",
+    "@hearth/shared": "0.3.7",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tabs": "^1.1.13",
