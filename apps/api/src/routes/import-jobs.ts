@@ -1,6 +1,9 @@
 import { Hono } from "hono";
 import { runGmailSyncForUser } from "../cron/gmail-sync";
-import { buildGmailAccountMappingIndex } from "../lib/gmail-account-resolver";
+import {
+  buildGmailAccountMappingIndex,
+  resolveOrCreateGmailImportAccountId,
+} from "../lib/gmail-account-resolver";
 import type { ApiEnv } from "../types";
 
 const BANK_ACCOUNT_KEYWORDS = [
@@ -123,7 +126,8 @@ importJobsRoutes.post("/from-gmail-search", async (c) => {
 
   if (accountsError) return c.json({ error: accountsError.message, status: "error" }, 500);
 
-  const mappingIndex = buildGmailAccountMappingIndex(mappings, accounts);
+  const accountList = [...(accounts ?? [])];
+  const mappingIndex = buildGmailAccountMappingIndex(mappings, accountList);
 
   let created = 0;
   let updated = 0;
@@ -136,7 +140,14 @@ importJobsRoutes.post("/from-gmail-search", async (c) => {
     }
 
     const sourceType = detectSourceType(email.subject);
-    const mappedAccountId = mappingIndex[`${email.bank}:${sourceType}`] ?? null;
+    const mappedAccountId = await resolveOrCreateGmailImportAccountId(
+      supabase,
+      user.id,
+      mappingIndex,
+      accountList,
+      email.bank,
+      sourceType,
+    );
     const status = mappedAccountId ? "pending_parse" : "needs_review";
     const pdfAttachments = (email.attachments ?? []).filter((attachment) =>
       attachment.id &&

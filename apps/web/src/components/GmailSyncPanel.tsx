@@ -103,10 +103,10 @@ const BANK_DISPLAY_NAMES: Record<BankKey, string> = {
 };
 
 const REVIEW_REASON_LABELS: Record<string, string> = {
-  missing_mapping: "尚未設定帳戶對應",
+  missing_mapping: "尚未建立自動匯入帳戶",
   parse_error: "帳單解析失敗，需人工確認",
   unknown_bank: "無法辨識銀行來源",
-  account_mapping_invalid: "帳戶對應已失效，請重新設定",
+  account_mapping_invalid: "自動匯入帳戶已失效",
 };
 
 const BANK_NAME_KEYWORDS: Record<BankKey, string[]> = {
@@ -509,7 +509,7 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
         await updateImportJob(item.id, {
           status: "needs_review",
           review_reason: "missing_mapping",
-          error_code: "no_account_mapping",
+          error_code: "auto_account_unavailable",
         });
         continue;
       }
@@ -976,7 +976,7 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
           <span className="queue-notice-count">
             {queueRunning
               ? "自動匯入進行中..."
-              : <>伺服器偵測到 <strong>{pendingQueue.length}</strong> 封待處理帳單（已設定帳戶對應）</>
+              : <>伺服器偵測到 <strong>{pendingQueue.length}</strong> 封待處理帳單</>
             }
           </span>
           {!queueRunning && (
@@ -1026,7 +1026,7 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
                     </button>
                   )}
                   {needsMapping && (
-                    <span className="panel-copy--tight gmail-review-hint">請先至設定頁配置帳戶對應</span>
+                    <span className="panel-copy--tight gmail-review-hint">重新掃描後系統會自動建立銀行帳戶</span>
                   )}
                 </li>
               );

@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-15T07:16:47.607142+00:00",
+  "contract_injected": true,
+  "contract_hash": "4798b4496673782e4a908c054b0b489dedae765c6a2e97eaebd48abb8a6e4ebb",
+  "scope": "fix",
+  "level": "L1",
+  "lang": "TypeScript",
+  "contract_fields": {
+    "LANG": "TypeScript",
+    "LEVEL": "L1",
+    "SCOPE": "fix",
+    "PLAN": "remove manual Gmail account mapping requirement",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-15.md",
+    "CONTEXT": "Make Gmail auto-import create or reuse bank-labeled accounts automatically and remove the manual mapping UI.",
+    "PRESSURE": "SAFE (API/UI import ergonomics without parser semantic changes)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L1\nSCOPE = fix\nPLAN = remove manual Gmail account mapping requirement\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-15.md\nCONTEXT = Make Gmail auto-import create or reuse bank-labeled accounts automatically and remove the manual mapping UI.\nPRESSURE = SAFE (API/UI import ergonomics without parser semantic changes)\n\nRemove manual Gmail account mapping requirement an"
+}

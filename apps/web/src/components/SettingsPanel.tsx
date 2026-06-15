@@ -6,149 +6,17 @@ import {
   type SaveUserSettingsInput,
   type UserSettings,
 } from "../lib/user-settings";
-import { fetchAccounts } from "../lib/accounts";
-import type { AccountRecord } from "@hearth/shared";
-import {
-  fetchBankAccountMappings,
-  upsertBankAccountMapping,
-  deleteBankAccountMapping,
-  type BankAccountMappingRecord,
-} from "../lib/import-jobs";
 
 type SettingsPanelProps = {
   session: Session | null;
   onMappingSaved?: () => void;
 };
 
-const BANK_DISPLAY_NAMES: Record<string, string> = {
-  sinopac: "永豐",
-  esun: "玉山",
-  cathay: "國泰",
-  taishin: "台新",
-  ctbc: "中信",
-  mega: "兆豐",
-};
-
-const ALL_BANKS = ["sinopac", "esun", "cathay", "taishin", "ctbc", "mega"] as const;
-const SOURCE_TYPE_LABELS: Record<string, string> = {
-  credit_card: "信用卡",
-  bank_account: "銀行帳戶",
-};
-
 function StatusText({ enabled }: { enabled: boolean | undefined }) {
   return <span>{enabled ? "已設定" : "未設定"}</span>;
 }
 
-function BankAccountMappingSection({ session, onMappingSaved }: { session: Session; onMappingSaved?: () => void }) {
-  const [mappings, setMappings] = useState<BankAccountMappingRecord[]>([]);
-  const [accounts, setAccounts] = useState<AccountRecord[]>([]);
-  const [newBank, setNewBank] = useState("sinopac");
-  const [newSourceType, setNewSourceType] = useState<"credit_card" | "bank_account">("credit_card");
-  const [newAccountId, setNewAccountId] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    void fetchBankAccountMappings().then((res) => {
-      if (res.status === "ok") setMappings(res.items);
-    });
-    void fetchAccounts().then((res) => {
-      if (res.status === "ok") {
-        setAccounts(res.items);
-        if (res.items.length > 0) setNewAccountId(res.items[0].id);
-      }
-    });
-  }, [session]);
-
-  async function handleAdd(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newAccountId) return;
-    setSaving(true);
-    setMessage(null);
-    const res = await upsertBankAccountMapping({ bank_key: newBank, source_type: newSourceType, account_id: newAccountId });
-    if (res.status === "ok") {
-      const refreshed = await fetchBankAccountMappings();
-      if (refreshed.status === "ok") setMappings(refreshed.items);
-      setMessage("對應已儲存。");
-      onMappingSaved?.();
-    } else {
-      setMessage(`儲存失敗：${res.error}`);
-    }
-    setSaving(false);
-  }
-
-  async function handleDelete(id: string) {
-    await deleteBankAccountMapping(id);
-    setMappings((prev) => prev.filter((m) => m.id !== id));
-  }
-
-  return (
-    <section>
-      <h3>Gmail 自動匯入帳戶對應</h3>
-      <p className="panel-copy panel-copy--tight">
-        系統會先依既有帳戶名稱與類型自動判斷匯入帳戶；只有找不到唯一帳戶時，才需要在這裡指定。
-      </p>
-
-      {mappings.length > 0 ? (
-        <ul className="gmail-email-list">
-          {mappings.map((m) => {
-            const account = accounts.find((a) => a.id === m.account_id);
-            return (
-              <li key={m.id} className="gmail-email-item panel-row-item">
-                <div className="gmail-email-meta">
-                  <span className="gmail-email-bank">{BANK_DISPLAY_NAMES[m.bank_key] ?? m.bank_key}</span>
-                  <span>{SOURCE_TYPE_LABELS[m.source_type] ?? m.source_type}</span>
-                  <span className="panel-copy--tight">→ {account?.name ?? m.account_id}</span>
-                </div>
-                <button
-                  className="action-button"
-                  type="button"
-                  onClick={() => void handleDelete(m.id)}
-                >
-                  刪除
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : (
-        <p className="panel-message panel-message--muted">尚未設定任何對應。</p>
-      )}
-
-      <form className="account-form" onSubmit={handleAdd}>
-        <label>
-          銀行
-          <select value={newBank} onChange={(e) => setNewBank(e.target.value)}>
-            {ALL_BANKS.map((b) => (
-              <option key={b} value={b}>{BANK_DISPLAY_NAMES[b]}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          類型
-          <select value={newSourceType} onChange={(e) => setNewSourceType(e.target.value as "credit_card" | "bank_account")}>
-            <option value="credit_card">信用卡</option>
-            <option value="bank_account">銀行帳戶</option>
-          </select>
-        </label>
-        <label>
-          帳戶
-          <select value={newAccountId} onChange={(e) => setNewAccountId(e.target.value)}>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </select>
-        </label>
-        <button className="action-button" type="submit" disabled={saving || !newAccountId}>
-          {saving ? "儲存中..." : "新增對應"}
-        </button>
-        {message && <p className="panel-message">{message}</p>}
-      </form>
-    </section>
-  );
-}
-
-export function SettingsPanel({ session, onMappingSaved }: SettingsPanelProps) {
+export function SettingsPanel({ session }: SettingsPanelProps) {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [defaultPw, setDefaultPw] = useState("");
   const [sinopacPw, setSinopacPw] = useState("");
@@ -345,7 +213,6 @@ export function SettingsPanel({ session, onMappingSaved }: SettingsPanelProps) {
         </p>
       ) : null}
 
-      <BankAccountMappingSection session={session} onMappingSaved={onMappingSaved} />
     </article>
   );
 }

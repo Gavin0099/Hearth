@@ -188,3 +188,4 @@
 | 2026-06-15 | Gmail search result flags | Gmail 搜尋結果列永遠顯示狀態 flag；有 `import_jobs` 時顯示既有狀態，尚未入庫時顯示「本次找到」；版本 bump 至 `0.3.6`。 |
 | 2026-06-15 | Gmail search auto-import jobs | 手動 Gmail 搜尋結果會寫入 current-user `import_jobs`，既有 `已匯入` job 不降級，新增/補 mapping job 進 `待匯入` queue 並觸發既有自動 parse/import；版本 bump 至 `0.3.7`。 |
 | 2026-06-15 | Gmail auto account resolution | Gmail 自動匯入會先使用既有帳戶自動判斷銀行/類型對應；只有找不到唯一符合的帳戶時才需要手動設定 mapping；版本 bump 至 `0.3.8`。 |
+| 2026-06-15 | Gmail auto account provisioning | Gmail 自動匯入不再顯示手動帳戶 mapping 設定；若沒有既有帳戶，server 會自動建立銀行標籤帳戶（例如 `中信 信用卡` / `台新 銀行帳戶`）並繼續匯入；版本 bump 至 `0.3.9`。 |

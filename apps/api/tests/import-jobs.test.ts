@@ -237,3 +237,93 @@ test("POST /api/import-jobs/from-gmail-search auto-resolves a unique existing ba
   assert.equal(inserts[0].status, "pending_parse");
   assert.equal(inserts[0].review_reason, null);
 });
+
+test("POST /api/import-jobs/from-gmail-search creates a bank-labeled account when none exists", async () => {
+  const accountInserts: Array<Record<string, unknown>> = [];
+  const jobInserts: Array<Record<string, unknown>> = [];
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "user@example.com" }),
+    createSupabaseAdminClient: () =>
+      ({
+        from(table: string) {
+          if (table === "bank_account_mapping") {
+            return {
+              select() {
+                return {
+                  eq() {
+                    return {
+                      eq() {
+                        return Promise.resolve({ data: [], error: null });
+                      },
+                    };
+                  },
+                };
+              },
+            };
+          }
+
+          if (table === "accounts") {
+            return {
+              select() {
+                return {
+                  eq() {
+                    return Promise.resolve({ data: [], error: null });
+                  },
+                };
+              },
+              insert(payload: Record<string, unknown>) {
+                accountInserts.push(payload);
+                return {
+                  select() {
+                    return {
+                      single() {
+                        return Promise.resolve({
+                          data: {
+                            id: "created-esun-card",
+                            name: payload.name,
+                            type: payload.type,
+                            broker: payload.broker,
+                          },
+                          error: null,
+                        });
+                      },
+                    };
+                  },
+                };
+              },
+            };
+          }
+
+          assert.equal(table, "import_jobs");
+          return {
+            insert(payload: Record<string, unknown>) {
+              jobInserts.push(payload);
+              return Promise.resolve({ error: null });
+            },
+          };
+        },
+      }) as any,
+  });
+
+  const response = await app.request(
+    "/api/import-jobs/from-gmail-search",
+    {
+      method: "POST",
+      headers: { Authorization: "Bearer valid-token", "Content-Type": "application/json" },
+      body: JSON.stringify({ emails: [sampleEmail] }),
+    },
+  );
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.deepEqual(payload, { created: 1, updated: 0, skipped: 0, status: "ok" });
+  assert.equal(accountInserts.length, 1);
+  assert.equal(accountInserts[0].user_id, "user-1");
+  assert.equal(accountInserts[0].name, "玉山 信用卡");
+  assert.equal(accountInserts[0].type, "cash_credit");
+  assert.equal(accountInserts[0].currency, "TWD");
+  assert.equal(accountInserts[0].broker, "esun");
+  assert.equal(jobInserts[0].mapped_account_id, "created-esun-card");
+  assert.equal(jobInserts[0].status, "pending_parse");
+  assert.equal(jobInserts[0].review_reason, null);
+});

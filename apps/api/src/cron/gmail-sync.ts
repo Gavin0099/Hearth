@@ -1,6 +1,9 @@
 import { createSupabaseAdminClient } from "../lib/supabase";
 import { decryptSecretValue } from "../lib/secrets";
-import { buildGmailAccountMappingIndex } from "../lib/gmail-account-resolver";
+import {
+  buildGmailAccountMappingIndex,
+  resolveOrCreateGmailImportAccountId,
+} from "../lib/gmail-account-resolver";
 import type { WorkerBindings } from "../types";
 
 const GMAIL_API_BASE = "https://gmail.googleapis.com/gmail/v1/users/me";
@@ -172,7 +175,8 @@ async function syncUserGmail(
     .select("id, name, type, broker")
     .eq("user_id", userId);
 
-  const mappingIndex = buildGmailAccountMappingIndex(mappings, accounts);
+  const accountList = [...(accounts ?? [])];
+  const mappingIndex = buildGmailAccountMappingIndex(mappings, accountList);
 
   const allSenders = Object.values(BANK_SENDERS);
   const senderQuery = allSenders.map((s) => `from:${s}`).join(" OR ");
@@ -217,7 +221,14 @@ async function syncUserGmail(
       if (!bankKey) continue;
 
       const sourceType = detectSourceType(subject);
-      const mappedAccountId = mappingIndex[`${bankKey}:${sourceType}`] ?? null;
+      const mappedAccountId = await resolveOrCreateGmailImportAccountId(
+        supabase,
+        userId,
+        mappingIndex,
+        accountList,
+        bankKey,
+        sourceType,
+      );
       const status = mappedAccountId ? "pending_parse" : "needs_review";
 
       const attachments = extractPdfAttachments(detail.payload as MsgPart);

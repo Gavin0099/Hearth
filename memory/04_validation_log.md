@@ -347,6 +347,16 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - Bumped root/api/web/shared package versions and internal `@hearth/shared` pins to `0.3.8`.
 - Claim boundary: implementation is local until tests/checks and production deploy complete.
 
+## 2026-06-15 Gmail Auto Account Provisioning
+
+- Removed the visible Settings UI for manual Gmail bank/account mapping.
+- Gmail job creation now creates a missing bank-labeled account on demand, using `cash_credit` for credit-card bills and `cash_bank` for bank statements, with names such as `玉山 信用卡` and `台新 銀行帳戶`.
+- Existing explicit `bank_account_mapping` records remain supported as a backend compatibility override, but the user no longer needs to configure them.
+- Existing `needs_review` Gmail jobs can be promoted by re-running Gmail scan/search; duplicate job handling updates `missing_mapping` rows to `pending_parse` once an account is available.
+- Added API coverage for automatic account creation when no matching account exists.
+- Bumped root/api/web/shared package versions and internal `@hearth/shared` pins to `0.3.9`.
+- Claim boundary: local API/UI behavior verified by tests/checks; production deploy and live Gmail evidence still need to be run.
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.
