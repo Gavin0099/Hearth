@@ -9,7 +9,7 @@ The deployment architecture is:
 - Cloudflare Workers for the Hono API and scheduled jobs
 
 Scheduled job execution history is stored in `job_runs`, including structured per-run summary payloads for the `daily-update` cron.
-Authenticated ops routes now expose both `GET /api/ops/job-runs/latest` and `GET /api/ops/job-runs/summary` so deployment/runbook checks can inspect latest-run verdicts and recent-window failure density.
+Admin-gated ops routes expose both `GET /api/ops/job-runs/latest` and `GET /api/ops/job-runs/summary` so deployment/runbook checks can inspect latest-run verdicts and recent-window failure density.
 
 ## Workspace layout
 
@@ -43,6 +43,7 @@ This repo currently contains the initial implementation foundation:
 3. Copy `apps/api/.dev.vars.example` to `apps/api/.dev.vars` for Worker secrets
 4. Create the Supabase project and apply `supabase/schema.sql` for a fresh bootstrap
 5. For later DB changes, apply SQL from `supabase/migrations/` in order and keep `supabase/schema.sql` as the latest snapshot
+   - Run `npm run db:schema:check` before committing schema changes.
 6. Run `npm run dev:web` and `npm run dev:api`
 7. Run `npm --workspace @hearth/api run test` for the current auth/accounts verification slice
 
@@ -71,10 +72,10 @@ Governance gate checklist: `npm run governance:gate` (docs: `docs/governance-pha
   - with auth + transaction CRUD probe: `powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -AccountId "<owned-account-id>" -ExerciseTransactions`
   - with auth + transaction probe + monthly report check: `powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseTransactions -ExerciseReport`
   - with auth + import/recurring route validation checks: `powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseImports -ExerciseRecurring`
-  - with auth + ops/cron-history check: `powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseOps`
-  - with auth + required healthy cron-history check: `powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseOps -RequireOpsHealthy -OpsMaxAgeMinutes 1440`
-  - with auth + strict cron-history check: `powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseOps -RequireOpsHealthy -RequireOpsZeroReportErrors -OpsMaxAgeMinutes 1440`
-  - with auth + recent-window ops summary verdict check: `powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseOps -RequireOpsSummaryHealthy -OpsMaxAgeMinutes 1440 -OpsConsecutiveFailureThreshold 2 -OpsConsecutiveReportErrorThreshold 2`
+  - with auth + ops/cron-history check: `powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<ops-admin-supabase-access-token>" -ExerciseOps`
+  - with auth + required healthy cron-history check: `powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<ops-admin-supabase-access-token>" -ExerciseOps -RequireOpsHealthy -OpsMaxAgeMinutes 1440`
+  - with auth + strict cron-history check: `powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<ops-admin-supabase-access-token>" -ExerciseOps -RequireOpsHealthy -RequireOpsZeroReportErrors -OpsMaxAgeMinutes 1440`
+  - with auth + recent-window ops summary verdict check: `powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<ops-admin-supabase-access-token>" -ExerciseOps -RequireOpsSummaryHealthy -OpsMaxAgeMinutes 1440 -OpsConsecutiveFailureThreshold 2 -OpsConsecutiveReportErrorThreshold 2`
 
 Deployment runbook: `docs/cloudflare-first-deploy.md`.
 Smoke runbook: `docs/post-deploy-smoke.md`.

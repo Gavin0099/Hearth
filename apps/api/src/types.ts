@@ -6,6 +6,8 @@ export type WorkerBindings = {
   USER_SETTINGS_SECRET_KEY?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  OPS_ADMIN_EMAILS?: string;
+  OPS_ADMIN_USER_IDS?: string;
 };
 
 export type ApiEnv = {

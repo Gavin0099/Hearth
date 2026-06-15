@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createApp } from "../src/app";
 
+const opsAdminEnv = {
+  OPS_ADMIN_EMAILS: "ops@example.com",
+} as any;
+
 test("GET /api/ops/job-runs/latest returns latest run for authenticated user", async () => {
   const app = createApp({
     resolveAuthenticatedUser: async () => ({ id: "user-1", email: "ops@example.com" }),
@@ -50,7 +54,7 @@ test("GET /api/ops/job-runs/latest returns latest run for authenticated user", a
 
   const response = await app.request("/api/ops/job-runs/latest?job_name=daily-update", {
     headers: { Authorization: "Bearer valid-token" },
-  });
+  }, opsAdminEnv);
 
   assert.equal(response.status, 200);
   const payload = await response.json();
@@ -72,6 +76,23 @@ test("GET /api/ops/job-runs/latest returns 401 when auth is missing", async () =
   const payload = await response.json();
   assert.equal(payload.status, "error");
   assert.equal(payload.code, "unauthorized");
+});
+
+test("GET /api/ops/job-runs/latest returns 403 for non-admin authenticated user", async () => {
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "user@example.com" }),
+  });
+
+  const response = await app.request(
+    "/api/ops/job-runs/latest",
+    { headers: { Authorization: "Bearer valid-token" } },
+    opsAdminEnv,
+  );
+  assert.equal(response.status, 403);
+
+  const payload = await response.json();
+  assert.equal(payload.status, "error");
+  assert.equal(payload.code, "forbidden");
 });
 
 test("GET /api/ops/job-runs/latest reports unhealthy when latest status mismatches requirement", async () => {
@@ -116,7 +137,7 @@ test("GET /api/ops/job-runs/latest reports unhealthy when latest status mismatch
 
   const response = await app.request("/api/ops/job-runs/latest?job_name=daily-update&require_status=ok", {
     headers: { Authorization: "Bearer valid-token" },
-  });
+  }, opsAdminEnv);
 
   assert.equal(response.status, 200);
   const payload = await response.json();
@@ -176,6 +197,7 @@ test("GET /api/ops/job-runs/latest reports unhealthy when report sections contai
     {
       headers: { Authorization: "Bearer valid-token" },
     },
+    opsAdminEnv,
   );
 
   assert.equal(response.status, 200);
@@ -263,7 +285,7 @@ test("GET /api/ops/job-runs/summary returns recent status and report-error total
 
   const response = await app.request("/api/ops/job-runs/summary?job_name=daily-update&limit=3&max_age_minutes=999999", {
     headers: { Authorization: "Bearer valid-token" },
-  });
+  }, opsAdminEnv);
 
   assert.equal(response.status, 200);
   const payload = await response.json();
@@ -344,6 +366,7 @@ test("GET /api/ops/job-runs/summary reports critical when latest runs are stale 
     {
       headers: { Authorization: "Bearer valid-token" },
     },
+    opsAdminEnv,
   );
 
   assert.equal(response.status, 200);
@@ -411,7 +434,7 @@ test("GET /api/ops/job-runs/summary applies default freshness policy for daily-u
 
   const response = await app.request("/api/ops/job-runs/summary?job_name=daily-update&limit=1", {
     headers: { Authorization: "Bearer valid-token" },
-  });
+  }, opsAdminEnv);
 
   assert.equal(response.status, 200);
   const payload = await response.json();
@@ -423,4 +446,47 @@ test("GET /api/ops/job-runs/summary applies default freshness policy for daily-u
     consecutive_report_error_threshold: 2,
   });
   assert.match(payload.reasons.join(" | "), /older than 4320 minute/);
+});
+
+test("GET /api/ops/job-runs/latest returns sanitized database errors", async () => {
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "ops@example.com" }),
+    createSupabaseAdminClient: () =>
+      ({
+        from() {
+          return {
+            select() {
+              return {
+                eq() {
+                  return {
+                    order() {
+                      return {
+                        limit() {
+                          return Promise.resolve({
+                            data: null,
+                            error: { message: "relation public.job_runs does not exist" },
+                          });
+                        },
+                      };
+                    },
+                  };
+                },
+              };
+            },
+          };
+        },
+      }) as any,
+  });
+
+  const response = await app.request(
+    "/api/ops/job-runs/latest?job_name=daily-update",
+    { headers: { Authorization: "Bearer valid-token" } },
+    opsAdminEnv,
+  );
+
+  assert.equal(response.status, 500);
+  const payload = await response.json();
+  assert.equal(payload.status, "error");
+  assert.equal(payload.code, "database_error");
+  assert.equal(payload.error, "Database request failed.");
 });

@@ -308,6 +308,17 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - Secret-pattern diff scan -> no matches.
 - Claim boundary: local UI/type safety verified; production deploy and live visual confirmation still need to be run.
 
+## 2026-06-15 Security Schema/Ops Hardening
+
+- `supabase/schema.sql` rebuilt as an ordered snapshot of all files under `supabase/migrations/`, including RLS policies, Gmail sync columns/tables, auto-import tables, review reasons, and Gmail scan timestamp.
+- Added `scripts/check-supabase-schema-snapshot.ps1`, root `npm run db:schema:check`, first-release readiness wiring, and deploy workflow steps so schema snapshot drift can fail locally/CI.
+- `/api/ops/*` now requires `OPS_ADMIN_EMAILS` or `OPS_ADMIN_USER_IDS`; authenticated non-admin users receive `403`.
+- Ops database/internal errors now return generic client messages while logging details server-side.
+- `npm.cmd --workspace @hearth/api run test -- tests/ops.test.ts` -> pass (`175/175`).
+- `npm.cmd --workspace @hearth/api run check` -> pass.
+- `powershell -ExecutionPolicy Bypass -File scripts/check-supabase-schema-snapshot.ps1` -> pass.
+- Claim boundary: this closes the reviewed schema bootstrap drift and ops authz exposure locally; production deploy still requires setting the ops allowlist before relying on `/api/ops/*` smoke checks.
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.

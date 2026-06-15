@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { ApiEnv } from "../types";
 import { runDailyUpdate } from "../cron/daily-update";
+import { databaseErrorResponse, internalErrorResponse } from "../lib/errors";
 
 type JobRunRecord = {
   id: string;
@@ -35,7 +36,7 @@ type JobRunLatestResponse =
       status: "ok";
     }
   | {
-      code: "unauthorized" | "database_error";
+      code: "unauthorized" | "forbidden" | "database_error";
       error: string;
       status: "error";
     };
@@ -69,7 +70,7 @@ type JobRunSummaryResponse =
       status: "ok";
     }
   | {
-      code: "unauthorized" | "database_error";
+      code: "unauthorized" | "forbidden" | "database_error";
       error: string;
       status: "error";
     };
@@ -134,6 +135,30 @@ function countLeadingMatches<T>(items: T[], predicate: (item: T) => boolean) {
   return count;
 }
 
+function splitAllowlist(value: string | undefined) {
+  return new Set(
+    (value ?? "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
+  );
+}
+
+function isOpsAdmin(
+  user: { id: string; email: string | null },
+  env: ApiEnv["Bindings"],
+) {
+  const allowedUserIds = splitAllowlist(env.OPS_ADMIN_USER_IDS);
+  const allowedEmails = new Set(
+    [...splitAllowlist(env.OPS_ADMIN_EMAILS)].map((email) => email.toLowerCase()),
+  );
+
+  return (
+    allowedUserIds.has(user.id) ||
+    (user.email ? allowedEmails.has(user.email.toLowerCase()) : false)
+  );
+}
+
 async function resolveOpsContext(c: any) {
   const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
   const user = await resolveAuthenticatedUser(c.req.raw, c.env);
@@ -142,6 +167,16 @@ async function resolveOpsContext(c: any) {
       errorResponse: c.json(
         { code: "unauthorized", error: "Missing or invalid Supabase bearer token.", status: "error" },
         401,
+      ),
+      supabase: null,
+    };
+  }
+
+  if (!isOpsAdmin(user, c.env)) {
+    return {
+      errorResponse: c.json(
+        { code: "forbidden", error: "Ops access is restricted.", status: "error" },
+        403,
       ),
       supabase: null,
     };
@@ -178,10 +213,8 @@ opsRoutes.get("/job-runs/latest", async (c) => {
     .limit(1);
 
   if (error) {
-    return c.json<JobRunLatestResponse>(
-      { code: "database_error", error: error.message, status: "error" },
-      500,
-    );
+    console.error("[ops] job-runs/latest database error", error);
+    return c.json<JobRunLatestResponse>(databaseErrorResponse(), 500);
   }
 
   const item = ((data ?? [])[0] ?? null) as JobRunRecord | null;
@@ -257,10 +290,8 @@ opsRoutes.get("/job-runs/summary", async (c) => {
     .limit(limit);
 
   if (error) {
-    return c.json<JobRunSummaryResponse>(
-      { code: "database_error", error: error.message, status: "error" },
-      500,
-    );
+    console.error("[ops] job-runs/summary database error", error);
+    return c.json<JobRunSummaryResponse>(databaseErrorResponse(), 500);
   }
 
   const items = (data ?? []) as JobRunRecord[];
@@ -366,9 +397,7 @@ opsRoutes.post("/trigger-daily-update", async (c) => {
     const report = await runDailyUpdate(c.env);
     return c.json({ report, status: "ok" });
   } catch (error) {
-    return c.json(
-      { code: "internal_error", error: error instanceof Error ? error.message : String(error), status: "error" },
-      500,
-    );
+    console.error("[ops] trigger-daily-update error", error);
+    return c.json(internalErrorResponse(), 500);
   }
 });

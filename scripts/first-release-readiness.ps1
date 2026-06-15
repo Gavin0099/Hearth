@@ -84,6 +84,8 @@ if (-not $SkipEnv) {
 
 Invoke-Step -Name "api tests" -Action { npm --workspace @hearth/api run test }
 
+Invoke-Step -Name "supabase schema snapshot" -Action { npm run db:schema:check }
+
 Invoke-Step -Name "api build" -Action { npm --workspace @hearth/api run build }
 
 Invoke-Step -Name "web check" -Action { npm --workspace @hearth/web run check }

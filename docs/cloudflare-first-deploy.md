@@ -27,6 +27,8 @@ This runbook is for the first real deploy of Hearth API + web.
 - Cloudflare Pages project already exists (default name: `hearth-web`)
 - `apps/api/.dev.vars` configured for local dev
 - production Worker secrets configured in Cloudflare Dashboard or via `wrangler secret put`
+- production Worker ops allowlist configured with `OPS_ADMIN_EMAILS` or `OPS_ADMIN_USER_IDS`;
+  `/api/ops/*` is fail-closed and returns `403` for authenticated users outside this allowlist
 
 ## Notes from first real deploy
 

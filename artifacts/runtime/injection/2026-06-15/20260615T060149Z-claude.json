@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-15T06:01:49.674706+00:00",
+  "contract_injected": true,
+  "contract_hash": "f0ee21f8bb41cda5f688081a047b6d707f6adefb126c1a2f7372296aad289b56",
+  "scope": "fix",
+  "level": "L2",
+  "lang": "TypeScript",
+  "contract_fields": {
+    "LANG": "TypeScript",
+    "LEVEL": "L2",
+    "SCOPE": "fix",
+    "PLAN": "Address security review findings: schema.sql bootstrap drift, ops admin authorization, and database error sanitization",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/02_tech_stack.md, memory/03_knowledge_base.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-15.md",
+    "CONTEXT": "Implement bounded security fixes for schema bootstrap consistency and API authorization/error handling in Hearth",
+    "PRESSURE": "ELEVATED (authz and schema/RLS surfaces)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L2\nSCOPE = fix\nPLAN = Address security review findings: schema.sql bootstrap drift, ops admin authorization, and database error sanitization\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/02_tech_stack.md, memory/03_knowledge_base.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-15.md\nCONTEXT = Implement bounded security fixes for schema bootstrap consistency and API authorization/error handling in Hear"
+}

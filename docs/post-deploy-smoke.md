@@ -44,25 +44,29 @@ powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerTo
 Verify the persisted cron run history surface:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseOps
+powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<ops-admin-supabase-access-token>" -ExerciseOps
 ```
+
+`-ExerciseOps` requires the bearer-token user to be listed in the Worker
+`OPS_ADMIN_EMAILS` or `OPS_ADMIN_USER_IDS` allowlist. A normal authenticated user
+should receive `403`.
 
 Require the latest `daily-update` run to be healthy, and optionally fresh:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseOps -RequireOpsHealthy -OpsMaxAgeMinutes 1440
+powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<ops-admin-supabase-access-token>" -ExerciseOps -RequireOpsHealthy -OpsMaxAgeMinutes 1440
 ```
 
 Require the latest `daily-update` run to be healthy, fresh, and free of section-level report errors:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseOps -RequireOpsHealthy -RequireOpsZeroReportErrors -OpsMaxAgeMinutes 1440
+powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<ops-admin-supabase-access-token>" -ExerciseOps -RequireOpsHealthy -RequireOpsZeroReportErrors -OpsMaxAgeMinutes 1440
 ```
 
 Require the recent-window summary verdict to stay healthy, not just the single latest row:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<supabase-access-token>" -ExerciseOps -RequireOpsSummaryHealthy -OpsMaxAgeMinutes 1440 -OpsConsecutiveFailureThreshold 2 -OpsConsecutiveReportErrorThreshold 2
+powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerToken "<ops-admin-supabase-access-token>" -ExerciseOps -RequireOpsSummaryHealthy -OpsMaxAgeMinutes 1440 -OpsConsecutiveFailureThreshold 2 -OpsConsecutiveReportErrorThreshold 2
 ```
 
 ## What it verifies
@@ -87,6 +91,7 @@ powershell -ExecutionPolicy Bypass -File scripts/post-deploy-smoke.ps1 -BearerTo
    - `GET /api/recurring-templates` returns `status: "ok"`
    - `POST /api/recurring-templates/apply` invalid payload returns expected validation error
 8. When `-ExerciseOps` is provided:
+   - the bearer-token user is authorized by `OPS_ADMIN_EMAILS` or `OPS_ADMIN_USER_IDS`
    - `GET /api/ops/job-runs/latest?job_name=daily-update` returns `status: "ok"`
    - the response includes an `item` field, which may be `null` if no cron run has been persisted yet
 9. When `-RequireOpsHealthy` is also provided:
