@@ -319,6 +319,13 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - `powershell -ExecutionPolicy Bypass -File scripts/check-supabase-schema-snapshot.ps1` -> pass.
 - Claim boundary: this closes the reviewed schema bootstrap drift and ops authz exposure locally; production deploy still requires setting the ops allowlist before relying on `/api/ops/*` smoke checks.
 
+## 2026-06-15 Gmail Search Result Flags
+
+- `GmailSyncPanel` now renders a status badge for every Gmail search result row.
+- Existing `import_jobs` still take precedence for `已匯入` / `待解析` / `需設定帳戶` / `解析失敗` flags.
+- Search results with no matching `import_jobs` record now show `本次找到`, so the current Gmail scan is visibly flagged even before persistence/parse.
+- Bumped root/api/web/shared package versions and internal `@hearth/shared` pins to `0.3.6`.
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.

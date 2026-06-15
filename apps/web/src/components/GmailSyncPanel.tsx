@@ -83,6 +83,15 @@ function getJobStatusView(status?: ImportJobRecord["status"]): {
   }
 }
 
+function getSearchResultStatusView(status?: ImportJobRecord["status"]): {
+  label: string;
+  variant: "default" | "success" | "warning" | "error" | "info";
+  buttonLabel: string;
+} {
+  if (status) return getJobStatusView(status);
+  return { label: "本次找到", variant: "info", buttonLabel: "匯入" };
+}
+
 const BANK_DISPLAY_NAMES: Record<BankKey, string> = {
   sinopac: "永豐",
   esun: "玉山",
@@ -1093,13 +1102,13 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
               );
               const job = jobsByMsgId.get(email.id);
               const jobStatus = job?.status;
-              const jobView = getJobStatusView(jobStatus);
+              const jobView = getSearchResultStatusView(jobStatus);
               return (
                 <li key={email.id} className="gmail-email-item panel-row-item">
                   <div className="gmail-email-meta">
                     <span className="gmail-email-bank">{BANK_DISPLAY_NAMES[email.bank]}</span>
                     <span className="gmail-email-subject">{email.subject}</span>
-                    {jobStatus && <Badge variant={jobView.variant}>{jobView.label}</Badge>}
+                    <Badge variant={jobView.variant}>{jobView.label}</Badge>
                     {!hasPdf && (
                       <Badge variant="warning">通知信，無 PDF 附件</Badge>
                     )}

@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-15T06:24:55.082292+00:00",
+  "contract_injected": true,
+  "contract_hash": "3821476d4c7e5a469a3b0ccea7eb1e180dfe6b0449617a6a0046d3bd8099857c",
+  "scope": "fix",
+  "level": "L1",
+  "lang": "TypeScript",
+  "contract_fields": {
+    "LANG": "TypeScript",
+    "LEVEL": "L1",
+    "SCOPE": "fix",
+    "PLAN": "Make Gmail search results always show a visible status flag even when no import_jobs record exists yet",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/02_tech_stack.md, memory/03_knowledge_base.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-15.md",
+    "CONTEXT": "Fix GmailSyncPanel search result status visibility so users can see detected flags immediately",
+    "PRESSURE": "SAFE (UI status display only, no parser or persistence semantics)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L1\nSCOPE = fix\nPLAN = Make Gmail search results always show a visible status flag even when no import_jobs record exists yet\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/02_tech_stack.md, memory/03_knowledge_base.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-15.md\nCONTEXT = Fix GmailSyncPanel search result status visibility so users can see detected flags immediately\nPRESSURE = SAFE (UI status disp"
+}
