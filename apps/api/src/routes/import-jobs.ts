@@ -128,10 +128,19 @@ importJobsRoutes.post("/from-gmail-search", async (c) => {
 
   const accountList = [...(accounts ?? [])];
   const mappingIndex = buildGmailAccountMappingIndex(mappings, accountList);
-
   let created = 0;
   let updated = 0;
   let skipped = 0;
+
+  const candidates: Array<{
+    gmailMessageId: string;
+    attachmentId: string;
+    emailSubject: string;
+    emailDate: string;
+    filename: string;
+    bankKey: string;
+    sourceType: "credit_card" | "bank_account";
+  }> = [];
 
   for (const email of emails) {
     if (!email.id || !email.subject || !isSupportedBank(email.bank)) {
@@ -139,72 +148,111 @@ importJobsRoutes.post("/from-gmail-search", async (c) => {
       continue;
     }
 
-    const sourceType = detectSourceType(email.subject);
-    const mappedAccountId = await resolveOrCreateGmailImportAccountId(
-      supabase,
-      user.id,
-      mappingIndex,
-      accountList,
-      email.bank,
-      sourceType,
-    );
-    const status = mappedAccountId ? "pending_parse" : "needs_review";
     const pdfAttachments = (email.attachments ?? []).filter((attachment) =>
       attachment.id &&
       attachment.filename &&
       (attachment.mimeType === "application/pdf" || attachment.filename.toLowerCase().endsWith(".pdf"))
     );
 
+    if (pdfAttachments.length === 0) {
+      skipped += 1;
+      continue;
+    }
+
+    const sourceType = detectSourceType(email.subject);
     for (const attachment of pdfAttachments) {
-      const { error: insertError } = await supabase.from("import_jobs").insert({
-        user_id: user.id,
-        gmail_message_id: email.id,
-        attachment_id: attachment.id,
-        email_subject: email.subject,
-        email_date: email.date ?? "",
-        filename: attachment.filename,
-        bank_key: email.bank,
-        source_type: sourceType,
-        mapped_account_id: mappedAccountId,
-        status,
-        review_reason: mappedAccountId ? null : "missing_mapping",
-        updated_at: new Date().toISOString(),
+      candidates.push({
+        gmailMessageId: email.id,
+        attachmentId: attachment.id!,
+        emailSubject: email.subject,
+        emailDate: email.date ?? "",
+        filename: attachment.filename!,
+        bankKey: email.bank,
+        sourceType,
       });
+    }
+  }
 
-      if (!insertError) {
-        created += 1;
-        continue;
-      }
+  const existingJobIndex = new Map<string, ImportJobRecord>();
+  const messageIds = [...new Set(candidates.map((candidate) => candidate.gmailMessageId))];
+  if (messageIds.length > 0) {
+    const { data: existingJobs, error: existingJobsError } = await supabase
+      .from("import_jobs")
+      .select("*")
+      .eq("user_id", user.id)
+      .in("gmail_message_id", messageIds);
 
-      if (insertError.code !== "23505") {
-        return c.json({ error: insertError.message, status: "error" }, 500);
-      }
+    if (existingJobsError) return c.json({ error: existingJobsError.message, status: "error" }, 500);
+    for (const job of existingJobs ?? []) {
+      existingJobIndex.set(`${job.gmail_message_id}:${job.attachment_id}`, job as ImportJobRecord);
+    }
+  }
 
+  const rowsToInsert: Array<Record<string, unknown>> = [];
+  const now = new Date().toISOString();
+
+  for (const candidate of candidates) {
+    const mappedAccountId = await resolveOrCreateGmailImportAccountId(
+      supabase,
+      user.id,
+      mappingIndex,
+      accountList,
+      candidate.bankKey,
+      candidate.sourceType,
+    );
+
+    const existingJob = existingJobIndex.get(`${candidate.gmailMessageId}:${candidate.attachmentId}`);
+    if (existingJob) {
       if (!mappedAccountId) {
         skipped += 1;
         continue;
       }
 
-      const { data: updateData, error: updateError } = await supabase
-        .from("import_jobs")
-        .update({
-          status: "pending_parse",
-          mapped_account_id: mappedAccountId,
-          review_reason: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("user_id", user.id)
-        .eq("gmail_message_id", email.id)
-        .eq("attachment_id", attachment.id)
-        .eq("status", "needs_review")
-        .eq("review_reason", "missing_mapping")
-        .select("id");
+      if (existingJob.status === "needs_review" && existingJob.review_reason === "missing_mapping") {
+        const { data: updateData, error: updateError } = await supabase
+          .from("import_jobs")
+          .update({
+            status: "pending_parse",
+            mapped_account_id: mappedAccountId,
+            review_reason: null,
+            updated_at: now,
+          })
+          .eq("id", existingJob.id)
+          .eq("user_id", user.id)
+          .eq("status", "needs_review")
+          .eq("review_reason", "missing_mapping")
+          .select("id");
 
-      if (updateError) return c.json({ error: updateError.message, status: "error" }, 500);
-      const updatedCount = Array.isArray(updateData) ? updateData.length : 0;
-      updated += updatedCount;
-      if (updatedCount === 0) skipped += 1;
+        if (updateError) return c.json({ error: updateError.message, status: "error" }, 500);
+        const updatedCount = Array.isArray(updateData) ? updateData.length : 0;
+        updated += updatedCount;
+        if (updatedCount === 0) skipped += 1;
+      } else {
+        skipped += 1;
+      }
+      continue;
     }
+
+    rowsToInsert.push({
+      user_id: user.id,
+      gmail_message_id: candidate.gmailMessageId,
+      attachment_id: candidate.attachmentId,
+      email_subject: candidate.emailSubject,
+      email_date: candidate.emailDate,
+      filename: candidate.filename,
+      bank_key: candidate.bankKey,
+      source_type: candidate.sourceType,
+      mapped_account_id: mappedAccountId,
+      status: mappedAccountId ? "pending_parse" : "needs_review",
+      review_reason: mappedAccountId ? null : "missing_mapping",
+      updated_at: now,
+    });
+  }
+
+  if (rowsToInsert.length > 0) {
+    const { error: insertError } = await supabase.from("import_jobs").insert(rowsToInsert);
+    if (insertError) return c.json({ error: insertError.message, status: "error" }, 500);
+    created += rowsToInsert.length;
   }
 
   return c.json({ created, updated, skipped, status: "ok" });

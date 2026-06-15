@@ -54,7 +54,16 @@ export async function enqueueGmailSearchResults(emails: Array<{
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ emails }),
   });
-  if (!res.ok) return { status: "error", error: `HTTP ${res.status}` };
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const payload = await res.json() as { error?: string };
+      detail = payload.error ? `: ${payload.error}` : "";
+    } catch {
+      detail = "";
+    }
+    return { status: "error", error: `HTTP ${res.status}${detail}` };
+  }
   return res.json();
 }
 

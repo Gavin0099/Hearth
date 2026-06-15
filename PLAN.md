@@ -189,3 +189,4 @@
 | 2026-06-15 | Gmail search auto-import jobs | 手動 Gmail 搜尋結果會寫入 current-user `import_jobs`，既有 `已匯入` job 不降級，新增/補 mapping job 進 `待匯入` queue 並觸發既有自動 parse/import；版本 bump 至 `0.3.7`。 |
 | 2026-06-15 | Gmail auto account resolution | Gmail 自動匯入會先使用既有帳戶自動判斷銀行/類型對應；只有找不到唯一符合的帳戶時才需要手動設定 mapping；版本 bump 至 `0.3.8`。 |
 | 2026-06-15 | Gmail auto account provisioning | Gmail 自動匯入不再顯示手動帳戶 mapping 設定；若沒有既有帳戶，server 會自動建立銀行標籤帳戶（例如 `中信 信用卡` / `台新 銀行帳戶`）並繼續匯入；版本 bump 至 `0.3.9`。 |
+| 2026-06-15 | Gmail search enqueue budget | 手動 Gmail 搜尋匯入改為先批次查 existing `import_jobs`、批次 insert 新 jobs、只升級 `needs_review/missing_mapping` 舊 jobs，避免 43 封帳單時 Worker subrequest 造成 HTTP 500；版本 bump 至 `0.3.10`。 |

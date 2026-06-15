@@ -14,6 +14,7 @@ const sampleEmail = {
 
 test("POST /api/import-jobs/from-gmail-search creates pending jobs for mapped Gmail PDFs", async () => {
   const inserts: Array<Record<string, unknown>> = [];
+  const existingJobLookups: string[][] = [];
   const app = createApp({
     resolveAuthenticatedUser: async () => ({ id: "user-1", email: "user@example.com" }),
     createSupabaseAdminClient: () =>
@@ -61,8 +62,23 @@ test("POST /api/import-jobs/from-gmail-search creates pending jobs for mapped Gm
 
           assert.equal(table, "import_jobs");
           return {
-            insert(payload: Record<string, unknown>) {
-              inserts.push(payload);
+            select() {
+              return {
+                eq(column: string, value: string) {
+                  assert.equal(column, "user_id");
+                  assert.equal(value, "user-1");
+                  return {
+                    in(columnName: string, values: string[]) {
+                      assert.equal(columnName, "gmail_message_id");
+                      existingJobLookups.push(values);
+                      return Promise.resolve({ data: [], error: null });
+                    },
+                  };
+                },
+              };
+            },
+            insert(payload: Record<string, unknown> | Array<Record<string, unknown>>) {
+              inserts.push(...(Array.isArray(payload) ? payload : [payload]));
               return Promise.resolve({ error: null });
             },
           };
@@ -82,6 +98,7 @@ test("POST /api/import-jobs/from-gmail-search creates pending jobs for mapped Gm
   assert.equal(response.status, 200);
   const payload = await response.json();
   assert.deepEqual(payload, { created: 1, updated: 0, skipped: 0, status: "ok" });
+  assert.deepEqual(existingJobLookups, [["gmail-msg-1"]]);
   assert.equal(inserts.length, 1);
   assert.equal(inserts[0].user_id, "user-1");
   assert.equal(inserts[0].gmail_message_id, "gmail-msg-1");
@@ -91,6 +108,7 @@ test("POST /api/import-jobs/from-gmail-search creates pending jobs for mapped Gm
 });
 
 test("POST /api/import-jobs/from-gmail-search keeps existing jobs from being downgraded", async () => {
+  let insertAttempted = false;
   let updateAttempted = false;
   const app = createApp({
     resolveAuthenticatedUser: async () => ({ id: "user-1", email: "user@example.com" }),
@@ -133,8 +151,29 @@ test("POST /api/import-jobs/from-gmail-search keeps existing jobs from being dow
 
           assert.equal(table, "import_jobs");
           return {
+            select() {
+              return {
+                eq() {
+                  return {
+                    in() {
+                      return Promise.resolve({
+                        data: [{
+                          id: "job-1",
+                          gmail_message_id: "gmail-msg-1",
+                          attachment_id: "att-1",
+                          status: "imported",
+                          review_reason: null,
+                        }],
+                        error: null,
+                      });
+                    },
+                  };
+                },
+              };
+            },
             insert() {
-              return Promise.resolve({ error: { code: "23505", message: "duplicate key" } });
+              insertAttempted = true;
+              return Promise.resolve({ error: null });
             },
             update(payload: Record<string, unknown>) {
               updateAttempted = true;
@@ -163,7 +202,119 @@ test("POST /api/import-jobs/from-gmail-search keeps existing jobs from being dow
   assert.equal(response.status, 200);
   const payload = await response.json();
   assert.deepEqual(payload, { created: 0, updated: 0, skipped: 1, status: "ok" });
-  assert.equal(updateAttempted, true);
+  assert.equal(insertAttempted, false);
+  assert.equal(updateAttempted, false);
+});
+
+test("POST /api/import-jobs/from-gmail-search promotes existing missing-mapping jobs", async () => {
+  let insertAttempted = false;
+  let updatePayload: Record<string, unknown> | null = null;
+  const updateFilters: Array<[string, string]> = [];
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({ id: "user-1", email: "user@example.com" }),
+    createSupabaseAdminClient: () =>
+      ({
+        from(table: string) {
+          if (table === "bank_account_mapping") {
+            return {
+              select() {
+                return {
+                  eq() {
+                    return {
+                      eq() {
+                        return Promise.resolve({
+                          data: [{ bank_key: "esun", source_type: "credit_card", account_id: "account-1" }],
+                          error: null,
+                        });
+                      },
+                    };
+                  },
+                };
+              },
+            };
+          }
+
+          if (table === "accounts") {
+            return {
+              select() {
+                return {
+                  eq() {
+                    return Promise.resolve({
+                      data: [{ id: "account-1", name: "ESUN card", type: "cash_credit", broker: null }],
+                      error: null,
+                    });
+                  },
+                };
+              },
+            };
+          }
+
+          assert.equal(table, "import_jobs");
+          return {
+            select() {
+              return {
+                eq() {
+                  return {
+                    in() {
+                      return Promise.resolve({
+                        data: [{
+                          id: "job-1",
+                          gmail_message_id: "gmail-msg-1",
+                          attachment_id: "att-1",
+                          status: "needs_review",
+                          review_reason: "missing_mapping",
+                        }],
+                        error: null,
+                      });
+                    },
+                  };
+                },
+              };
+            },
+            insert() {
+              insertAttempted = true;
+              return Promise.resolve({ error: null });
+            },
+            update(payload: Record<string, unknown>) {
+              updatePayload = payload;
+              return {
+                eq(column: string, value: string) {
+                  updateFilters.push([column, value]);
+                  return this;
+                },
+                select(column: string) {
+                  assert.equal(column, "id");
+                  return Promise.resolve({ data: [{ id: "job-1" }], error: null });
+                },
+              };
+            },
+          };
+        },
+      }) as any,
+  });
+
+  const response = await app.request(
+    "/api/import-jobs/from-gmail-search",
+    {
+      method: "POST",
+      headers: { Authorization: "Bearer valid-token", "Content-Type": "application/json" },
+      body: JSON.stringify({ emails: [sampleEmail] }),
+    },
+  );
+
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.deepEqual(payload, { created: 0, updated: 1, skipped: 0, status: "ok" });
+  assert.equal(insertAttempted, false);
+  assert.equal(updatePayload?.status, "pending_parse");
+  assert.equal(updatePayload?.mapped_account_id, "account-1");
+  assert.equal(updatePayload?.review_reason, null);
+  assert.deepEqual(updateFilters, [
+    ["id", "job-1"],
+    ["user_id", "user-1"],
+    ["status", "needs_review"],
+    ["review_reason", "missing_mapping"],
+  ]);
 });
 
 test("POST /api/import-jobs/from-gmail-search auto-resolves a unique existing bank account", async () => {
@@ -212,8 +363,19 @@ test("POST /api/import-jobs/from-gmail-search auto-resolves a unique existing ba
 
           assert.equal(table, "import_jobs");
           return {
-            insert(payload: Record<string, unknown>) {
-              inserts.push(payload);
+            select() {
+              return {
+                eq() {
+                  return {
+                    in() {
+                      return Promise.resolve({ data: [], error: null });
+                    },
+                  };
+                },
+              };
+            },
+            insert(payload: Record<string, unknown> | Array<Record<string, unknown>>) {
+              inserts.push(...(Array.isArray(payload) ? payload : [payload]));
               return Promise.resolve({ error: null });
             },
           };
@@ -296,8 +458,19 @@ test("POST /api/import-jobs/from-gmail-search creates a bank-labeled account whe
 
           assert.equal(table, "import_jobs");
           return {
-            insert(payload: Record<string, unknown>) {
-              jobInserts.push(payload);
+            select() {
+              return {
+                eq() {
+                  return {
+                    in() {
+                      return Promise.resolve({ data: [], error: null });
+                    },
+                  };
+                },
+              };
+            },
+            insert(payload: Record<string, unknown> | Array<Record<string, unknown>>) {
+              jobInserts.push(...(Array.isArray(payload) ? payload : [payload]));
               return Promise.resolve({ error: null });
             },
           };

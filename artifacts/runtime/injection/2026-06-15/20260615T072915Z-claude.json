@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-15T07:29:15.724238+00:00",
+  "contract_injected": true,
+  "contract_hash": "92edb1199867c167e6ec4e5070ee6ece45e63ee3ede951c2e777575324e7d2b9",
+  "scope": "fix",
+  "level": "L1",
+  "lang": "TypeScript",
+  "contract_fields": {
+    "LANG": "TypeScript",
+    "LEVEL": "L1",
+    "SCOPE": "fix",
+    "PLAN": "reduce Gmail search import subrequests and expose API errors",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-15.md",
+    "CONTEXT": "Fix production HTTP 500 when manual Gmail search enqueues many existing bills by avoiding duplicate insert/update per message and skipping no-PDF emails before account provisioning.",
+    "PRESSURE": "ELEVATED (production Gmail import failure)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L1\nSCOPE = fix\nPLAN = reduce Gmail search import subrequests and expose API errors\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-15.md\nCONTEXT = Fix production HTTP 500 when manual Gmail search enqueues many existing bills by avoiding duplicate insert/update per message and skipping no-PDF emails before account provisioning.\nPRESSURE = ELEVATED (production Gmail im"
+}

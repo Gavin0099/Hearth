@@ -24,6 +24,7 @@
 - Gmail search auto-import jobs are implemented locally: manual Gmail search results are persisted as current-user `import_jobs`; existing imported jobs stay `已匯入`, new mapped jobs enter `待匯入`, and the existing queue processor can auto-download/parse/import them.
 - Gmail auto account resolution is implemented locally: explicit `bank_account_mapping` remains supported, but Gmail auto-import now falls back to a unique existing account with matching bank keyword and account type before asking the user to configure mapping.
 - Gmail manual account mapping UI is removed locally: Gmail auto-import now creates missing bank-labeled cash/credit accounts automatically, so users do not need to configure per-bank account mappings in Settings.
+- Gmail search enqueue subrequest fix is implemented locally: manual Gmail search now batches existing-job lookup and insert, and re-running search promotes existing `needs_review` + `missing_mapping` jobs to `pending_parse` after auto account provisioning instead of leaving them in manual-confirmation state.
 - Security review hardening is in progress locally: `supabase/schema.sql` is rebuilt from ordered migrations, schema drift check script is added, `/api/ops/*` requires an admin allowlist, and ops DB/internal errors are sanitized.
 - `stash@{0}` (`codex-pre-pull-tracked-20260611`) remains as a backup of pre-pull tracked dirty changes and can be dropped after explicit review.
 

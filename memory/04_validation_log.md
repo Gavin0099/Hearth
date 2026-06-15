@@ -357,6 +357,16 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - Bumped root/api/web/shared package versions and internal `@hearth/shared` pins to `0.3.9`.
 - Claim boundary: local API/UI behavior verified by tests/checks; production deploy and live Gmail evidence still need to be run.
 
+## 2026-06-15 Gmail Search Enqueue Subrequest Budget
+
+- Manual Gmail search job creation now skips unsupported/no-PDF emails before account provisioning, batches existing `import_jobs` lookup by Gmail message id, batches inserts for new PDF jobs, and only updates existing `needs_review` + `missing_mapping` jobs back to `pending_parse`.
+- The web client now includes backend error details in the visible enqueue error, so future HTTP 500s expose the server-side reason instead of only `HTTP 500`.
+- Added API regression coverage for batch insert, imported-job non-downgrade, missing-mapping promotion, unique-account fallback, and auto-created account enqueue.
+- Bumped root/api/web/shared package versions and internal `@hearth/shared` pins to `0.3.10`.
+- `npm.cmd --workspace @hearth/api run test -- tests/import-jobs.test.ts` -> pass (`180/180`).
+- `npm.cmd run check` -> pass for api/web/shared at `0.3.10`.
+- Claim boundary: local API/UI wiring verified; production deploy and live Gmail re-scan evidence still need to be run.
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.
