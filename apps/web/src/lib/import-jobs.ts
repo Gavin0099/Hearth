@@ -30,6 +30,15 @@ export async function fetchImportJobs(status?: string): Promise<
   return res.json();
 }
 
+export async function triggerGmailSyncNow(): Promise<
+  | { status: "ok"; report: unknown }
+  | { status: "error"; error: string }
+> {
+  const res = await apiFetch("/api/import-jobs/sync-now", { method: "POST" });
+  if (!res.ok) return { status: "error", error: `HTTP ${res.status}` };
+  return res.json();
+}
+
 export async function updateImportJob(
   id: string,
   update: {

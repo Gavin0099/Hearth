@@ -1,9 +1,10 @@
-import { Suspense, lazy, useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { env } from "./env";
 import { AuthPanel } from "./components/AuthPanel";
 import { getCurrentSession, signInWithGoogle, signOut } from "./lib/auth";
 import { apiFetch } from "./lib/api";
+import { triggerGmailSyncNow } from "./lib/import-jobs";
 import { getSupabaseBrowserClient } from "./lib/supabase";
 
 const AccountsPanel = lazy(() =>
@@ -62,8 +63,28 @@ export function App() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [reportRefreshKey, setReportRefreshKey] = useState(0);
   const [gmailRefreshKey, setGmailRefreshKey] = useState(0);
+  const gmailAutoDetectSessionKey = useRef<string | null>(null);
   const [currentView, setCurrentView] = useState<AppView>("home");
   const isSupabaseConfigured = Boolean(env.supabaseUrl && env.supabaseAnonKey);
+
+  async function triggerGmailAutoDetect(sessionToSync: Session) {
+    const sessionKey = `${sessionToSync.user.id}:${sessionToSync.access_token.slice(-12)}`;
+    if (gmailAutoDetectSessionKey.current === sessionKey) return;
+    gmailAutoDetectSessionKey.current = sessionKey;
+
+    try {
+      const result = await triggerGmailSyncNow();
+      if (result.status === "error") {
+        setAuthError(`Gmail 自動偵測失敗：${result.error}`);
+        return;
+      }
+    } catch (error) {
+      setAuthError(`Gmail 自動偵測失敗：${error instanceof Error ? error.message : String(error)}`);
+      return;
+    }
+
+    setGmailRefreshKey((k) => k + 1);
+  }
 
   useEffect(() => {
     const client = getSupabaseBrowserClient();
@@ -79,6 +100,9 @@ export function App() {
         if (!isMounted) return;
         setSession(currentSession);
         setAuthLoading(false);
+        if (currentSession) {
+          void triggerGmailAutoDetect(currentSession);
+        }
       })
       .catch((error: Error) => {
         if (!isMounted) return;
@@ -99,7 +123,13 @@ export function App() {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ gmail_refresh_token: nextSession.provider_refresh_token, gmail_connected: true }),
-        });
+        })
+          .then(() => triggerGmailAutoDetect(nextSession))
+          .catch((error) => {
+            setAuthError(`Gmail 授權儲存失敗：${error instanceof Error ? error.message : String(error)}`);
+          });
+      } else if (event === "SIGNED_IN" && nextSession) {
+        void triggerGmailAutoDetect(nextSession);
       }
     });
 

@@ -270,6 +270,18 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
   - Wrangler CLI is available, but Cloudflare account-scoped secret evidence cannot be queried from this environment yet.
 - Claim boundary: Cloudflare `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `USER_SETTINGS_SECRET_KEY` presence/values, OAuth re-login refresh-token capture, scheduled Gmail queue population, and real Gmail bill ingestion remain unverified.
 
+## 2026-06-15 Gmail Login Auto-Detect
+
+- Added authenticated `POST /api/import-jobs/sync-now` to run Gmail detection for the current user only.
+- `App` now triggers sync-now once per loaded/sign-in session, then bumps the Gmail refresh key; `GmailSyncPanel` reloads `pending_parse` / `needs_review` / `failed` queues and lets the existing provider-token auto-process path parse/import pending jobs.
+- `npm.cmd --workspace @hearth/api run check` -> pass.
+- `npm.cmd --workspace @hearth/web run check` -> pass.
+- `npm.cmd run check` -> pass for api/web/shared.
+- `npm.cmd --workspace @hearth/api run test` -> pass (`173/173` API tests).
+- `python -X utf8 ai-governance-framework\governance_tools\governance_drift_checker.py --repo . --framework-root ai-governance-framework --format human` -> pass (`severity=ok`).
+- `memory_workflow` and `dirty_runtime_ledger_detector.py` were not available in the parent-pinned `ai-governance-framework` checkout (`57db6c1`), so those checks were not run in this pass.
+- Claim boundary: this verifies local type safety and user-scoped wiring only; production deploy, live login, Gmail API scan, import job creation, and browser-side auto-parse still need deployed evidence.
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.

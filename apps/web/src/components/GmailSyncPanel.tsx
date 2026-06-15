@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import type { AccountRecord, ParsedPdfTransaction } from "@hearth/shared";
 import { Button } from "./ui/button";
@@ -339,6 +339,18 @@ export function GmailSyncPanel({ session, onImported, refreshKey }: GmailSyncPan
   const [jobsByMsgId, setJobsByMsgId] = useState<Map<string, ImportJobRecord>>(new Map());
   const autoProcessFired = useRef(false);
 
+  const loadQueues = useCallback(async () => {
+    const [pending, review, failed] = await Promise.all([
+      fetchImportJobs("pending_parse"),
+      fetchImportJobs("needs_review"),
+      fetchImportJobs("failed"),
+    ]);
+
+    if (pending.status === "ok") setPendingQueue(pending.items);
+    if (review.status === "ok") setNeedsReviewQueue(review.items);
+    if (failed.status === "ok") setFailedQueue(failed.items);
+  }, []);
+
   useEffect(() => {
     if (!session) {
       setPendingQueue([]);
@@ -348,16 +360,8 @@ export function GmailSyncPanel({ session, onImported, refreshKey }: GmailSyncPan
       return;
     }
 
-    void fetchImportJobs("pending_parse").then((res) => {
-      if (res.status === "ok") setPendingQueue(res.items);
-    });
-    void fetchImportJobs("needs_review").then((res) => {
-      if (res.status === "ok") setNeedsReviewQueue(res.items);
-    });
-    void fetchImportJobs("failed").then((res) => {
-      if (res.status === "ok") setFailedQueue(res.items);
-    });
-  }, [session, refreshKey]);
+    void loadQueues();
+  }, [session, refreshKey, loadQueues]);
 
   // Reset auto-process guard on re-login so pending jobs are processed again with new token
   useEffect(() => {

@@ -1,0 +1,12 @@
+[
+  {
+    "repo": "Hearth",
+    "timestamp": "20260615T034240Z",
+    "task_type": "feat/gmail-login-auto-detect",
+    "total_tokens": null,
+    "token_source_summary": "claude_code_internal",
+    "token_observability_level": "none",
+    "decision_usage_allowed": false,
+    "artifact_path": "artifacts/runtime/injection/2026-06-15/20260615T034240Z-claude.json"
+  }
+]

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { runGmailSyncForUser } from "../cron/gmail-sync";
 import type { ApiEnv } from "../types";
 
 export type ImportJobRecord = {
@@ -47,6 +48,23 @@ importJobsRoutes.get("/", async (c) => {
   const { data, error } = await query;
   if (error) return c.json({ error: error.message, status: "error" }, 500);
   return c.json({ items: data ?? [], status: "ok" });
+});
+
+// POST /api/import-jobs/sync-now - scan Gmail for the current user before browser-side parsing.
+importJobsRoutes.post("/sync-now", async (c) => {
+  const resolveAuthenticatedUser = c.get("resolveAuthenticatedUser");
+  const user = await resolveAuthenticatedUser(c.req.raw, c.env);
+  if (!user) return c.json({ error: "unauthorized", status: "error" }, 401);
+
+  try {
+    const report = await runGmailSyncForUser(c.env, user.id);
+    return c.json({ report, status: "ok" });
+  } catch (error) {
+    return c.json({
+      error: error instanceof Error ? error.message : String(error),
+      status: "error",
+    }, 500);
+  }
 });
 
 // PATCH /api/import-jobs/:id — update status after browser-side parse/import

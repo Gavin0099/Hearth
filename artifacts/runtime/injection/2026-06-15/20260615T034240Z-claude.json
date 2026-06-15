@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-15T03:42:40.983211+00:00",
+  "contract_injected": true,
+  "contract_hash": "963ce6af666efe66a03feef70c88319a522b3a266d3bf0965a6eb3eb154356db",
+  "scope": "feat",
+  "level": "L2",
+  "lang": "TypeScript",
+  "contract_fields": {
+    "LANG": "TypeScript",
+    "LEVEL": "L2",
+    "SCOPE": "feat",
+    "PLAN": "Trigger Gmail server sync on user login and process pending import jobs",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, governance/TESTING.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-15.md",
+    "CONTEXT": "Add authenticated current-user Gmail sync trigger so login/settings load detects Gmail bills before existing browser-side parse/import queue runs",
+    "PRESSURE": "ELEVATED (auth-scoped Gmail scan and import job creation path)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L2\nSCOPE = feat\nPLAN = Trigger Gmail server sync on user login and process pending import jobs\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, governance/TESTING.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-15.md\nCONTEXT = Add authenticated current-user Gmail sync trigger so login/settings load detects Gmail bills before existing browser-side parse/import queue runs\nPRESSURE = ELEVATED (auth-scoped Gmail sc"
+}

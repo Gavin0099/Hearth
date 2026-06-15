@@ -59,6 +59,22 @@ type MsgPart = {
   parts?: MsgPart[];
 };
 
+export type GmailSyncRunReport = {
+  users_processed: number;
+  jobs_created: number;
+  requested_max_results: number;
+  effective_max_results: number;
+  scan_windows: Array<{
+    user_id: string;
+    after_date: string;
+    messages_fetched: number;
+    queued: number;
+    scan_succeeded: boolean;
+  }>;
+  errors: string[];
+  skipped_reason?: "missing_google_oauth_config" | "missing_refresh_token";
+};
+
 function extractPdfAttachments(part: MsgPart): { attachmentId: string; filename: string }[] {
   const results: { attachmentId: string; filename: string }[] = [];
   if (part.mimeType === "application/pdf" && part.filename && part.body.attachmentId) {
@@ -249,6 +265,101 @@ async function syncUserGmail(
 }
 
 // ── Entry point ───────────────────────────────────────────────────────────────
+
+export async function runGmailSyncForUser(
+  env: WorkerBindings,
+  userId: string,
+): Promise<GmailSyncRunReport> {
+  const requestedMaxResults = 50;
+  const effectiveMaxResults = computeSafeMaxResults(1);
+
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+    return {
+      users_processed: 0,
+      jobs_created: 0,
+      requested_max_results: requestedMaxResults,
+      effective_max_results: effectiveMaxResults,
+      scan_windows: [],
+      errors: ["GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET not configured"],
+      skipped_reason: "missing_google_oauth_config",
+    };
+  }
+
+  const supabase = createSupabaseAdminClient(env);
+  const startedAt = new Date().toISOString();
+
+  const { data: settings, error: settingsError } = await supabase
+    .from("user_settings")
+    .select("user_id, gmail_refresh_token, gmail_last_successful_scan_at")
+    .eq("user_id", userId)
+    .limit(1);
+
+  if (settingsError) {
+    throw new Error(settingsError.message);
+  }
+
+  const row = settings?.[0] as
+    | { user_id: string; gmail_refresh_token: string | null; gmail_last_successful_scan_at?: string | null }
+    | undefined;
+
+  if (!row?.gmail_refresh_token) {
+    return {
+      users_processed: 0,
+      jobs_created: 0,
+      requested_max_results: requestedMaxResults,
+      effective_max_results: effectiveMaxResults,
+      scan_windows: [],
+      errors: [],
+      skipped_reason: "missing_refresh_token",
+    };
+  }
+
+  const afterDate = computeAfterDate(row.gmail_last_successful_scan_at ?? null);
+  const { queued, messagesFetched, errors, scanSucceeded } = await syncUserGmail(
+    row.user_id,
+    row.gmail_refresh_token,
+    env,
+    supabase,
+    afterDate,
+    effectiveMaxResults,
+  );
+
+  const now = new Date().toISOString();
+  await supabase.from("user_settings").upsert(
+    {
+      user_id: row.user_id,
+      gmail_last_sync_at: now,
+      ...(scanSucceeded ? { gmail_last_successful_scan_at: now } : {}),
+      updated_at: now,
+    },
+    { onConflict: "user_id" },
+  );
+
+  const report: GmailSyncRunReport = {
+    users_processed: 1,
+    jobs_created: queued,
+    requested_max_results: requestedMaxResults,
+    effective_max_results: effectiveMaxResults,
+    scan_windows: [{
+      user_id: row.user_id,
+      after_date: afterDate,
+      messages_fetched: messagesFetched,
+      queued,
+      scan_succeeded: scanSucceeded,
+    }],
+    errors,
+  };
+
+  await supabase.from("job_runs").insert({
+    job_name: "gmail-sync-login",
+    run_started_at: startedAt,
+    run_finished_at: new Date().toISOString(),
+    status: errors.length > 0 ? "error" : "ok",
+    report,
+  });
+
+  return report;
+}
 
 export async function runGmailSync(env: WorkerBindings): Promise<void> {
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
