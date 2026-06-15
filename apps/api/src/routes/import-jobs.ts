@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { runGmailSyncForUser } from "../cron/gmail-sync";
+import { buildGmailAccountMappingIndex } from "../lib/gmail-account-resolver";
 import type { ApiEnv } from "../types";
 
 const BANK_ACCOUNT_KEYWORDS = [
@@ -115,10 +116,14 @@ importJobsRoutes.post("/from-gmail-search", async (c) => {
 
   if (mappingError) return c.json({ error: mappingError.message, status: "error" }, 500);
 
-  const mappingIndex: Record<string, string> = {};
-  for (const m of mappings ?? []) {
-    mappingIndex[`${m.bank_key}:${m.source_type}`] = m.account_id;
-  }
+  const { data: accounts, error: accountsError } = await supabase
+    .from("accounts")
+    .select("id, name, type, broker")
+    .eq("user_id", user.id);
+
+  if (accountsError) return c.json({ error: accountsError.message, status: "error" }, 500);
+
+  const mappingIndex = buildGmailAccountMappingIndex(mappings, accounts);
 
   let created = 0;
   let updated = 0;

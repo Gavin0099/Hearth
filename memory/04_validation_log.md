@@ -337,6 +337,16 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - `npm.cmd run check` -> pass for api/web/shared.
 - Claim boundary: local API/UI wiring and type safety verified; production deploy and live Gmail auto-import evidence still need to be run.
 
+## 2026-06-15 Gmail Auto Account Resolution
+
+- Added server-side Gmail account resolver for `import_jobs` creation and Gmail cron sync.
+- Resolver keeps explicit `bank_account_mapping` as the first priority, then falls back to a unique existing account whose `type` matches the Gmail source type (`cash_credit` for credit cards, `cash_bank` for bank statements) and whose name or broker contains the bank keyword.
+- Browser-side pending queue processing now uses the same mapping-first, unique-existing-account fallback before marking a job as `needs_review`.
+- Ambiguous or missing account matches still go to `needs_review` instead of guessing, preserving financial correctness.
+- Settings copy now states that manual mapping is only needed when the app cannot uniquely infer the account.
+- Bumped root/api/web/shared package versions and internal `@hearth/shared` pins to `0.3.8`.
+- Claim boundary: implementation is local until tests/checks and production deploy complete.
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.

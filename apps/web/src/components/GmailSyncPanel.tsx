@@ -241,6 +241,27 @@ function resolveImportAccountId(
   return bankMatches[0]?.id ?? accounts[0]?.id ?? "";
 }
 
+function resolveAutoMappedAccountId(
+  bank: BankKey,
+  sourceType: ImportJobRecord["source_type"],
+  accounts: AccountRecord[],
+) {
+  const targetType = sourceType === "credit_card" ? "cash_credit" : "cash_bank";
+  const keywords = BANK_NAME_KEYWORDS[bank];
+  const candidates = accounts.filter((account) =>
+    account.type === targetType &&
+    keywords.some((kw) => {
+      const keyword = kw.toLowerCase();
+      return (
+        account.name.toLowerCase().includes(keyword) ||
+        (account.broker?.toLowerCase().includes(keyword) ?? false)
+      );
+    })
+  );
+
+  return candidates.length === 1 ? candidates[0].id : null;
+}
+
 function extractPreviewLines(text: string) {
   const lines = text
     .split("\n")
@@ -463,8 +484,10 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
     const pdfParser = await loadPdfParser();
     const settings = await fetchUserSettingsSecrets();
 
-    // Resolve bank_account_mapping fresh — never rely on stored mapped_account_id
+    // Resolve bank_account_mapping fresh, then fall back to a unique existing account match.
     const mappingsRes = await fetchBankAccountMappings();
+    const accountsRes = await fetchAccounts();
+    const freshAccounts = accountsRes.status === "ok" ? accountsRes.items : [];
     const freshMappingIndex: Record<string, string> = {};
     if (mappingsRes.status === "ok") {
       for (const m of mappingsRes.items as BankAccountMappingRecord[]) {
@@ -479,8 +502,9 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
       const isBankStatement = item.source_type === "bank_account";
       setState({ status: "loading", message: `處理 ${BANK_DISPLAY_NAMES[bank] ?? bank}｜${item.email_subject}...` });
 
-      // Re-resolve account from fresh mapping — never trust stored mapped_account_id
-      const resolvedAccountId = freshMappingIndex[`${bank}:${item.source_type}`] ?? null;
+      const resolvedAccountId =
+        freshMappingIndex[`${bank}:${item.source_type}`] ??
+        resolveAutoMappedAccountId(bank, item.source_type, freshAccounts);
       if (!resolvedAccountId) {
         await updateImportJob(item.id, {
           status: "needs_review",

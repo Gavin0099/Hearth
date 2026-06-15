@@ -1,5 +1,6 @@
 import { createSupabaseAdminClient } from "../lib/supabase";
 import { decryptSecretValue } from "../lib/secrets";
+import { buildGmailAccountMappingIndex } from "../lib/gmail-account-resolver";
 import type { WorkerBindings } from "../types";
 
 const GMAIL_API_BASE = "https://gmail.googleapis.com/gmail/v1/users/me";
@@ -166,10 +167,12 @@ async function syncUserGmail(
     .eq("user_id", userId)
     .eq("enabled", true);
 
-  const mappingIndex: Record<string, string> = {};
-  for (const m of mappings ?? []) {
-    mappingIndex[`${m.bank_key}:${m.source_type}`] = m.account_id;
-  }
+  const { data: accounts } = await supabase
+    .from("accounts")
+    .select("id, name, type, broker")
+    .eq("user_id", userId);
+
+  const mappingIndex = buildGmailAccountMappingIndex(mappings, accounts);
 
   const allSenders = Object.values(BANK_SENDERS);
   const senderQuery = allSenders.map((s) => `from:${s}`).join(" OR ");

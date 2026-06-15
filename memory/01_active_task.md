@@ -22,6 +22,7 @@
 - Gmail background auto-parse is implemented locally: when the user is logged in outside Settings, `App` mounts `GmailSyncPanel` in background mode so pending Gmail PDFs are downloaded and parsed/imported without requiring navigation to Settings.
 - Gmail fetched-status visibility is implemented locally: `GmailSyncPanel` now reads all current-user `import_jobs` on load and shows a detected/processed list plus status badges for matched Gmail search results.
 - Gmail search auto-import jobs are implemented locally: manual Gmail search results are persisted as current-user `import_jobs`; existing imported jobs stay `已匯入`, new mapped jobs enter `待匯入`, and the existing queue processor can auto-download/parse/import them.
+- Gmail auto account resolution is implemented locally: explicit `bank_account_mapping` remains supported, but Gmail auto-import now falls back to a unique existing account with matching bank keyword and account type before asking the user to configure mapping.
 - Security review hardening is in progress locally: `supabase/schema.sql` is rebuilt from ordered migrations, schema drift check script is added, `/api/ops/*` requires an admin allowlist, and ops DB/internal errors are sanitized.
 - `stash@{0}` (`codex-pre-pull-tracked-20260611`) remains as a backup of pre-pull tracked dirty changes and can be dropped after explicit review.
 

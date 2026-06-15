@@ -86,7 +86,7 @@ function BankAccountMappingSection({ session, onMappingSaved }: { session: Sessi
     <section>
       <h3>Gmail 自動匯入帳戶對應</h3>
       <p className="panel-copy panel-copy--tight">
-        設定各銀行帳單對應的帳戶。未設定的銀行帳單會進入待審查佇列，不會自動匯入。
+        系統會先依既有帳戶名稱與類型自動判斷匯入帳戶；只有找不到唯一帳戶時，才需要在這裡指定。
       </p>
 
       {mappings.length > 0 ? (

@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-15T06:57:19.767399+00:00",
+  "contract_injected": true,
+  "contract_hash": "62124253dbc64541d22ffd296496b82cae70d33cff6beac99b082c1ae100d354",
+  "scope": "fix",
+  "level": "L1",
+  "lang": "TypeScript",
+  "contract_fields": {
+    "LANG": "TypeScript",
+    "LEVEL": "L1",
+    "SCOPE": "fix",
+    "PLAN": "auto-resolve Gmail import account mapping from existing accounts",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-15.md",
+    "CONTEXT": "Make Gmail auto-import use existing user accounts as a safe fallback when explicit bank_account_mapping is absent.",
+    "PRESSURE": "SAFE (account inference without parser semantic changes)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L1\nSCOPE = fix\nPLAN = auto-resolve Gmail import account mapping from existing accounts\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-15.md\nCONTEXT = Make Gmail auto-import use existing user accounts as a safe fallback when explicit bank_account_mapping is absent.\nPRESSURE = SAFE (account inference without parser semantic changes)\n\nUse existing accounts for Gmail au"
+}
