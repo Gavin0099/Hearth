@@ -40,6 +40,7 @@ type SyncState =
 type QueueItem = ImportJobRecord;
 
 const GMAIL_ENABLED_BANKS = ["sinopac", "esun", "cathay", "taishin", "ctbc", "mega"] as const satisfies BankKey[];
+const BLOCKING_AUTO_PARSE_BANKS = new Set<BankKey>(["mega"]);
 const QUEUE_PDF_PARSE_TIMEOUT_MS = 45_000;
 const QUEUE_IMPORT_TIMEOUT_MS = 30_000;
 
@@ -533,6 +534,16 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
       }
 
       try {
+        if (BLOCKING_AUTO_PARSE_BANKS.has(bank)) {
+          await updateImportJob(item.id, {
+            status: "failed",
+            review_reason: "parse_error",
+            error_code: "auto_parser_blocked",
+            error_message: `${BANK_DISPLAY_NAMES[bank] ?? bank} PDF 自動解析暫停：此銀行格式目前會卡住瀏覽器端解析，已略過以便後續帳單繼續匯入。`,
+          });
+          continue;
+        }
+
         const defaultPw = settings.default_pdf_password ?? "";
         const password =
           bank === "sinopac" ? (settings.sinopac_pdf_password ?? defaultPw)

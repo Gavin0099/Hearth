@@ -191,3 +191,4 @@
 | 2026-06-15 | Gmail auto account provisioning | Gmail 自動匯入不再顯示手動帳戶 mapping 設定；若沒有既有帳戶，server 會自動建立銀行標籤帳戶（例如 `中信 信用卡` / `台新 銀行帳戶`）並繼續匯入；版本 bump 至 `0.3.9`。 |
 | 2026-06-15 | Gmail search enqueue budget | 手動 Gmail 搜尋匯入改為先批次查 existing `import_jobs`、批次 insert 新 jobs、只升級 `needs_review/missing_mapping` 舊 jobs，避免 43 封帳單時 Worker subrequest 造成 HTTP 500；版本 bump 至 `0.3.10`。 |
 | 2026-06-15 | Gmail queue item timeout | Gmail 背景匯入每筆 PDF 解析與交易匯入加入 timeout 與進度顯示，單一 PDF 卡住會標 failed 並繼續下一筆；版本 bump 至 `0.3.11`。 |
+| 2026-06-15 | Gmail Mega parser bypass | 兆豐 PDF 在瀏覽器端解析會同步卡住事件迴圈，暫停兆豐自動 parser 並將 job 標 failed，避免擋住其他銀行帳單；版本 bump 至 `0.3.12`。 |

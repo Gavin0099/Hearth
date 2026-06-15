@@ -377,6 +377,13 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - `npm.cmd run check` -> pass for api/web/shared at `0.3.11`.
 - Claim boundary: local type safety verified; production deploy and live queue run still need to confirm the stuck Mega PDF moves to failed or imported and the remaining queue advances.
 
+## 2026-06-15 Gmail Mega Parser Bypass
+
+- Mega Gmail jobs are now marked `failed` with `error_code=auto_parser_blocked` before PDF extraction, because the live Mega PDF path can block the browser event loop and prevent JavaScript timeouts from firing.
+- This is a queue-unblock fix, not a claim that Mega PDF parsing is supported; Mega parser support still needs sample-driven work.
+- Bumped root/api/web/shared package versions and internal `@hearth/shared` pins to `0.3.12`.
+- Claim boundary: local code path and type safety need verification before push; live deploy still must confirm the queue advances to non-Mega jobs.
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.

@@ -26,6 +26,7 @@
 - Gmail manual account mapping UI is removed locally: Gmail auto-import now creates missing bank-labeled cash/credit accounts automatically, so users do not need to configure per-bank account mappings in Settings.
 - Gmail search enqueue subrequest fix is implemented locally: manual Gmail search now batches existing-job lookup and insert, and re-running search promotes existing `needs_review` + `missing_mapping` jobs to `pending_parse` after auto account provisioning instead of leaving them in manual-confirmation state.
 - Gmail queue item timeout fix is implemented locally: browser-side background Gmail import now shows per-item progress and times out slow PDF parsing/import work so one stuck statement is marked failed instead of blocking the whole pending queue.
+- Gmail Mega parser bypass is implemented locally: Mega pending Gmail jobs are marked failed with `auto_parser_blocked` before PDF extraction because the current Mega PDF parser can block the browser event loop; this keeps other banks moving while Mega parser support remains separate work.
 - Security review hardening is in progress locally: `supabase/schema.sql` is rebuilt from ordered migrations, schema drift check script is added, `/api/ops/*` requires an admin allowlist, and ops DB/internal errors are sanitized.
 - `stash@{0}` (`codex-pre-pull-tracked-20260611`) remains as a backup of pre-pull tracked dirty changes and can be dropped after explicit review.
 
