@@ -282,6 +282,11 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - `memory_workflow` and `dirty_runtime_ledger_detector.py` were not available in the parent-pinned `ai-governance-framework` checkout (`57db6c1`), so those checks were not run in this pass.
 - Claim boundary: this verifies local type safety and user-scoped wiring only; production deploy, live login, Gmail API scan, import job creation, and browser-side auto-parse still need deployed evidence.
 
+## 2026-06-15 Gmail Login Auto-Detect Version Bump
+
+- Bumped root/api/web/shared package versions and internal `@hearth/shared` pins to `0.3.2` after the pre-push version guard recommended a patch bump for the Gmail login auto-detect code change.
+- `npm.cmd run check` -> pass for api/web/shared at `0.3.2`.
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.
