@@ -27,6 +27,7 @@ type GmailSyncPanelProps = {
   session: Session | null;
   onImported: () => void;
   refreshKey?: number;
+  background?: boolean;
 };
 
 type SyncState =
@@ -327,7 +328,7 @@ function buildEsunLoanDebugSuffix(
   return ` 玉山貸款偵測：0 筆。bankStatement=${isBankStatement ? "yes" : "no"}；原文線索=${rawPreview || "無"}；OCR線索=${preview}`;
 }
 
-export function GmailSyncPanel({ session, onImported, refreshKey }: GmailSyncPanelProps) {
+export function GmailSyncPanel({ session, onImported, refreshKey, background = false }: GmailSyncPanelProps) {
   const [state, setState] = useState<SyncState>({ status: "idle" });
   const [emails, setEmails] = useState<GmailBillEmail[]>([]);
   const [accounts, setAccounts] = useState<AccountRecord[]>([]);
@@ -882,7 +883,7 @@ export function GmailSyncPanel({ session, onImported, refreshKey }: GmailSyncPan
     }
   }
 
-  if (!session) return null;
+  if (!session || background) return null;
 
   return (
     <article className="panel gmail-sync-panel">

@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-15T05:33:35.822246+00:00",
+  "contract_injected": true,
+  "contract_hash": "4f06c000c6934ead0f1728a525c31faad2cf96318bf9410bef68e45f427a346e",
+  "scope": "fix",
+  "level": "L2",
+  "lang": "TypeScript",
+  "contract_fields": {
+    "LANG": "TypeScript",
+    "LEVEL": "L2",
+    "SCOPE": "fix",
+    "PLAN": "Run Gmail pending PDF parse/import in the background after login",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, governance/TESTING.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-15.md",
+    "CONTEXT": "Mount GmailSyncPanel in background mode outside Settings so pending_parse jobs created by login sync-now are downloaded and parsed after login",
+    "PRESSURE": "ELEVATED (auth-scoped Gmail attachment download and import job processing path)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L2\nSCOPE = fix\nPLAN = Run Gmail pending PDF parse/import in the background after login\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, governance/TESTING.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-15.md\nCONTEXT = Mount GmailSyncPanel in background mode outside Settings so pending_parse jobs created by login sync-now are downloaded and parsed after login\nPRESSURE = ELEVATED (auth-scoped Gmail attachment do"
+}

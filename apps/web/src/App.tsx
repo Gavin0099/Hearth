@@ -237,6 +237,17 @@ export function App() {
         />
       </header>
 
+      {session && currentView !== "settings" && (
+        <Suspense fallback={null}>
+          <GmailSyncPanel
+            session={session}
+            onImported={handleImported}
+            refreshKey={gmailRefreshKey}
+            background
+          />
+        </Suspense>
+      )}
+
       {currentView === "home" && (
         <Suspense fallback={<section className="two-column"><p>載入中...</p></section>}>
           <section className="home-overview">

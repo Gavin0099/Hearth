@@ -287,6 +287,15 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - Bumped root/api/web/shared package versions and internal `@hearth/shared` pins to `0.3.2` after the pre-push version guard recommended a patch bump for the Gmail login auto-detect code change.
 - `npm.cmd run check` -> pass for api/web/shared at `0.3.2`.
 
+## 2026-06-15 Gmail Background Auto-Parse
+
+- `GmailSyncPanel` now accepts `background`; effects still load and process pending queues, but the UI renders `null`.
+- `App` mounts the background Gmail processor whenever a user is logged in and the visible Settings panel is not mounted, so login/session auto-detect can continue into PDF download + parse/import without requiring navigation to Settings.
+- Bumped root/api/web/shared package versions and internal `@hearth/shared` pins to `0.3.3` for the background auto-parse behavior fix.
+- `npm.cmd --workspace @hearth/web run check` -> pass.
+- `npm.cmd run check` -> pass for api/web/shared.
+- Claim boundary: local type safety and background processor wiring are verified; production deploy and live Gmail PDF download/parse evidence still need to be run.
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.
