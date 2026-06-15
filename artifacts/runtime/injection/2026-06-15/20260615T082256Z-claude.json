@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-15T08:22:56.381750+00:00",
+  "contract_injected": true,
+  "contract_hash": "4899d1d1b93ea7b55c53cfbbc51b3affdd048cf6b862b5d42d790f73de0c5318",
+  "scope": "fix",
+  "level": "L1",
+  "lang": "TypeScript",
+  "contract_fields": {
+    "LANG": "TypeScript",
+    "LEVEL": "L1",
+    "SCOPE": "fix",
+    "PLAN": "prevent Gmail queue processor from hanging on one PDF",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-15.md",
+    "CONTEXT": "Add per-job timeout and error propagation to browser-side Gmail queue processing so one slow PDF cannot block remaining pending jobs.",
+    "PRESSURE": "ELEVATED (live Gmail auto-import appears stuck after 0.3.10 deploy)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L1\nSCOPE = fix\nPLAN = prevent Gmail queue processor from hanging on one PDF\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-15.md\nCONTEXT = Add per-job timeout and error propagation to browser-side Gmail queue processing so one slow PDF cannot block remaining pending jobs.\nPRESSURE = ELEVATED (live Gmail auto-import appears stuck after 0.3.10 deploy)\n\nFix Gmail queue"
+}

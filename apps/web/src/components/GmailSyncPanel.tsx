@@ -40,6 +40,8 @@ type SyncState =
 type QueueItem = ImportJobRecord;
 
 const GMAIL_ENABLED_BANKS = ["sinopac", "esun", "cathay", "taishin", "ctbc", "mega"] as const satisfies BankKey[];
+const QUEUE_PDF_PARSE_TIMEOUT_MS = 45_000;
+const QUEUE_IMPORT_TIMEOUT_MS = 30_000;
 
 const JOB_STATUS_PRIORITY: Record<string, number> = {
   imported: 6,
@@ -123,6 +125,21 @@ type PdfParserModule = typeof import("../lib/pdf-parser");
 
 async function loadPdfParser() {
   return import("../lib/pdf-parser");
+}
+
+async function withTimeout<T>(promise: Promise<T>, label: string, ms: number): Promise<T> {
+  let timeoutId = 0;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => {
+      reject(new Error(`${label} timeout after ${Math.round(ms / 1000)}s`));
+    }, ms);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 }
 
 async function extractPdfTextWithOptionalBlankFallback(
@@ -497,10 +514,11 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
       }
     }
 
-    for (const item of pendingQueue) {
+    for (const [index, item] of pendingQueue.entries()) {
       const bank = item.bank_key as BankKey;
       const isBankStatement = item.source_type === "bank_account";
-      setState({ status: "loading", message: `處理 ${BANK_DISPLAY_NAMES[bank] ?? bank}｜${item.email_subject}...` });
+      const progressLabel = `${index + 1}/${pendingQueue.length}`;
+      setState({ status: "loading", message: `處理 ${progressLabel} ${BANK_DISPLAY_NAMES[bank] ?? bank}｜${item.email_subject}...` });
 
       const resolvedAccountId =
         freshMappingIndex[`${bank}:${item.source_type}`] ??
@@ -523,12 +541,16 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
           : defaultPw;
 
         const bytes = await downloadAttachment(item.gmail_message_id, item.attachment_id, accessToken);
-        const extraction = await extractPdfTextWithOptionalBlankFallback(
-          pdfParser,
-          bytes,
-          password,
-          bank,
-          { probeEsunAssets: isBankStatement },
+        const extraction = await withTimeout(
+          extractPdfTextWithOptionalBlankFallback(
+            pdfParser,
+            bytes,
+            password,
+            bank,
+            { probeEsunAssets: isBankStatement },
+          ),
+          `${BANK_DISPLAY_NAMES[bank] ?? bank} PDF parse`,
+          QUEUE_PDF_PARSE_TIMEOUT_MS,
         );
         const text = extraction.text;
 
@@ -564,12 +586,20 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
             "date,amount,currency,category,description",
             ...parsed.map((tx) => `${tx.date},${tx.amount},${tx.currency ?? "TWD"},,${tx.description.replace(/,/g, " ")}`),
           ].join("\n");
-          const result = await importTransactionsCsv(
-            resolvedAccountId,
-            new File([csvLines], `queue-bank.csv`, { type: "text/csv" }),
-            `gmail_bank_${bank}` as Parameters<typeof importTransactionsCsv>[2],
+          const result = await withTimeout(
+            importTransactionsCsv(
+              resolvedAccountId,
+              new File([csvLines], `queue-bank.csv`, { type: "text/csv" }),
+              `gmail_bank_${bank}` as Parameters<typeof importTransactionsCsv>[2],
+            ),
+            `${BANK_DISPLAY_NAMES[bank] ?? bank} transaction import`,
+            QUEUE_IMPORT_TIMEOUT_MS,
           );
-          if (result.status === "ok") { jobImported = result.imported; jobSkipped = result.skipped; }
+          if (result.status === "error") {
+            throw new Error(result.error);
+          }
+          jobImported = result.imported;
+          jobSkipped = result.skipped;
         } else {
           const emailSendDate = item.email_date ? new Date(item.email_date) : new Date();
           const billingMonth = `${emailSendDate.getFullYear()}-${String(emailSendDate.getMonth() + 1).padStart(2, "0")}-01`;
@@ -578,12 +608,20 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
             "date,amount,currency,category,description",
             ...billedParsed.map((tx) => `${tx.date},${tx.amount},${tx.currency ?? "TWD"},,${tx.description.replace(/,/g, " ")}`),
           ].join("\n");
-          const result = await importTransactionsCsv(
-            resolvedAccountId,
-            new File([csvLines], "queue-import.csv", { type: "text/csv" }),
-            `gmail_pdf_${bank}` as Parameters<typeof importTransactionsCsv>[2],
+          const result = await withTimeout(
+            importTransactionsCsv(
+              resolvedAccountId,
+              new File([csvLines], "queue-import.csv", { type: "text/csv" }),
+              `gmail_pdf_${bank}` as Parameters<typeof importTransactionsCsv>[2],
+            ),
+            `${BANK_DISPLAY_NAMES[bank] ?? bank} transaction import`,
+            QUEUE_IMPORT_TIMEOUT_MS,
           );
-          if (result.status === "ok") { jobImported = result.imported; jobSkipped = result.skipped; }
+          if (result.status === "error") {
+            throw new Error(result.error);
+          }
+          jobImported = result.imported;
+          jobSkipped = result.skipped;
         }
 
         await updateImportJob(item.id, { status: "imported", imported_count: jobImported, skipped_count: jobSkipped });

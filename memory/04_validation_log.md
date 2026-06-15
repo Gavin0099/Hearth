@@ -367,6 +367,16 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - `npm.cmd run check` -> pass for api/web/shared at `0.3.10`.
 - Claim boundary: local API/UI wiring verified; production deploy and live Gmail re-scan evidence still need to be run.
 
+## 2026-06-15 Gmail Queue Item Timeout
+
+- Background Gmail queue processing now displays per-item progress (`current/total`) while handling `pending_parse` jobs.
+- PDF parsing has a 45-second per-job timeout and transaction import has a 30-second per-job timeout; a timeout marks that job `failed` with `parse_error` and lets later pending jobs continue.
+- Import API errors from `importTransactionsCsv` are now thrown and persisted to the job instead of being counted as a zero-row successful import.
+- Bumped root/api/web/shared package versions and internal `@hearth/shared` pins to `0.3.11`.
+- `npm.cmd --workspace @hearth/web run check` -> pass.
+- `npm.cmd run check` -> pass for api/web/shared at `0.3.11`.
+- Claim boundary: local type safety verified; production deploy and live queue run still need to confirm the stuck Mega PDF moves to failed or imported and the remaining queue advances.
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.
