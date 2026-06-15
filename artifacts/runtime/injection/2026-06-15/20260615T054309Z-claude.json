@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-15T05:43:09.252875+00:00",
+  "contract_injected": true,
+  "contract_hash": "8e23db8eb65d325342b4f495ecb3364e025749df585fef364f6612ca6dbc54a4",
+  "scope": "fix",
+  "level": "L1",
+  "lang": "TypeScript",
+  "contract_fields": {
+    "LANG": "TypeScript",
+    "LEVEL": "L1",
+    "SCOPE": "fix",
+    "PLAN": "Show previously detected Gmail import jobs in GmailSyncPanel",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, governance/TESTING.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-15.md",
+    "CONTEXT": "Display import_jobs history/status in GmailSyncPanel so previously detected or imported Gmail bills remain visible even before manual Gmail search",
+    "PRESSURE": "SAFE (UI visibility/status fix; no parser or import semantics change)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L1\nSCOPE = fix\nPLAN = Show previously detected Gmail import jobs in GmailSyncPanel\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, governance/TESTING.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-15.md\nCONTEXT = Display import_jobs history/status in GmailSyncPanel so previously detected or imported Gmail bills remain visible even before manual Gmail search\nPRESSURE = SAFE (UI visibility/status fix; no parser"
+}

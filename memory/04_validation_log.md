@@ -296,6 +296,18 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - `npm.cmd run check` -> pass for api/web/shared.
 - Claim boundary: local type safety and background processor wiring are verified; production deploy and live Gmail PDF download/parse evidence still need to be run.
 
+## 2026-06-15 Gmail Fetched Status Visibility
+
+- `GmailSyncPanel` now loads all current-user `import_jobs` together with pending/review/failed queues.
+- The panel renders an `已偵測 / 已處理` list for previously detected/imported Gmail bills, and Gmail search results show status badges from the same job map.
+- Bumped root/api/web/shared package versions and internal `@hearth/shared` pins to `0.3.4`.
+- `npm.cmd --workspace @hearth/web run check` -> pass.
+- `npm.cmd run check` -> pass for api/web/shared at `0.3.4`.
+- `git diff --check` -> pass.
+- `python -X utf8 ai-governance-framework\governance_tools\governance_drift_checker.py --repo . --framework-root ai-governance-framework --format human` -> pass (`severity=ok`).
+- Secret-pattern diff scan -> no matches.
+- Claim boundary: local UI/type safety verified; production deploy and live visual confirmation still need to be run.
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.

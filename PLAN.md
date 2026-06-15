@@ -183,3 +183,4 @@
 | 2026-06-12 | Gmail deployment boundary | Post-migration API/web smoke PASS；Cloudflare secret list blocked by missing `CLOUDFLARE_API_TOKEN`，因此 Google secrets / OAuth refresh token / real Gmail ingestion 仍未 claim 完成。 |
 | 2026-06-15 | Gmail login auto-detect | 新增 authenticated `/api/import-jobs/sync-now`，App 載入既有 session 或 Google SIGNED_IN 後會掃目前使用者 Gmail 建立 import jobs，再由既有 pending queue 自動 parse/import。 |
 | 2026-06-15 | Gmail background auto-parse | `GmailSyncPanel` 新增 background mode；非設定頁登入後也會掛載背景 processor，自動下載 pending Gmail PDFs 並沿用既有 parser/import 流程。 |
+| 2026-06-15 | Gmail fetched-status visibility | `GmailSyncPanel` 載入時同步讀取 `import_jobs`，顯示已偵測 / 已處理帳單清單與狀態 badge；版本 bump 至 `0.3.4`。 |

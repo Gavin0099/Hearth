@@ -40,6 +40,49 @@ type QueueItem = ImportJobRecord;
 
 const GMAIL_ENABLED_BANKS = ["sinopac", "esun", "cathay", "taishin", "ctbc", "mega"] as const satisfies BankKey[];
 
+const JOB_STATUS_PRIORITY: Record<string, number> = {
+  imported: 6,
+  parsed: 5,
+  pending_parse: 4,
+  needs_review: 3,
+  failed: 2,
+  auth_required: 1,
+};
+
+function buildJobStatusMap(jobs: ImportJobRecord[]) {
+  const map = new Map<string, ImportJobRecord>();
+  for (const job of jobs) {
+    const existing = map.get(job.gmail_message_id);
+    if (!existing || (JOB_STATUS_PRIORITY[job.status] ?? 0) > (JOB_STATUS_PRIORITY[existing.status] ?? 0)) {
+      map.set(job.gmail_message_id, job);
+    }
+  }
+  return map;
+}
+
+function getJobStatusView(status?: ImportJobRecord["status"]): {
+  label: string;
+  variant: "default" | "success" | "warning" | "error" | "info";
+  buttonLabel: string;
+} {
+  switch (status) {
+    case "imported":
+      return { label: "已匯入", variant: "success", buttonLabel: "重新匯入" };
+    case "parsed":
+      return { label: "已解析", variant: "info", buttonLabel: "匯入" };
+    case "pending_parse":
+      return { label: "待解析", variant: "info", buttonLabel: "匯入" };
+    case "needs_review":
+      return { label: "需設定帳戶", variant: "warning", buttonLabel: "匯入" };
+    case "failed":
+      return { label: "解析失敗", variant: "error", buttonLabel: "重試" };
+    case "auth_required":
+      return { label: "需重新授權", variant: "warning", buttonLabel: "匯入" };
+    default:
+      return { label: "未處理", variant: "default", buttonLabel: "匯入" };
+  }
+}
+
 const BANK_DISPLAY_NAMES: Record<BankKey, string> = {
   sinopac: "永豐",
   esun: "玉山",
@@ -335,21 +378,27 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
   const [pendingQueue, setPendingQueue] = useState<QueueItem[]>([]);
   const [needsReviewQueue, setNeedsReviewQueue] = useState<QueueItem[]>([]);
   const [failedQueue, setFailedQueue] = useState<QueueItem[]>([]);
+  const [allJobs, setAllJobs] = useState<ImportJobRecord[]>([]);
   const [queueRunning, setQueueRunning] = useState(false);
   const [retryingJobId, setRetryingJobId] = useState<string | null>(null);
   const [jobsByMsgId, setJobsByMsgId] = useState<Map<string, ImportJobRecord>>(new Map());
   const autoProcessFired = useRef(false);
 
   const loadQueues = useCallback(async () => {
-    const [pending, review, failed] = await Promise.all([
+    const [pending, review, failed, all] = await Promise.all([
       fetchImportJobs("pending_parse"),
       fetchImportJobs("needs_review"),
       fetchImportJobs("failed"),
+      fetchImportJobs(),
     ]);
 
     if (pending.status === "ok") setPendingQueue(pending.items);
     if (review.status === "ok") setNeedsReviewQueue(review.items);
     if (failed.status === "ok") setFailedQueue(failed.items);
+    if (all.status === "ok") {
+      setAllJobs(all.items);
+      setJobsByMsgId(buildJobStatusMap(all.items));
+    }
   }, []);
 
   useEffect(() => {
@@ -357,6 +406,8 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
       setPendingQueue([]);
       setNeedsReviewQueue([]);
       setFailedQueue([]);
+      setAllJobs([]);
+      setJobsByMsgId(new Map());
       autoProcessFired.current = false;
       return;
     }
@@ -517,6 +568,7 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
     setPendingQueue([]);
     setQueueRunning(false);
     setState({ status: "done", message: `佇列處理完成，新增 ${importedTotal} 筆，略過 ${skippedTotal} 筆。` });
+    await loadQueues();
     onImported();
   }
 
@@ -589,16 +641,8 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
     // Load all import_jobs to show per-email status flags
     void fetchImportJobs().then((res) => {
       if (res.status === "ok") {
-        const map = new Map<string, ImportJobRecord>();
-        for (const job of res.items) {
-          // Prefer higher-priority status: imported > pending_parse > needs_review > failed
-          const existing = map.get(job.gmail_message_id);
-          const priority: Record<string, number> = { imported: 4, pending_parse: 3, needs_review: 2, failed: 1 };
-          if (!existing || (priority[job.status] ?? 0) > (priority[existing.status] ?? 0)) {
-            map.set(job.gmail_message_id, job);
-          }
-        }
-        setJobsByMsgId(map);
+        setAllJobs(res.items);
+        setJobsByMsgId(buildJobStatusMap(res.items));
       }
     });
 
@@ -1009,6 +1053,36 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
       {state.status === "error" && <p className="panel-message panel-message--error panel-status-message">錯誤：{state.message}</p>}
       {state.status === "done" && <p className="panel-message panel-status-message panel-status-message--done">{state.message}</p>}
 
+      {allJobs.length > 0 && (
+        <div className="queue-notice gmail-queue">
+          <span className="queue-notice-count">
+            已偵測 / 已處理 <strong>{allJobs.length}</strong> 份 Gmail 帳單
+            （顯示最新 {Math.min(allJobs.length, 20)} 筆）
+          </span>
+          <ul className="gmail-review-list">
+            {allJobs.slice(0, 20).map((job) => {
+              const view = getJobStatusView(job.status);
+              const reasonLabel = job.review_reason
+                ? (REVIEW_REASON_LABELS[job.review_reason] ?? job.review_reason)
+                : null;
+              return (
+                <li key={job.id} className="panel-copy panel-copy--tight gmail-review-item">
+                  <div className="gmail-review-item-meta">
+                    <span className="gmail-email-bank">
+                      {BANK_DISPLAY_NAMES[job.bank_key as BankKey] ?? job.bank_key}
+                    </span>
+                    {" - "}
+                    {job.email_subject}
+                    <Badge variant={view.variant}>{view.label}</Badge>
+                    {reasonLabel && <span className="gmail-review-reason"> [{reasonLabel}]</span>}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
       {emails.length > 0 && (
         <>
           <p className="panel-copy panel-copy--tight">找到 {emails.length} 封帳單。</p>
@@ -1019,18 +1093,16 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
               );
               const job = jobsByMsgId.get(email.id);
               const jobStatus = job?.status;
+              const jobView = getJobStatusView(jobStatus);
               return (
                 <li key={email.id} className="gmail-email-item panel-row-item">
                   <div className="gmail-email-meta">
                     <span className="gmail-email-bank">{BANK_DISPLAY_NAMES[email.bank]}</span>
                     <span className="gmail-email-subject">{email.subject}</span>
+                    {jobStatus && <Badge variant={jobView.variant}>{jobView.label}</Badge>}
                     {!hasPdf && (
                       <Badge variant="warning">通知信，無 PDF 附件</Badge>
                     )}
-                    {jobStatus === "imported" && <Badge variant="success">已匯入</Badge>}
-                    {jobStatus === "pending_parse" && <Badge variant="info">排隊中</Badge>}
-                    {jobStatus === "needs_review" && <Badge variant="warning">需設定帳戶</Badge>}
-                    {jobStatus === "failed" && <Badge variant="error">解析失敗</Badge>}
                   </div>
                   <div className="gmail-email-actions">
                     <Button
@@ -1041,7 +1113,7 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
                       type="button"
                       title={!hasPdf ? "此信無 PDF 附件，無法匯入" : undefined}
                     >
-                      {jobStatus === "imported" ? "重新匯入" : "匯入"}
+                      {jobView.buttonLabel}
                     </Button>
                   </div>
                 </li>
