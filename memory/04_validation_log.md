@@ -394,6 +394,17 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - `npm.cmd run check` -> pass for api/web/shared at `0.3.13`.
 - Claim boundary: local type safety verified; production deploy and live queue run still need to confirm the queue advances past the first Mega job.
 
+## 2026-06-16 Gmail Queue Optimistic Refresh
+
+- `GmailSyncPanel` now keeps local `import_jobs` status overrides for the current browser session.
+- Queue processing applies an override as soon as a job reaches `imported`, `failed`, or `needs_review`, so the pending queue and status badges refresh immediately instead of waiting for a later backend refresh.
+- `loadQueues()` merges server rows with local overrides, preventing stale `pending_parse` server responses from restoring `待匯入` after a completed browser-side queue run.
+- Manual retry also refreshes local job status back to `pending_parse`.
+- Bumped root/api/web/shared package versions and internal `@hearth/shared` pins to `0.3.14`.
+- `npm.cmd --workspace @hearth/web run check` -> pass.
+- `npm.cmd run check` -> pass for api/web/shared at `0.3.14`.
+- Claim boundary: local type safety and UI state wiring verified; production deploy/live browser confirmation still need to verify the stale pending badges clear after import completion.
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.

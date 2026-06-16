@@ -28,10 +28,11 @@
 - Gmail queue item timeout fix is implemented locally: browser-side background Gmail import now shows per-item progress and times out slow PDF parsing/import work so one stuck statement is marked failed instead of blocking the whole pending queue.
 - Gmail Mega parser bypass is implemented locally: Mega pending Gmail jobs are marked failed with `auto_parser_blocked` before PDF extraction because the current Mega PDF parser can block the browser event loop; this keeps other banks moving while Mega parser support remains separate work.
 - Gmail API timeout / safe update fix is implemented locally: `apiFetch` now aborts after 15 seconds, `updateImportJob` throws on non-2xx, and queue status updates are wrapped in `safeUpdateImportJob` so a stuck or failed PATCH cannot stop the queue.
+- Gmail queue optimistic refresh fix is implemented locally: browser-side queue processing keeps per-session `import_jobs` status overrides, applies them immediately after each job reaches imported/failed/needs_review, and merges them into later `loadQueues()` results so stale backend `pending_parse` rows do not keep the Settings panel showing `待匯入`.
 - Security review hardening is in progress locally: `supabase/schema.sql` is rebuilt from ordered migrations, schema drift check script is added, `/api/ops/*` requires an admin allowlist, and ops DB/internal errors are sanitized.
 - `stash@{0}` (`codex-pre-pull-tracked-20260611`) remains as a backup of pre-pull tracked dirty changes and can be dropped after explicit review.
 
 ## Next
 
 - Keep product work focused on: Gmail server-sync manual deployment validation and Security Phase F-1 verification.
-- Deploy and live-test the login auto-detect path before claiming the production app now performs Gmail detection on every login.
+- Deploy and live-test `0.3.14`: after pressing `立即匯入`, the queue notice should clear or shrink immediately as jobs finish, and the detected/processed list should show imported/failed/needs_review instead of stale `待匯入`.

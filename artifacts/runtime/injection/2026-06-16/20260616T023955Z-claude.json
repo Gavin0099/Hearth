@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-16T02:39:55.863514+00:00",
+  "contract_injected": true,
+  "contract_hash": "35287c3386fa2d2fcfce3ce13f0f68fdf2861310d1b9f9b2d68c9c678f338b64",
+  "scope": "fix",
+  "level": "L1",
+  "lang": "TypeScript",
+  "contract_fields": {
+    "LANG": "TypeScript",
+    "LEVEL": "L1",
+    "SCOPE": "fix",
+    "PLAN": "optimistically refresh Gmail queue UI after processing",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-16.md, memory/2026-06-15.md",
+    "CONTEXT": "Live Gmail queue imports transactions successfully but Settings panel still shows stale pending_parse counts and pending badges after completion; keep local job status overrides and merge them into queue refresh.",
+    "PRESSURE": "ELEVATED (live UI misrepresents completed Gmail import)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L1\nSCOPE = fix\nPLAN = optimistically refresh Gmail queue UI after processing\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-16.md, memory/2026-06-15.md\nCONTEXT = Live Gmail queue imports transactions successfully but Settings panel still shows stale pending_parse counts and pending badges after completion; keep local job status overrides and merge them into queue re"
+}

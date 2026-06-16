@@ -446,6 +446,40 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
   const [retryingJobId, setRetryingJobId] = useState<string | null>(null);
   const [jobsByMsgId, setJobsByMsgId] = useState<Map<string, ImportJobRecord>>(new Map());
   const autoProcessFired = useRef(false);
+  const localJobOverrides = useRef(new Map<string, ImportJobRecord>());
+
+  const mergeLocalOverrides = useCallback((jobs: ImportJobRecord[]) => {
+    return jobs.map((job) => localJobOverrides.current.get(job.id) ?? job);
+  }, []);
+
+  const applyJobOverride = useCallback((job: ImportJobRecord, patch: Partial<ImportJobRecord>) => {
+    const updated: ImportJobRecord = {
+      ...job,
+      ...patch,
+      updated_at: new Date().toISOString(),
+    };
+    localJobOverrides.current.set(job.id, updated);
+
+    setPendingQueue((prev) =>
+      prev
+        .map((item) => (item.id === updated.id ? updated : item))
+        .filter((item) => item.status === "pending_parse"),
+    );
+    setNeedsReviewQueue((prev) => {
+      const withoutCurrent = prev.filter((item) => item.id !== updated.id);
+      return updated.status === "needs_review" ? [updated, ...withoutCurrent] : withoutCurrent;
+    });
+    setFailedQueue((prev) => {
+      const withoutCurrent = prev.filter((item) => item.id !== updated.id);
+      return updated.status === "failed" ? [updated, ...withoutCurrent] : withoutCurrent;
+    });
+    setAllJobs((prev) => {
+      const next = prev.some((item) => item.id === updated.id)
+        ? prev.map((item) => (item.id === updated.id ? updated : item))
+        : [updated, ...prev];
+      return next;
+    });
+  }, []);
 
   const loadQueues = useCallback(async () => {
     const [pending, review, failed, all] = await Promise.all([
@@ -455,14 +489,24 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
       fetchImportJobs(),
     ]);
 
-    if (pending.status === "ok") setPendingQueue(pending.items);
-    if (review.status === "ok") setNeedsReviewQueue(review.items);
-    if (failed.status === "ok") setFailedQueue(failed.items);
-    if (all.status === "ok") {
-      setAllJobs(all.items);
-      setJobsByMsgId(buildJobStatusMap(all.items));
+    if (pending.status === "ok") {
+      setPendingQueue(mergeLocalOverrides(pending.items).filter((item) => item.status === "pending_parse"));
     }
-  }, []);
+    if (review.status === "ok") {
+      setNeedsReviewQueue(mergeLocalOverrides(review.items).filter((item) => item.status === "needs_review"));
+    }
+    if (failed.status === "ok") {
+      setFailedQueue(mergeLocalOverrides(failed.items).filter((item) => item.status === "failed"));
+    }
+    if (all.status === "ok") {
+      const merged = mergeLocalOverrides(all.items);
+      setAllJobs(merged);
+    }
+  }, [mergeLocalOverrides]);
+
+  useEffect(() => {
+    setJobsByMsgId(buildJobStatusMap(allJobs));
+  }, [allJobs]);
 
   useEffect(() => {
     if (!session) {
@@ -471,6 +515,7 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
       setFailedQueue([]);
       setAllJobs([]);
       setJobsByMsgId(new Map());
+      localJobOverrides.current.clear();
       autoProcessFired.current = false;
       return;
     }
@@ -539,6 +584,11 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
         freshMappingIndex[`${bank}:${item.source_type}`] ??
         resolveAutoMappedAccountId(bank, item.source_type, freshAccounts);
       if (!resolvedAccountId) {
+        applyJobOverride(item, {
+          status: "needs_review",
+          review_reason: "missing_mapping",
+          error_code: "auto_account_unavailable",
+        });
         await safeUpdateImportJob(item.id, {
           status: "needs_review",
           review_reason: "missing_mapping",
@@ -549,6 +599,11 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
 
       try {
         if (BLOCKING_AUTO_PARSE_BANKS.has(bank)) {
+          applyJobOverride(item, {
+            status: "failed",
+            review_reason: "parse_error",
+            error_code: "auto_parser_blocked",
+          });
           await safeUpdateImportJob(item.id, {
             status: "failed",
             review_reason: "parse_error",
@@ -580,6 +635,11 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
         const text = extraction.text;
 
         if (!text.trim()) {
+          applyJobOverride(item, {
+            status: "failed",
+            review_reason: "parse_error",
+            error_code: "empty_text",
+          });
           await safeUpdateImportJob(item.id, {
             status: "failed",
             review_reason: "parse_error",
@@ -594,6 +654,11 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
           : parseCreditCardTransactions(pdfParser, bank, text);
 
         if (parsed.length === 0) {
+          applyJobOverride(item, {
+            status: "failed",
+            review_reason: "parse_error",
+            error_code: "no_transactions",
+          });
           await safeUpdateImportJob(item.id, {
             status: "failed",
             review_reason: "parse_error",
@@ -649,15 +714,23 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
           jobSkipped = result.skipped;
         }
 
+        applyJobOverride(item, { status: "imported", imported_count: jobImported, skipped_count: jobSkipped });
         await safeUpdateImportJob(item.id, { status: "imported", imported_count: jobImported, skipped_count: jobSkipped });
         importedTotal += jobImported;
         skippedTotal += jobSkipped;
       } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        applyJobOverride(item, {
+          status: "failed",
+          review_reason: "parse_error",
+          error_code: "parse_error",
+          error_message: errorMessage,
+        });
         await safeUpdateImportJob(item.id, {
           status: "failed",
           review_reason: "parse_error",
           error_code: "parse_error",
-          error_message: err instanceof Error ? err.message : String(err),
+          error_message: errorMessage,
         });
       }
     }
@@ -673,6 +746,12 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
     setRetryingJobId(item.id);
     try {
       await updateImportJob(item.id, {
+        status: "pending_parse",
+        error_code: null,
+        error_message: null,
+        review_reason: null,
+      });
+      applyJobOverride(item, {
         status: "pending_parse",
         error_code: null,
         error_message: null,
