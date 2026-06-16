@@ -35,6 +35,13 @@ function accountTypeForSourceType(sourceType: GmailSourceType) {
   return sourceType === "credit_card" ? "cash_credit" : "cash_bank";
 }
 
+function isAccountCompatibleWithSourceType(
+  account: GmailAccountCandidate | null | undefined,
+  sourceType: GmailSourceType,
+) {
+  return !!account && account.type === accountTypeForSourceType(sourceType);
+}
+
 function accountNameForSourceType(bankKey: string, sourceType: GmailSourceType) {
   const bankName = BANK_DISPLAY_NAMES[bankKey] ?? bankKey;
   return `${bankName} ${sourceType === "credit_card" ? "信用卡" : "銀行帳戶"}`;
@@ -51,7 +58,12 @@ export function buildGmailAccountMappingIndex(
   accounts: GmailAccountCandidate[] | null | undefined,
 ) {
   const index: Record<string, string> = {};
+  const accountsById = new Map((accounts ?? []).map((account) => [account.id, account]));
   for (const mapping of mappings ?? []) {
+    const account = accountsById.get(mapping.account_id);
+    if (!isAccountCompatibleWithSourceType(account, mapping.source_type)) {
+      continue;
+    }
     index[`${mapping.bank_key}:${mapping.source_type}`] = mapping.account_id;
   }
 
@@ -96,7 +108,13 @@ export async function resolveOrCreateGmailImportAccountId(
   sourceType: GmailSourceType,
 ) {
   const key = `${bankKey}:${sourceType}`;
-  if (index[key]) return index[key];
+  if (index[key]) {
+    const indexedAccount = accounts.find((account) => account.id === index[key]);
+    if (isAccountCompatibleWithSourceType(indexedAccount, sourceType)) {
+      return index[key];
+    }
+    delete index[key];
+  }
 
   const existingId = resolveExistingGmailAccountId(bankKey, sourceType, accounts);
   if (existingId) {

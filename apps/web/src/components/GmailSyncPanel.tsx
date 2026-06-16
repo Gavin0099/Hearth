@@ -294,6 +294,17 @@ function resolveAutoMappedAccountId(
   return candidates.length === 1 ? candidates[0].id : null;
 }
 
+function isMappedAccountCompatible(
+  accountId: string | undefined,
+  sourceType: ImportJobRecord["source_type"],
+  accounts: AccountRecord[],
+) {
+  if (!accountId) return false;
+  const expectedType = sourceType === "credit_card" ? "cash_credit" : "cash_bank";
+  const account = accounts.find((item) => item.id === accountId);
+  return account?.type === expectedType;
+}
+
 function extractPreviewLines(text: string) {
   const lines = text
     .split("\n")
@@ -568,7 +579,7 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
     const freshMappingIndex: Record<string, string> = {};
     if (mappingsRes.status === "ok") {
       for (const m of mappingsRes.items as BankAccountMappingRecord[]) {
-        if (m.enabled) {
+        if (m.enabled && isMappedAccountCompatible(m.account_id, m.source_type, freshAccounts)) {
           freshMappingIndex[`${m.bank_key}:${m.source_type}`] = m.account_id;
         }
       }

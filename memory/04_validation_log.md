@@ -443,6 +443,16 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - `powershell -ExecutionPolicy Bypass -File .\scripts\gmail-transactions-dedupe-cleanup.ps1 -UserEmail reiko0099@gmail.com -Apply -PrintSqlOnly` -> pass.
 - PowerShell parser check -> pass.
 
+## 2026-06-16 Gmail Invalid Mapping Guard
+
+- Root cause analysis from live DB output: duplicate-looking Gmail rows were not same-account duplicates; they were being written through different account ids, consistent with a stale or invalid `bank_account_mapping` pointing a Gmail source type at the wrong account type.
+- `apps/api/src/lib/gmail-account-resolver.ts` now ignores explicit mapping rows unless the mapped account exists and its `type` matches the Gmail `source_type`.
+- `apps/web/src/components/GmailSyncPanel.tsx` now ignores browser-fetched mapping rows unless the target account type matches the pending job `source_type`.
+- Added API regression coverage for an explicit `credit_card` mapping that incorrectly points to a `cash_bank` account; the route now falls back to the correct `cash_credit` account.
+- `npm.cmd --workspace @hearth/api run test -- tests/import-jobs.test.ts` -> pass (`183/183`).
+- `npm.cmd --workspace @hearth/api run check` -> pass.
+- `npm.cmd --workspace @hearth/web run check` -> pass.
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.

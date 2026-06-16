@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-16T03:55:34.844751+00:00",
+  "contract_injected": true,
+  "contract_hash": "5fcf9299a3b7f54071335c370e4dfd4c11ea9090b3cd3149883ba9f9cc72327d",
+  "scope": "fix",
+  "level": "L1",
+  "lang": "TypeScript",
+  "contract_fields": {
+    "LANG": "TypeScript",
+    "LEVEL": "L1",
+    "SCOPE": "fix",
+    "PLAN": "Ignore incompatible Gmail bank/account mappings that point credit-card jobs to cash_bank accounts or bank-statement jobs to cash_credit accounts",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-16.md",
+    "CONTEXT": "Fixing Gmail auto-import duplication caused by stale or invalid bank_account_mapping account types",
+    "PRESSURE": "SAFE (mapping validation guard and regression test only)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L1\nSCOPE = fix\nPLAN = Ignore incompatible Gmail bank/account mappings that point credit-card jobs to cash_bank accounts or bank-statement jobs to cash_credit accounts\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-16.md\nCONTEXT = Fixing Gmail auto-import duplication caused by stale or invalid bank_account_mapping account types\nPRESSURE = SAFE (mapping validation gua"
+}
