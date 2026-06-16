@@ -43,6 +43,7 @@ const GMAIL_ENABLED_BANKS = ["sinopac", "esun", "cathay", "taishin", "ctbc", "me
 const BLOCKING_AUTO_PARSE_BANKS = new Set<BankKey>(["mega"]);
 const QUEUE_PDF_PARSE_TIMEOUT_MS = 45_000;
 const QUEUE_IMPORT_TIMEOUT_MS = 30_000;
+const QUEUE_JOB_UPDATE_TIMEOUT_MS = 10_000;
 
 const JOB_STATUS_PRIORITY: Record<string, number> = {
   imported: 6,
@@ -140,6 +141,19 @@ async function withTimeout<T>(promise: Promise<T>, label: string, ms: number): P
     return await Promise.race([promise, timeout]);
   } finally {
     window.clearTimeout(timeoutId);
+  }
+}
+
+async function safeUpdateImportJob(
+  id: string,
+  update: Parameters<typeof updateImportJob>[1],
+): Promise<boolean> {
+  try {
+    await withTimeout(updateImportJob(id, update), "import job status update", QUEUE_JOB_UPDATE_TIMEOUT_MS);
+    return true;
+  } catch (error) {
+    console.warn("[gmail-sync] import job status update failed", error);
+    return false;
   }
 }
 
@@ -525,7 +539,7 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
         freshMappingIndex[`${bank}:${item.source_type}`] ??
         resolveAutoMappedAccountId(bank, item.source_type, freshAccounts);
       if (!resolvedAccountId) {
-        await updateImportJob(item.id, {
+        await safeUpdateImportJob(item.id, {
           status: "needs_review",
           review_reason: "missing_mapping",
           error_code: "auto_account_unavailable",
@@ -535,7 +549,7 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
 
       try {
         if (BLOCKING_AUTO_PARSE_BANKS.has(bank)) {
-          await updateImportJob(item.id, {
+          await safeUpdateImportJob(item.id, {
             status: "failed",
             review_reason: "parse_error",
             error_code: "auto_parser_blocked",
@@ -566,7 +580,7 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
         const text = extraction.text;
 
         if (!text.trim()) {
-          await updateImportJob(item.id, {
+          await safeUpdateImportJob(item.id, {
             status: "failed",
             review_reason: "parse_error",
             error_code: "empty_text",
@@ -580,7 +594,7 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
           : parseCreditCardTransactions(pdfParser, bank, text);
 
         if (parsed.length === 0) {
-          await updateImportJob(item.id, {
+          await safeUpdateImportJob(item.id, {
             status: "failed",
             review_reason: "parse_error",
             error_code: "no_transactions",
@@ -635,11 +649,11 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
           jobSkipped = result.skipped;
         }
 
-        await updateImportJob(item.id, { status: "imported", imported_count: jobImported, skipped_count: jobSkipped });
+        await safeUpdateImportJob(item.id, { status: "imported", imported_count: jobImported, skipped_count: jobSkipped });
         importedTotal += jobImported;
         skippedTotal += jobSkipped;
       } catch (err) {
-        await updateImportJob(item.id, {
+        await safeUpdateImportJob(item.id, {
           status: "failed",
           review_reason: "parse_error",
           error_code: "parse_error",

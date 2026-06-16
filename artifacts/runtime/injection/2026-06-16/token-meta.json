@@ -1,0 +1,12 @@
+[
+  {
+    "repo": "Hearth",
+    "timestamp": "20260616T014456Z",
+    "task_type": "fix/gmail-api-timeout-safe-updates",
+    "total_tokens": null,
+    "token_source_summary": "claude_code_internal",
+    "token_observability_level": "none",
+    "decision_usage_allowed": false,
+    "artifact_path": "artifacts/runtime/injection/2026-06-16/20260616T014456Z-claude.json"
+  }
+]

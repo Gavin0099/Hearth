@@ -78,11 +78,21 @@ export async function updateImportJob(
     error_message?: string | null;
   },
 ): Promise<void> {
-  await apiFetch(`/api/import-jobs/${id}`, {
+  const res = await apiFetch(`/api/import-jobs/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(update),
   });
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const payload = await res.json() as { error?: string };
+      detail = payload.error ? `: ${payload.error}` : "";
+    } catch {
+      detail = "";
+    }
+    throw new Error(`HTTP ${res.status}${detail}`);
+  }
 }
 
 export type BankAccountMappingRecord = {

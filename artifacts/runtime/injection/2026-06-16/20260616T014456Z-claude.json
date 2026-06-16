@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-16T01:44:56.050619+00:00",
+  "contract_injected": true,
+  "contract_hash": "de49a260e6d81748f26d69d42bd97a1c325cddfd574aef4f5ce1c15db28a6456",
+  "scope": "fix",
+  "level": "L1",
+  "lang": "TypeScript",
+  "contract_fields": {
+    "LANG": "TypeScript",
+    "LEVEL": "L1",
+    "SCOPE": "fix",
+    "PLAN": "add API timeout and safe Gmail job status updates",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-16.md(today if present), memory/2026-06-15.md(yesterday)",
+    "CONTEXT": "Live Gmail queue still stops at first Mega item after parser bypass, likely because job status PATCH has no timeout and blocks queue advancement.",
+    "PRESSURE": "ELEVATED (live queue cannot advance past first item)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L1\nSCOPE = fix\nPLAN = add API timeout and safe Gmail job status updates\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-16.md(today if present), memory/2026-06-15.md(yesterday)\nCONTEXT = Live Gmail queue still stops at first Mega item after parser bypass, likely because job status PATCH has no timeout and blocks queue advancement.\nPRESSURE = ELEVATED (live queue cann"
+}

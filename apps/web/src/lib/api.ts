@@ -5,6 +5,27 @@ type ApiRequestInit = RequestInit & {
   auth?: boolean;
 };
 
+const API_FETCH_TIMEOUT_MS = 15_000;
+
+async function fetchWithTimeout(url: string, init: RequestInit) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), API_FETCH_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: init.signal ?? controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error(`API timeout after ${API_FETCH_TIMEOUT_MS / 1000}s`);
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 export async function apiFetch(path: string, init: ApiRequestInit = {}) {
   const headers = new Headers(init.headers);
   const shouldAttachAuth = init.auth !== false;
@@ -21,7 +42,7 @@ export async function apiFetch(path: string, init: ApiRequestInit = {}) {
   const requestUrl = `${env.apiBaseUrl}${path}`;
   let firstResponse: Response;
   try {
-    firstResponse = await fetch(requestUrl, {
+    firstResponse = await fetchWithTimeout(requestUrl, {
       ...init,
       headers,
     });
@@ -44,7 +65,7 @@ export async function apiFetch(path: string, init: ApiRequestInit = {}) {
   retryHeaders.set("authorization", `Bearer ${refreshedToken}`);
 
   try {
-    return await fetch(requestUrl, {
+    return await fetchWithTimeout(requestUrl, {
       ...init,
       headers: retryHeaders,
     });

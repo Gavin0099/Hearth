@@ -384,6 +384,16 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - Bumped root/api/web/shared package versions and internal `@hearth/shared` pins to `0.3.12`.
 - Claim boundary: local code path and type safety need verification before push; live deploy still must confirm the queue advances to non-Mega jobs.
 
+## 2026-06-16 Gmail API Timeout / Safe Updates
+
+- `apiFetch` now wraps API calls in a 15-second `AbortController` timeout and reports API timeout errors.
+- `updateImportJob` now throws on non-2xx responses instead of silently ignoring failed PATCH requests.
+- Gmail queue status writes now use `safeUpdateImportJob`; a stuck or failed status PATCH logs a warning and lets the queue advance to the next pending job.
+- Bumped root/api/web/shared package versions and internal `@hearth/shared` pins to `0.3.13`.
+- `npm.cmd --workspace @hearth/web run check` -> pass.
+- `npm.cmd run check` -> pass for api/web/shared at `0.3.13`.
+- Claim boundary: local type safety verified; production deploy and live queue run still need to confirm the queue advances past the first Mega job.
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.
