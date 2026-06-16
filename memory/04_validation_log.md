@@ -460,6 +460,20 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - `npm.cmd --workspace @hearth/web run check` -> pass.
 - Claim boundary: this prevents future manual Gmail credit-card imports from landing in same-bank bank accounts after deployment; it does not clean already-misrouted production rows.
 
+## 2026-06-16 Gmail Cross-Account Cleanup Script
+
+- Live DB evidence for `reiko0099@gmail.com` showed many remaining `gmail_bank_sinopac` and `gmail_pdf_*` pairs were historical cross-account duplicates: same natural-key transaction rows existed under both a preferred and non-preferred account type, with different `created_at` windows.
+- Added `scripts/gmail-cross-account-dedupe-cleanup.ps1` to preview and optionally delete only those repairable groups.
+- Safety contract:
+  - scope is limited to `transactions.source LIKE 'gmail_%'`
+  - group must contain both preferred and non-preferred account types
+  - preferred account type is inferred from source (`gmail_pdf_% -> cash_credit`, `gmail_bank_% -> cash_bank`)
+  - preferred account count must be exactly `1`
+  - if the kept preferred row lacks `category`, the script preserves category from a duplicate before delete
+- `powershell -ExecutionPolicy Bypass -File scripts/gmail-cross-account-dedupe-cleanup.ps1 -UserEmail reiko0099@gmail.com -PrintSqlOnly` -> pass.
+- `powershell -ExecutionPolicy Bypass -File scripts/gmail-cross-account-dedupe-cleanup.ps1 -UserEmail reiko0099@gmail.com -Apply -PrintSqlOnly` -> pass.
+- Claim boundary: SQL generation and safety filters are locally validated only; no production cleanup was executed from this workspace.
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.

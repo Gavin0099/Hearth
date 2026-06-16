@@ -34,6 +34,7 @@
 - Gmail duplicate cleanup script uuid hotfix is implemented locally: user-scoped SQL now compares `accounts.user_id` to `auth.users.id` as uuid and casts transaction ids to text only for preview display aggregation.
 - Gmail invalid mapping guard is implemented locally: stale `bank_account_mapping` rows whose `source_type` does not match the mapped account's `type` are ignored in both API job creation and browser-side queue processing.
 - Gmail manual credit-card import fix is implemented locally: `GmailSyncPanel.handleSync()` now resolves single-item credit-card imports through `resolveAutoMappedAccountId(email.bank, "credit_card", freshAccounts)` instead of the generic bank matcher, so manual Gmail import cannot pick a same-bank `cash_bank` account.
+- Gmail cross-account cleanup support is implemented locally: `scripts/gmail-cross-account-dedupe-cleanup.ps1` previews and optionally deletes historical `gmail_%` rows duplicated across wrong/correct account types, but only when the same natural key has exactly one preferred account and at least one non-preferred account.
 - Governance protected-file CI fix is implemented locally: `AGENTS.base.md` and `.governance/baseline.yaml` are pinned to LF via `.gitattributes`, and the protected baseline hash now matches the LF checkout hash reported by GitHub CI (`c16617acca72...`).
 - Security review hardening is in progress locally: `supabase/schema.sql` is rebuilt from ordered migrations, schema drift check script is added, `/api/ops/*` requires an admin allowlist, and ops DB/internal errors are sanitized.
 - `stash@{0}` (`codex-pre-pull-tracked-20260611`) remains as a backup of pre-pull tracked dirty changes and can be dropped after explicit review.
@@ -45,4 +46,5 @@
 - Pull the cleanup-script uuid hotfix before rerunning the Supabase preview command; the previous script failed with `operator does not exist: uuid = text`.
 - After deploying the invalid-mapping guard, inspect existing `bank_account_mapping` rows and existing wrong-account Gmail imports before any one-time cleanup.
 - After deploying the manual import fix, verify a single-row Gmail credit-card import lands only in the credit-card account and does not recreate cross-account duplicates.
+- Run `scripts/gmail-cross-account-dedupe-cleanup.ps1 -UserEmail reiko0099@gmail.com` in preview mode against Supabase, review keep/delete rows, then rerun with `-Apply` if the preview matches the historical wrong-account duplicates.
 - After the governance protected-file fix is pushed, confirm the GitHub drift check no longer fails on `protected_files_unmodified`.

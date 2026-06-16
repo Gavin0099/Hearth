@@ -200,3 +200,4 @@
 | 2026-06-16 | Gmail duplicate cleanup UUID hotfix | 修正清理腳本 user scope SQL 的 `uuid = text` 錯誤，preview/apply SQL 產生檢查通過。 |
 | 2026-06-16 | Gmail invalid mapping guard | Gmail auto-import 會忽略 `credit_card -> cash_bank` 或 `bank_account -> cash_credit` 的舊錯誤 mapping，回退到正確型別帳戶解析；新增 regression test。 |
 | 2026-06-16 | Gmail manual import account-type fix | `GmailSyncPanel` 手動單封信用卡匯入改用 `resolveAutoMappedAccountId(..., "credit_card", ...)`，避免手動匯入挑到同銀行的銀行帳戶並再次寫出跨帳戶重複資料。 |
+| 2026-06-16 | Gmail cross-account cleanup script | 新增 `scripts/gmail-cross-account-dedupe-cleanup.ps1`，專門清理歷史上被寫到錯帳戶型別的 `gmail_%` 重複資料；僅在同一自然鍵同時存在 preferred/non-preferred account type 且 preferred account 唯一時才會刪除。 |

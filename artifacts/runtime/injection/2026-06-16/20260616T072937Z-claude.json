@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-16T07:29:37.561373+00:00",
+  "contract_injected": true,
+  "contract_hash": "4ac5f907c178f55d1758d511fb811ed589b560b137dc45d37ec99a71c6f2c0ab",
+  "scope": "fix",
+  "level": "L2",
+  "lang": "PowerShell",
+  "contract_fields": {
+    "LANG": "PowerShell",
+    "LEVEL": "L2",
+    "SCOPE": "fix",
+    "PLAN": "Add a safe cross-account Gmail duplicate cleanup script for already-misrouted bank/credit imports",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-16.md",
+    "CONTEXT": "Create a preview-first cleanup script for historical Gmail transactions duplicated across wrong and correct account types",
+    "PRESSURE": "ELEVATED (production data cleanup helper; preview-first and type-safe)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = PowerShell\nLEVEL = L2\nSCOPE = fix\nPLAN = Add a safe cross-account Gmail duplicate cleanup script for already-misrouted bank/credit imports\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-16.md\nCONTEXT = Create a preview-first cleanup script for historical Gmail transactions duplicated across wrong and correct account types\nPRESSURE = ELEVATED (production data cleanup helper; preview-fi"
+}
