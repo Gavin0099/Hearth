@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-16T03:00:06.221850+00:00",
+  "contract_injected": true,
+  "contract_hash": "6ce42b1c3488a9e27b38fcb15bd89217a04844f6bd3d2997162a73d749c6060d",
+  "scope": "fix",
+  "level": "L2",
+  "lang": "PowerShell",
+  "contract_fields": {
+    "LANG": "PowerShell",
+    "LEVEL": "L2",
+    "SCOPE": "fix",
+    "PLAN": "add safe cleanup for existing duplicated Gmail transaction imports",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-16.md",
+    "CONTEXT": "The dedupe code fix prevents future gmail_pdf and gmail_bank duplicates, but live screenshots show existing duplicated bank transactions already stored; add a dry-run-first cleanup script scoped to Gmail transaction sources and one user.",
+    "PRESSURE": "ELEVATED (production financial transaction cleanup must be scoped and previewable)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = PowerShell\nLEVEL = L2\nSCOPE = fix\nPLAN = add safe cleanup for existing duplicated Gmail transaction imports\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-16.md\nCONTEXT = The dedupe code fix prevents future gmail_pdf and gmail_bank duplicates, but live screenshots show existing duplicated bank transactions already stored; add a dry-run-first cleanup script scoped to Gmail transaction "
+}

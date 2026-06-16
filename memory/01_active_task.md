@@ -30,10 +30,11 @@
 - Gmail API timeout / safe update fix is implemented locally: `apiFetch` now aborts after 15 seconds, `updateImportJob` throws on non-2xx, and queue status updates are wrapped in `safeUpdateImportJob` so a stuck or failed PATCH cannot stop the queue.
 - Gmail queue optimistic refresh fix is implemented locally: browser-side queue processing keeps per-session `import_jobs` status overrides, applies them immediately after each job reaches imported/failed/needs_review, and merges them into later `loadQueues()` results so stale backend `pending_parse` rows do not keep the Settings panel showing `待匯入`.
 - Gmail re-import dedupe fix is implemented locally: transaction `source_hash` no longer includes `category`, and Gmail transaction imports check existing rows by category-independent natural key so previously categorized Cathay rows are skipped instead of duplicated as uncategorized rows.
+- Gmail duplicate cleanup support is implemented locally: `scripts/gmail-transactions-dedupe-cleanup.ps1` previews and optionally deletes existing duplicate `gmail_%` transaction rows by category-independent natural key, keeping categorized rows first and requiring an explicit user scope for `-Apply`.
 - Security review hardening is in progress locally: `supabase/schema.sql` is rebuilt from ordered migrations, schema drift check script is added, `/api/ops/*` requires an admin allowlist, and ops DB/internal errors are sanitized.
 - `stash@{0}` (`codex-pre-pull-tracked-20260611`) remains as a backup of pre-pull tracked dirty changes and can be dropped after explicit review.
 
 ## Next
 
 - Keep product work focused on: Gmail server-sync manual deployment validation and Security Phase F-1 verification.
-- Deploy and live-test `0.3.15`: re-running Cathay/Gmail statement import should report skipped rows for already-imported transactions instead of adding duplicate uncategorized copies; existing duplicates already created in production may still need cleanup.
+- Deploy and live-test `0.3.16`, then run `scripts/gmail-transactions-dedupe-cleanup.ps1 -UserEmail reiko0099@gmail.com` to preview existing duplicate Gmail rows before deciding whether to run the same command with `-Apply`.

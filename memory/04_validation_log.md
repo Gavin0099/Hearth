@@ -416,6 +416,17 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - `npm.cmd --workspace @hearth/api run check` -> pass.
 - Claim boundary: prevents future Gmail re-import duplicates after deployment; it does not remove duplicate transaction rows already created in production.
 
+## 2026-06-16 Gmail Duplicate Cleanup Script
+
+- Added `scripts/gmail-transactions-dedupe-cleanup.ps1` for existing duplicate `transactions` rows from Gmail imports.
+- Cleanup scope is restricted to `transactions.source LIKE 'gmail_%'` and groups duplicates by account/date/amount/currency/description/source.
+- Preview mode is the default and prints duplicate groups with `keep_id` and `delete_ids`; `-Apply` deletes only rows ranked after the kept row.
+- Delete mode requires `-UserEmail`, `-UserId`, or explicit `-AllUsers`; this prevents accidental cross-user cleanup.
+- Retention order keeps categorized rows before uncategorized duplicates, then oldest created row, then lowest id.
+- `powershell -ExecutionPolicy Bypass -File scripts/gmail-transactions-dedupe-cleanup.ps1 -UserEmail reiko0099@gmail.com -PrintSqlOnly` -> pass.
+- `powershell -ExecutionPolicy Bypass -File scripts/gmail-transactions-dedupe-cleanup.ps1 -UserEmail reiko0099@gmail.com -Apply -PrintSqlOnly` -> pass.
+- Claim boundary: SQL generation is locally validated only; no production DB cleanup was executed.
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.
