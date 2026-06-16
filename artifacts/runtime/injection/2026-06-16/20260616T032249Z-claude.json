@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-16T03:22:49.515632+00:00",
+  "contract_injected": true,
+  "contract_hash": "dad8a518dfc5e6bc33ce7b458d9a1a08cf642bbe28bdbc3a50fe557cbe015f43",
+  "scope": "fix",
+  "level": "L1",
+  "lang": "PowerShell",
+  "contract_fields": {
+    "LANG": "PowerShell",
+    "LEVEL": "L1",
+    "SCOPE": "fix",
+    "PLAN": "Fix gmail-transactions-dedupe-cleanup.ps1 SQL uuid type mismatch for user-scoped preview/apply cleanup",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-16.md",
+    "CONTEXT": "Fixing Supabase preview failure from uuid = text in Gmail duplicate cleanup script",
+    "PRESSURE": "SAFE (script SQL predicate and uuid aggregation fix only)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = PowerShell\nLEVEL = L1\nSCOPE = fix\nPLAN = Fix gmail-transactions-dedupe-cleanup.ps1 SQL uuid type mismatch for user-scoped preview/apply cleanup\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-16.md\nCONTEXT = Fixing Supabase preview failure from uuid = text in Gmail duplicate cleanup script\nPRESSURE = SAFE (script SQL predicate and uuid aggregation fix only)\n\nFix Gmail transaction dedup"
+}

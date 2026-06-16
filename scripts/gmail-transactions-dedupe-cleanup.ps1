@@ -45,11 +45,11 @@ function Build-UserPredicate {
   }
 
   if ($UserId.Trim()) {
-    return "a.user_id = " + (Sql-Literal $UserId.Trim())
+    return "a.user_id = " + (Sql-Literal $UserId.Trim()) + "::uuid"
   }
 
   if ($UserEmail.Trim()) {
-    return "a.user_id IN (SELECT id::text FROM auth.users WHERE lower(email) = lower(" + (Sql-Literal $UserEmail.Trim()) + "))"
+    return "a.user_id IN (SELECT id FROM auth.users WHERE lower(email) = lower(" + (Sql-Literal $UserEmail.Trim()) + "))"
   }
 
   if ($Apply) {
@@ -116,8 +116,8 @@ SELECT
   source,
   description,
   COUNT(*) AS duplicate_rows,
-  MAX(CASE WHEN keep_rank = 1 THEN id END) AS keep_id,
-  string_agg(id, ', ' ORDER BY keep_rank) FILTER (WHERE keep_rank > 1) AS delete_ids
+  (array_agg(id ORDER BY keep_rank))[1] AS keep_id,
+  string_agg(id::text, ', ' ORDER BY keep_rank) FILTER (WHERE keep_rank > 1) AS delete_ids
 FROM ranked
 WHERE duplicate_count > 1
 GROUP BY user_id, account_id, date, amount, currency, source, description
