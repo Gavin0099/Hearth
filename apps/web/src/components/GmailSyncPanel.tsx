@@ -1064,7 +1064,7 @@ export function GmailSyncPanel({ session, onImported, refreshKey, background = f
           return;
         }
 
-        const accountId = resolveImportAccountId(email.bank, freshAccounts);
+        const accountId = resolveAutoMappedAccountId(email.bank, "credit_card", freshAccounts);
         if (!accountId) {
           setState({ status: "error", message: "找不到對應帳戶。" });
           return;

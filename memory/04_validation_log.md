@@ -453,6 +453,13 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - `npm.cmd --workspace @hearth/api run check` -> pass.
 - `npm.cmd --workspace @hearth/web run check` -> pass.
 
+## 2026-06-16 Gmail Manual Import Account-Type Fix
+
+- Live DB evidence showed the remaining wrong-account duplication path was not same-account re-import; the same Gmail statement rows were written into different account ids, and manual single-item Gmail import still used the generic `resolveImportAccountId()` bank matcher.
+- `apps/web/src/components/GmailSyncPanel.tsx` now routes manual credit-card imports through `resolveAutoMappedAccountId(email.bank, "credit_card", freshAccounts)`, aligning manual import with the same account-type-safe resolver used by Gmail auto-import.
+- `npm.cmd --workspace @hearth/web run check` -> pass.
+- Claim boundary: this prevents future manual Gmail credit-card imports from landing in same-bank bank accounts after deployment; it does not clean already-misrouted production rows.
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.

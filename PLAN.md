@@ -3,7 +3,7 @@
 > **專案名稱**: Hearth 家庭財務管理
 > **技術棧**: React / TypeScript / Hono / Supabase / Cloudflare
 > **風險等級**: L1-L2（以 correctness / security 為優先）
-> **最後更新**: 2026-06-11
+> **最後更新**: 2026-06-16
 > **Owner**: GavinWu
 > **Freshness**: Sprint (7d)
 
@@ -199,3 +199,4 @@
 | 2026-06-16 | Governance protected-file CI fix | `AGENTS.base.md` 與 `.governance/baseline.yaml` 固定 LF，baseline hash 改為 Linux/CI checkout 會計算出的 `c16617...`，修復 `protected_files_unmodified` drift failure。 |
 | 2026-06-16 | Gmail duplicate cleanup UUID hotfix | 修正清理腳本 user scope SQL 的 `uuid = text` 錯誤，preview/apply SQL 產生檢查通過。 |
 | 2026-06-16 | Gmail invalid mapping guard | Gmail auto-import 會忽略 `credit_card -> cash_bank` 或 `bank_account -> cash_credit` 的舊錯誤 mapping，回退到正確型別帳戶解析；新增 regression test。 |
+| 2026-06-16 | Gmail manual import account-type fix | `GmailSyncPanel` 手動單封信用卡匯入改用 `resolveAutoMappedAccountId(..., "credit_card", ...)`，避免手動匯入挑到同銀行的銀行帳戶並再次寫出跨帳戶重複資料。 |

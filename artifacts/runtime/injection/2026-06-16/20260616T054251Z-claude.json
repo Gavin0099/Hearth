@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-16T05:42:51.095130+00:00",
+  "contract_injected": true,
+  "contract_hash": "47fc64c92ff5cce3fb7785199422dfd387c444d53db3ff7aa5d52420d162413f",
+  "scope": "fix",
+  "level": "L1",
+  "lang": "TypeScript",
+  "contract_fields": {
+    "LANG": "TypeScript",
+    "LEVEL": "L1",
+    "SCOPE": "fix",
+    "PLAN": "Make manual Gmail credit-card import use a credit-card-only account resolver instead of a bank/credit mixed resolver",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-16.md",
+    "CONTEXT": "Closing the remaining Gmail wrong-account import path in GmailSyncPanel manual credit-card import",
+    "PRESSURE": "SAFE (single-line account resolver fix plus verification)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L1\nSCOPE = fix\nPLAN = Make manual Gmail credit-card import use a credit-card-only account resolver instead of a bank/credit mixed resolver\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-16.md\nCONTEXT = Closing the remaining Gmail wrong-account import path in GmailSyncPanel manual credit-card import\nPRESSURE = SAFE (single-line account resolver fix plus verification)"
+}
