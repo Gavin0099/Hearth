@@ -427,6 +427,13 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - `powershell -ExecutionPolicy Bypass -File scripts/gmail-transactions-dedupe-cleanup.ps1 -UserEmail reiko0099@gmail.com -Apply -PrintSqlOnly` -> pass.
 - Claim boundary: SQL generation is locally validated only; no production DB cleanup was executed.
 
+## 2026-06-16 Governance Protected-File CI Fix
+
+- Root cause: `.governance/baseline.yaml` recorded the Windows CRLF working-tree hash for protected `AGENTS.base.md`, while GitHub/Linux CI checks the LF checkout bytes and reported `current=c16617acca72...`.
+- Added `.gitattributes` to force LF for `AGENTS.base.md` and `.governance/baseline.yaml`.
+- Normalized `AGENTS.base.md` to LF and updated `sha256.AGENTS.base.md` to `c16617acca72b517fe6f6280e75372a1b30ef7b10edd6ed9000a1a948ca691b9`.
+- `python -X utf8 ai-governance-framework\governance_tools\governance_drift_checker.py --repo . --framework-root ai-governance-framework --format human` -> pass (`severity=ok`).
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.

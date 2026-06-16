@@ -196,3 +196,4 @@
 | 2026-06-16 | Gmail queue optimistic refresh | Gmail queue 每筆處理完成後立即套用本機 job status override，並讓 `loadQueues()` 合併本輪處理結果，避免後端狀態刷新延遲時 UI 繼續顯示 `待匯入`；版本 bump 至 `0.3.14`。 |
 | 2026-06-16 | Gmail re-import dedupe | `source_hash` 改為分類無關，並針對 Gmail 匯入加上 account/date/source 範圍內的 natural-key 相容查詢，避免已分類舊交易重匯入後新增未分類 duplicate；版本 bump 至 `0.3.15`。 |
 | 2026-06-16 | Gmail duplicate cleanup script | 新增 `scripts/gmail-transactions-dedupe-cleanup.ps1`，預設 preview，僅清 `gmail_%` 交易來源，`-Apply` 必須指定 `-UserEmail` / `-UserId` 或明確 `-AllUsers`；版本 bump 至 `0.3.16`。 |
+| 2026-06-16 | Governance protected-file CI fix | `AGENTS.base.md` 與 `.governance/baseline.yaml` 固定 LF，baseline hash 改為 Linux/CI checkout 會計算出的 `c16617...`，修復 `protected_files_unmodified` drift failure。 |
