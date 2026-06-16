@@ -2666,6 +2666,114 @@ test("POST /api/import/transactions-csv skips duplicate rows by source hash", as
   assert.deepEqual(insertedRows, []);
 });
 
+test("POST /api/import/transactions-csv skips Gmail re-imports by category-independent natural key", async () => {
+  let insertedRows: Array<Record<string, unknown>> = [];
+  let transactionSelectCalls = 0;
+
+  const app = createApp({
+    resolveAuthenticatedUser: async () => ({
+      id: "user-1",
+      email: "reiko0099@gmail.com",
+    }),
+    createSupabaseAdminClient: () => ({
+      from: (table: string) => {
+        if (table === "accounts") {
+          return {
+            select: () => ({
+              eq: async () => ({
+                data: [{ id: "account-1" }],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === "transactions") {
+          return {
+            select: () => {
+              transactionSelectCalls += 1;
+              if (transactionSelectCalls === 1) {
+                return {
+                  in: async () => ({
+                    data: [],
+                    error: null,
+                  }),
+                };
+              }
+
+              let filterCount = 0;
+              const query = {
+                in: () => {
+                  filterCount += 1;
+                  if (filterCount < 3) {
+                    return query;
+                  }
+
+                  return Promise.resolve({
+                    data: [
+                      {
+                        account_id: "account-1",
+                        date: "2026-06-01",
+                        amount: -1941,
+                        currency: "TWD",
+                        description: "WEIXIN*Panduo platform",
+                        source: "gmail_pdf_cathay",
+                      },
+                    ],
+                    error: null,
+                  });
+                },
+              };
+              return query;
+            },
+            upsert: async (values: Array<Record<string, unknown>>) => {
+              insertedRows = values;
+              return { error: null };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    }),
+  });
+
+  const formData = new FormData();
+  formData.set("account_id", "account-1");
+  formData.set("source", "gmail_pdf_cathay");
+  formData.set(
+    "file",
+    new File(
+      ["date,amount,currency,category,description\n2026-06-01,-1941,TWD,,WEIXIN*Panduo platform\n"],
+      "cathay-gmail.csv",
+      { type: "text/csv" },
+    ),
+  );
+  const response = await app.request(
+    "/api/import/transactions-csv",
+    {
+      method: "POST",
+      body: formData,
+    },
+    env,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    source: "transactions-csv",
+    imported: 0,
+    skipped: 1,
+    failed: 0,
+    runtime: "cloudflare-worker",
+    persistence: "supabase",
+    status: "ok",
+    errors: [],
+    warnings: [],
+    recurringCandidates: [],
+  });
+  assert.deepEqual(insertedRows, []);
+});
+
 test("POST /api/import/transactions-csv dedupes duplicate rows within the same upload batch", async () => {
   let insertedRows: Array<Record<string, unknown>> = [];
 

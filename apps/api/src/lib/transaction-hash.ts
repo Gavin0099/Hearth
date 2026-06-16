@@ -10,7 +10,6 @@ export function buildTransactionSourceHash(input: CreateTransactionInput) {
         String(input.amount),
         (input.currency ?? "TWD").trim().toUpperCase(),
         (input.description ?? "").trim(),
-        (input.category ?? "").trim(),
         (input.source ?? "").trim(),
       ].join("|"),
       "utf8",

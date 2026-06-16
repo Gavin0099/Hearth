@@ -11,6 +11,7 @@ import { parseSinopacTransactionsCsv } from "./sinopac";
 import { parseSinopacStockCsv } from "./sinopac-stock";
 import { executeStockTradeImport } from "./stock-import";
 import { buildTransactionImportRows, prepareTransactionImportBatch } from "./transaction-import";
+import { buildTransactionSourceHash } from "./transaction-hash";
 import type { ApiEnv } from "../types";
 
 export type ImportRouteContext = Context<ApiEnv>;
@@ -196,9 +197,43 @@ export async function importNormalizedRows(
     };
   }
 
+  const sources = [...new Set(importRows.map((row) => row.source ?? source))];
+  let naturalExistingHashes: string[] = [];
+  if (sources.some((item) => item.startsWith("gmail_"))) {
+    const accountIds = [...new Set(importRows.map((row) => row.account_id))];
+    const dates = [...new Set(importRows.map((row) => row.date))];
+    const { data: naturalExisting, error: naturalExistingError } = await supabase
+      .from("transactions")
+      .select("account_id, date, amount, currency, description, source")
+      .in("account_id", accountIds)
+      .in("date", dates)
+      .in("source", sources);
+
+    if (naturalExistingError) {
+      return {
+        response: databaseImportResponse(naturalExistingError.message),
+        status: 500 as const,
+      };
+    }
+
+    naturalExistingHashes = (naturalExisting ?? []).map((row: CreateTransactionInput) =>
+      buildTransactionSourceHash({
+        account_id: row.account_id,
+        date: row.date,
+        amount: Number(row.amount),
+        currency: row.currency ?? "TWD",
+        description: row.description ?? null,
+        source: row.source ?? source,
+      }),
+    );
+  }
+
   const { freshRows, skipped } = prepareTransactionImportBatch(
     importRows,
-    (existing ?? []).map((item: { source_hash: string | null }) => item.source_hash).filter(Boolean),
+    [
+      ...(existing ?? []).map((item: { source_hash: string | null }) => item.source_hash).filter(Boolean),
+      ...naturalExistingHashes,
+    ],
   );
 
   if (freshRows.length > 0) {

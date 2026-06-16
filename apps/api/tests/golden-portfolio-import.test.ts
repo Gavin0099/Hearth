@@ -269,6 +269,22 @@ test("transaction import batch golden: removes payload duplicates and existing h
   assert.equal(result.skipped, 2);
 });
 
+test("transaction source hash ignores category edits", () => {
+  const base = {
+    account_id: "account-1",
+    date: "2026-06-01",
+    amount: -1941,
+    currency: "TWD",
+    description: "WEIXIN*Panduo platform",
+    source: "gmail_pdf_cathay",
+  };
+
+  assert.equal(
+    buildTransactionImportRows([{ ...base, category: "購物" }])[0]?.source_hash,
+    buildTransactionImportRows([{ ...base, category: null }])[0]?.source_hash,
+  );
+});
+
 test("transaction import batch golden: keeps all unique rows when no existing hashes match", () => {
   const rows: CreateTransactionInput[] = [
     {

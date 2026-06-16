@@ -1,0 +1,19 @@
+{
+  "provider": "claude",
+  "generated_at": "2026-06-16T02:51:41.889130+00:00",
+  "contract_injected": true,
+  "contract_hash": "f9a3be0634bf0b6968f915936770eb82ce128a037f873c61e1c090d793171dd7",
+  "scope": "fix",
+  "level": "L2",
+  "lang": "TypeScript",
+  "contract_fields": {
+    "LANG": "TypeScript",
+    "LEVEL": "L2",
+    "SCOPE": "fix",
+    "PLAN": "prevent duplicate transaction inserts when Gmail PDF statements are re-imported",
+    "LOADED": "AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-16.md",
+    "CONTEXT": "Live Cathay credit-card Gmail import was re-run and duplicated transaction rows in the credit-card detail view; inspect transaction import source_hash construction and make Gmail statement re-import idempotent without weakening ownership checks.",
+    "PRESSURE": "ELEVATED (financial transaction duplication affects spending totals)"
+  },
+  "governed_prompt_preview": "[Governance Contract]\nLANG = TypeScript\nLEVEL = L2\nSCOPE = fix\nPLAN = prevent duplicate transaction inserts when Gmail PDF statements are re-imported\nLOADED = AGENTS.md, PLAN.md, governance/AGENT.md, memory/01_active_task.md, memory/04_validation_log.md, MEMORY.md, memory/2026-06-16.md\nCONTEXT = Live Cathay credit-card Gmail import was re-run and duplicated transaction rows in the credit-card detail view; inspect transaction import source_hash construction and make Gmail statement re-import idem"
+}

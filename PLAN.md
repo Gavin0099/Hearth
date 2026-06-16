@@ -194,3 +194,4 @@
 | 2026-06-15 | Gmail Mega parser bypass | 兆豐 PDF 在瀏覽器端解析會同步卡住事件迴圈，暫停兆豐自動 parser 並將 job 標 failed，避免擋住其他銀行帳單；版本 bump 至 `0.3.12`。 |
 | 2026-06-16 | Gmail API timeout / safe updates | `apiFetch` 加入 15 秒 timeout，Gmail queue 狀態更新改為 safe update，避免 PATCH 卡住或失敗時擋住整批；版本 bump 至 `0.3.13`。 |
 | 2026-06-16 | Gmail queue optimistic refresh | Gmail queue 每筆處理完成後立即套用本機 job status override，並讓 `loadQueues()` 合併本輪處理結果，避免後端狀態刷新延遲時 UI 繼續顯示 `待匯入`；版本 bump 至 `0.3.14`。 |
+| 2026-06-16 | Gmail re-import dedupe | `source_hash` 改為分類無關，並針對 Gmail 匯入加上 account/date/source 範圍內的 natural-key 相容查詢，避免已分類舊交易重匯入後新增未分類 duplicate；版本 bump 至 `0.3.15`。 |

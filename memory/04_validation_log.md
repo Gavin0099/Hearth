@@ -405,6 +405,17 @@ pm.cmd --workspace @hearth/web run check -> pass (ImportPanel recurring create+a
 - `npm.cmd run check` -> pass for api/web/shared at `0.3.14`.
 - Claim boundary: local type safety and UI state wiring verified; production deploy/live browser confirmation still need to verify the stale pending badges clear after import completion.
 
+## 2026-06-16 Gmail Re-import Dedupe
+
+- Transaction `source_hash` construction no longer includes `category`, so a user categorizing an imported transaction does not change the identity of future imports.
+- Gmail transaction CSV imports now additionally query existing rows by account/date/source and build category-independent natural keys, which preserves duplicate detection for rows inserted with the old category-sensitive hash formula.
+- Added API regression coverage for Cathay Gmail re-import where an existing categorized row must skip a new uncategorized row with the same account/date/amount/currency/description/source.
+- Added golden coverage proving transaction source hashes ignore category edits.
+- `npm.cmd --workspace @hearth/api run test -- tests/golden-portfolio-import.test.ts` -> pass (`182/182`).
+- `npm.cmd --workspace @hearth/api run test -- tests/auth-accounts.test.ts` -> pass (`182/182`).
+- `npm.cmd --workspace @hearth/api run check` -> pass.
+- Claim boundary: prevents future Gmail re-import duplicates after deployment; it does not remove duplicate transaction rows already created in production.
+
 ## 2026-06-12 AI Governance Update
 
 - `git -c safe.directory=E:/BackUp/Git_EE/Hearth/ai-governance-framework -C ai-governance-framework fetch origin main` -> pass with escalation after sandbox permission blocked `.git/modules/.../FETCH_HEAD`.
